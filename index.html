@@ -1,0 +1,632 @@
+import React, { useState } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, PieChart, Pie, Cell } from 'recharts';
+
+const SiciliaDashboard = () => {
+  const [showReport, setShowReport] = useState(false);
+  const [showAlerts, setShowAlerts] = useState(false);
+  const [showProiezioni, setShowProiezioni] = useState(false);
+  const [strutturaSelezionata, setStrutturaSelezionata] = useState(null);
+  const [showDataValidation, setShowDataValidation] = useState(false);
+
+  const struttureDati = [
+    {
+      nome: "CTA - Comunità Terapeutica Assistita",
+      sottotitolo: "Servizi Intensivi ed Estensivi + Permessi Terapeutici", 
+      riga: 4,
+      budgetAnnuale: 2277600,
+      budgetMensile: 189800,
+      postiLetto: 40,
+      tariffaGiornaliera: 156,
+      giorni7Mesi: 212,
+      budgetTeoricoPlenaOccupazione: 1322880,
+      fatturato: [
+        { mese: "Gen", attuale: 101244, budget: 189800 },
+        { mese: "Feb", attuale: 100620, budget: 189800 },
+        { mese: "Mar", attuale: 105612, budget: 189800 },
+        { mese: "Apr", attuale: 104364, budget: 189800 },
+        { mese: "Mag", attuale: 117156, budget: 189800 },
+        { mese: "Giu", attuale: 125800, budget: 189800 },
+        { mese: "Lug", attuale: 626003, budget: 189800 }
+      ],
+      totaleFatturato: 1280799,
+      budgetCumulato7Mesi: 1328600,
+      percentualeRealizzata: 96.8,
+      scostamento: -42081,
+      scostamentoPercentuale: -3.2,
+      percentualeOccupazioneTeorica: 96.8,
+      scostamentoVsBudgetTeorico: -42081,
+      status: "attenzione",
+      criticita: "media",
+      note: "7 mesi operativi - Esclude agosto. Performance vicina al teorico"
+    },
+    {
+      nome: "RSA",
+      riga: 10,
+      budgetAnnuale: 2456596,
+      budgetMensile: 204716,
+      fatturato: [
+        { mese: "Gen", attuale: 204716, budget: 204716 },
+        { mese: "Feb", attuale: 204716, budget: 204716 },
+        { mese: "Mar", attuale: 204716, budget: 204716 },
+        { mese: "Apr", attuale: 204716, budget: 204716 },
+        { mese: "Mag", attuale: 204716, budget: 204716 },
+        { mese: "Giu", attuale: 204716, budget: 204716 },
+        { mese: "Lug", attuale: 204716, budget: 204716 }
+      ],
+      totaleFatturato: 1421739,
+      budgetCumulato7Mesi: 1433012,
+      percentualeRealizzata: 99.2,
+      scostamento: -11273,
+      scostamentoPercentuale: -0.8,
+      status: "positivo",
+      criticita: "bassa"
+    },
+    {
+      nome: "Casa di Cura COSENTINO - ACUTI",
+      sottotitolo: "Chirurgia ORTOPEDICA + RIABILITAZIONE",
+      riga: 14,
+      budgetAnnuale: 3944957.84,
+      budgetMensile: 328746.49,
+      budgetCumulato7Mesi: 2301225.41,
+      dettaglioFatturato: {
+        chirurgiaOrtopedica: 1861801.82,
+        riabilitazione: 522172.35
+      },
+      fatturato: [
+        { mese: "Gen", attuale: 340567, budget: 328746.49 },
+        { mese: "Feb", attuale: 340567, budget: 328746.49 },
+        { mese: "Mar", attuale: 340567, budget: 328746.49 },
+        { mese: "Apr", attuale: 340567, budget: 328746.49 },
+        { mese: "Mag", attuale: 340567, budget: 328746.49 },
+        { mese: "Giu", attuale: 340567, budget: 328746.49 },
+        { mese: "Lug", attuale: 340571, budget: 328746.49 }
+      ],
+      totaleFatturato: 2383974.17,
+      percentualeRealizzata: 103.6,
+      scostamento: 82748.76,
+      scostamentoPercentuale: 3.6,
+      status: "positivo",
+      criticita: "bassa",
+      note: "Surplus strategico per compensare agosto e contestazioni ASP"
+    },
+    {
+      nome: "Radiologia rimborso ASL",
+      riga: 20,
+      budgetAnnuale: 370712,
+      budgetMensile: 30892.67,
+      fatturato: [
+        { mese: "Gen", attuale: 30892.67, budget: 30892.67 },
+        { mese: "Feb", attuale: 30892.67, budget: 30892.67 },
+        { mese: "Mar", attuale: 30892.67, budget: 30892.67 },
+        { mese: "Apr", attuale: 30892.67, budget: 30892.67 },
+        { mese: "Mag", attuale: 30892.67, budget: 30892.67 },
+        { mese: "Giu", attuale: 28500.00, budget: 30892.67 },
+        { mese: "Lug", attuale: 32100.00, budget: 30892.67 }
+      ],
+      totaleFatturato: 216063.35,
+      budgetCumulato7Mesi: 216248.69,
+      percentualeRealizzata: 99.9,
+      scostamento: -185.34,
+      scostamentoPercentuale: -0.1,
+      status: "positivo",
+      criticita: "bassa"
+    },
+    {
+      nome: "FKT-Rimborso SSR",
+      riga: 24,
+      budgetAnnuale: 110919.08,
+      budgetMensile: 9243.26,
+      fatturato: [
+        { mese: "Gen", attuale: 9243.26, budget: 9243.26 },
+        { mese: "Feb", attuale: 9243.26, budget: 9243.26 },
+        { mese: "Mar", attuale: 9243.26, budget: 9243.26 },
+        { mese: "Apr", attuale: 9243.26, budget: 9243.26 },
+        { mese: "Mag", attuale: 9243.26, budget: 9243.26 },
+        { mese: "Giu", attuale: 8800.00, budget: 9243.26 },
+        { mese: "Lug", attuale: 9650.00, budget: 9243.26 }
+      ],
+      totaleFatturato: 64666.30,
+      budgetCumulato7Mesi: 64702.82,
+      percentualeRealizzata: 99.9,
+      scostamento: -36.52,
+      scostamentoPercentuale: -0.1,
+      status: "positivo",
+      criticita: "bassa"
+    }
+  ];
+
+  const datiCriticita = [
+    { nome: 'Alta', valore: struttureDati.filter(s => s.criticita === 'alta').length, colore: '#ef4444' },
+    { nome: 'Media', valore: struttureDati.filter(s => s.criticita === 'media').length, colore: '#f59e0b' },
+    { nome: 'Bassa', valore: struttureDati.filter(s => s.criticita === 'bassa').length, colore: '#10b981' }
+  ];
+
+  const datiPerformance = struttureDati.map(struttura => ({
+    nome: struttura.nome.length > 12 ? struttura.nome.substring(0, 12) + "..." : struttura.nome,
+    Realizzato: struttura.totaleFatturato,
+    Budget: struttura.budgetCumulato7Mesi,
+    Percentuale: struttura.percentualeRealizzata,
+    Scostamento: struttura.scostamento
+  }));
+
+  // Calcolo totali CORRETTI per 7 mesi
+  const totaleRealizzato = struttureDati.reduce((sum, s) => sum + s.totaleFatturato, 0);
+  const totaleBudget = struttureDati.reduce((sum, s) => sum + s.budgetCumulato7Mesi, 0);
+  const percentualeTotale = totaleBudget > 0 ? (totaleRealizzato / totaleBudget) * 100 : 0;
+  const scostamentoTotale = totaleRealizzato - totaleBudget;
+
+  const formattaValuta = (valore) => {
+    return `€${Math.round(valore).toLocaleString('it-IT')}`;
+  };
+
+  const formattaPercentuale = (valore) => {
+    return `${valore.toFixed(1)}%`;
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8 text-center relative">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            Cruscotto Flusso di Cassa - Sicilia
+          </h1>
+          <p className="text-lg text-gray-600 mb-4">
+            Gruppo Karol - Sicilia | Attività Sanitarie e Socio Sanitarie - Prestazioni Convenzionate
+          </p>
+          
+          <button
+            onClick={() => setShowDataValidation(!showDataValidation)}
+            className="absolute top-0 right-0 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          >
+            ⚠️ Valida Dati
+          </button>
+          
+          {showDataValidation && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mt-4 text-left">
+              <h3 className="font-semibold text-orange-800 mb-2">Validazione Dati - Righe Excel & Calcolo Scostamento:</h3>
+              <div className="text-sm text-orange-700 space-y-2">
+                <div className="bg-white p-3 rounded border border-orange-300">
+                  <h4 className="font-semibold mb-2">📊 Calcolo Scostamento Totale: {formattaValuta(scostamentoTotale)}</h4>
+                  <div className="space-y-1 font-mono text-xs">
+                    {struttureDati.map((struttura, index) => (
+                      <div key={index} className="flex justify-between">
+                        <span>{struttura.nome.substring(0, 25)}...</span>
+                        <span className={struttura.scostamento >= 0 ? 'text-green-600' : 'text-red-600'}>
+                          {formattaValuta(struttura.scostamento)}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="border-t pt-1 mt-2 font-bold">
+                      <div className="flex justify-between">
+                        <span>TOTALE SCOSTAMENTO:</span>
+                        <span className="text-red-600">{formattaValuta(scostamentoTotale)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-blue-50 p-3 rounded border border-blue-300">
+                  <h4 className="font-semibold mb-2">🏥 CTA - Parametri Operativi (7 mesi):</h4>
+                  <div className="text-xs space-y-1">
+                    <div>• <strong>Posti Letto:</strong> {struttureDati[0].postiLetto}</div>
+                    <div>• <strong>Tariffa Pro Die:</strong> €{struttureDati[0].tariffaGiornaliera}/giorno</div>
+                    <div>• <strong>Giorni Operativi (Gen-Lug):</strong> {struttureDati[0].giorni7Mesi}</div>
+                    <div>• <strong>Budget Teorico Piena Occupazione:</strong> {formattaValuta(struttureDati[0].budgetTeoricoPlenaOccupazione)}</div>
+                    <div>• <strong>Fatturato Effettivo:</strong> {formattaValuta(struttureDati[0].totaleFatturato)}</div>
+                    <div>• <strong>% Occupazione Teorica:</strong> {struttureDati[0].percentualeOccupazioneTeorica.toFixed(1)}%</div>
+                    <div>• <strong>Scostamento vs Teorico:</strong> {formattaValuta(struttureDati[0].scostamentoVsBudgetTeorico)}</div>
+                    <div className="mt-2 text-yellow-800 bg-yellow-100 p-2 rounded">
+                      <strong>⚠️ Note:</strong> {struttureDati[0].note}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-green-50 p-3 rounded border border-green-300">
+                  <h4 className="font-semibold mb-2">🏢 COSENTINO - Strategia Acuti:</h4>
+                  <div className="text-xs space-y-1">
+                    <div>• <strong>Budget Annuo Acuti:</strong> {formattaValuta(struttureDati[2].budgetAnnuale)}</div>
+                    <div>• <strong>Budget 7 mesi (7/12):</strong> {formattaValuta(struttureDati[2].budgetCumulato7Mesi)}</div>
+                    <div>• <strong>Chirurgia ORTOPEDICA:</strong> {formattaValuta(struttureDati[2].dettaglioFatturato.chirurgiaOrtopedica)}</div>
+                    <div>• <strong>RIABILITAZIONE:</strong> {formattaValuta(struttureDati[2].dettaglioFatturato.riabilitazione)}</div>
+                    <div>• <strong>Totale Fatturato:</strong> {formattaValuta(struttureDati[2].totaleFatturato)}</div>
+                    <div>• <strong>Surplus Strategico:</strong> +{formattaValuta(struttureDati[2].scostamento)}</div>
+                    <div className="mt-2 text-green-800 bg-green-100 p-2 rounded">
+                      <strong>✅ Strategia:</strong> {struttureDati[2].note}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="text-xs">
+                  {struttureDati.map((struttura, index) => (
+                    <div key={index} className="flex justify-between border-b py-1">
+                      <span>{struttura.nome}</span>
+                      <span className="font-mono">Riga {struttura.riga} | Budget: {formattaValuta(struttura.budgetAnnuale)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* KPI Cards - CORRETTI A 7 MESI */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-blue-500">
+            <h3 className="text-sm font-medium text-gray-500 mb-2">Fatturato Totale (7 mesi)</h3>
+            <p className="text-3xl font-bold text-blue-600">{formattaValuta(totaleRealizzato)}</p>
+          </div>
+          
+          <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-green-500">
+            <h3 className="text-sm font-medium text-gray-500 mb-2">Budget Totale (7 mesi)</h3>
+            <p className="text-3xl font-bold text-green-600">{formattaValuta(totaleBudget)}</p>
+          </div>
+          
+          <div className={`bg-white rounded-2xl shadow-lg p-6 border-l-4 ${percentualeTotale >= 80 ? 'border-green-500' : percentualeTotale >= 60 ? 'border-yellow-500' : 'border-red-500'}`}>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">% Realizzazione</h3>
+            <p className={`text-3xl font-bold ${percentualeTotale >= 80 ? 'text-green-600' : percentualeTotale >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+              {formattaPercentuale(percentualeTotale)}
+            </p>
+          </div>
+          
+          <div className={`bg-white rounded-2xl shadow-lg p-6 border-l-4 ${scostamentoTotale >= 0 ? 'border-green-500' : 'border-red-500'}`}>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">Scostamento</h3>
+            <p className={`text-3xl font-bold ${scostamentoTotale >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formattaValuta(scostamentoTotale)}
+            </p>
+          </div>
+        </div>
+
+        {/* Main Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg p-6">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">Performance vs Budget per Struttura</h3>
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={datiPerformance} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="nome" 
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                  fontSize={12}
+                />
+                <YAxis tickFormatter={(value) => `€${(value / 1000).toFixed(0)}k`} />
+                <Tooltip 
+                  formatter={(value, name) => [formattaValuta(value), name === 'Realizzato' ? 'Fatturato' : 'Budget']}
+                  labelFormatter={(label) => `Struttura: ${label}`}
+                />
+                <Legend />
+                <Bar dataKey="Budget" fill="#e5e7eb" name="Budget" />
+                <Bar dataKey="Realizzato" fill="#3b82f6" name="Fatturato" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">Livello di Criticità</h3>
+            <ResponsiveContainer width="100%" height={350}>
+              <PieChart>
+                <Pie
+                  data={datiCriticita}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="valore"
+                  label={({ nome, valore }) => valore > 0 ? `${nome}: ${valore}` : ''}
+                >
+                  {datiCriticita.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.colore} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Export e Azioni Rapide */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">Azioni Rapide</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              onClick={() => setShowReport(true)}
+            >
+              📊 Genera Report
+            </button>
+            
+            <button
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              onClick={() => setShowAlerts(true)}
+            >
+              🚨 Verifica Alert
+            </button>
+            
+            <button
+              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              onClick={() => setShowProiezioni(true)}
+            >
+              📈 Proiezione Annuale
+            </button>
+          </div>
+        </div>
+
+        {/* Modal Report */}
+        {showReport && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-4xl w-full mx-4 max-h-screen overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-gray-900">📊 Report Dettagliato Gruppo Karol - Sicilia</h3>
+                <button
+                  onClick={() => setShowReport(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-blue-800 mb-2">📈 Sintesi Esecutiva</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <strong>Periodo:</strong> Gennaio - Luglio 2025 (7 mesi)
+                    </div>
+                    <div>
+                      <strong>Performance Totale:</strong> {formattaPercentuale(percentualeTotale)}
+                    </div>
+                    <div>
+                      <strong>Fatturato Realizzato:</strong> {formattaValuta(totaleRealizzato)}
+                    </div>
+                    <div>
+                      <strong>Scostamento Budget:</strong> {formattaValuta(scostamentoTotale)}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs border border-gray-200">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="p-2 text-left border">Struttura</th>
+                        <th className="p-2 text-right border">Budget Ann.</th>
+                        <th className="p-2 text-right border">Fatt. 7m</th>
+                        <th className="p-2 text-right border">Budget 7m</th>
+                        <th className="p-2 text-right border">% Real.</th>
+                        <th className="p-2 text-right border">Scostamento</th>
+                        <th className="p-2 text-center border">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {struttureDati.map((struttura, index) => (
+                        <tr key={index} className="border-b">
+                          <td className="p-2 border">{struttura.nome}</td>
+                          <td className="p-2 text-right border">{formattaValuta(struttura.budgetAnnuale)}</td>
+                          <td className="p-2 text-right border font-medium">{formattaValuta(struttura.totaleFatturato)}</td>
+                          <td className="p-2 text-right border">{formattaValuta(struttura.budgetCumulato7Mesi)}</td>
+                          <td className={`p-2 text-right border font-medium ${
+                            struttura.percentualeRealizzata >= 90 ? 'text-green-600' : 
+                            struttura.percentualeRealizzata >= 80 ? 'text-yellow-600' : 'text-red-600'
+                          }`}>
+                            {formattaPercentuale(struttura.percentualeRealizzata)}
+                          </td>
+                          <td className={`p-2 text-right border font-medium ${
+                            struttura.scostamento >= 0 ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {formattaValuta(struttura.scostamento)}
+                          </td>
+                          <td className="p-2 text-center border">
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              struttura.criticita === 'alta' ? 'bg-red-100 text-red-800' :
+                              struttura.criticita === 'media' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-green-100 text-green-800'
+                            }`}>
+                              {struttura.status === 'positivo' ? '✅' : '⚠️'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-semibold mb-2">💡 Raccomandazioni</h4>
+                  <ul className="text-sm space-y-1">
+                    <li>• <strong>CTA (ex-INTENSIVI):</strong> Performance 96.8% su budget teorico - Servizi: Intensivi/Estensivi + Permessi Terapeutici</li>
+                    <li>• <strong>COSENTINO:</strong> Surplus strategico +{formattaValuta(struttureDati[2].scostamento)} per compensare agosto</li>
+                    <li>• <strong>RSA:</strong> Leggero scostamento {formattaValuta(struttureDati[1].scostamento)} da monitorare</li>
+                    <li>• <strong>Strutture RADIOLOGIA/FKT:</strong> Performance stabili in linea con obiettivi</li>
+                  </ul>
+                </div>
+
+                <div className="text-center">
+                  <button
+                    onClick={() => {
+                      const reportText = `GRUPPO KAROL - SICILIA - REPORT 7 MESI\n\nPerformance Totale: ${formattaPercentuale(percentualeTotale)}\nFatturato: ${formattaValuta(totaleRealizzato)}\nScostamento: ${formattaValuta(scostamentoTotale)}`;
+                      navigator.clipboard.writeText(reportText).then(() => {
+                        alert('✅ Report copiato negli appunti!');
+                      });
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
+                  >
+                    📋 Copia Report
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Alerts */}
+        {showAlerts && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-gray-900">🚨 Sistema Alert - Monitoraggio Criticità</h3>
+                <button
+                  onClick={() => setShowAlerts(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="border-l-4 border-red-500 bg-red-50 p-4">
+                  <h4 className="font-semibold text-red-800 mb-2">🔴 ALERT CRITICI (Performance &lt; 70%)</h4>
+                  {struttureDati.filter(s => s.percentualeRealizzata < 70).length > 0 ? (
+                    struttureDati.filter(s => s.percentualeRealizzata < 70).map((struttura, idx) => (
+                      <div key={idx} className="bg-white p-3 rounded mb-2 border border-red-200">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <strong>{struttura.nome}</strong>
+                            <p className="text-sm text-gray-600">Riga Excel: {struttura.riga}</p>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-red-700 font-bold">{struttura.percentualeRealizzata.toFixed(1)}%</div>
+                            <div className="text-sm text-red-600">{formattaValuta(struttura.scostamento)}</div>
+                          </div>
+                        </div>
+                        <div className="mt-2 text-sm bg-red-100 p-2 rounded">
+                          <strong>Azione CTA:</strong> Ottimizzare occupazione {struttura.postiLetto} posti letto 
+                          ({struttura.percentualeOccupazioneTeorica.toFixed(1)}% vs teorico). 
+                          Gap teorico: {formattaValuta(struttura.scostamentoVsBudgetTeorico)}
+                          <br/><small>Servizi: Intensivi/Estensivi + Permessi Terapeutici</small>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-green-700 bg-green-100 p-2 rounded">✅ Nessun alert critico</div>
+                  )}
+                </div>
+
+                <div className="border-l-4 border-green-500 bg-green-50 p-4">
+                  <h4 className="font-semibold text-green-800 mb-2">🟢 PERFORMANCE OTTIMALI (≥90%)</h4>
+                  <div className="space-y-2">
+                    {struttureDati.filter(s => s.percentualeRealizzata >= 90).map((struttura, idx) => (
+                      <div key={idx} className="bg-white p-3 rounded border border-green-200">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <strong>{struttura.nome}</strong>
+                            <p className="text-sm text-gray-600">Riga Excel: {struttura.riga}</p>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-green-700 font-bold">{struttura.percentualeRealizzata.toFixed(1)}%</div>
+                            <div className="text-sm text-green-600">{formattaValuta(struttura.scostamento)}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Proiezioni */}
+        {showProiezioni && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-4xl w-full mx-4 max-h-screen overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-gray-900">📈 Proiezioni Fine Anno 2025</h3>
+                <button
+                  onClick={() => setShowProiezioni(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-blue-800 mb-2">📊 Scenario Gruppo Karol - Sicilia</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <strong>Budget Annuale Totale:</strong><br/>
+                      {formattaValuta(struttureDati.reduce((sum, s) => sum + s.budgetAnnuale, 0))}
+                    </div>
+                    <div>
+                      <strong>Proiezione Totale:</strong><br/>
+                      {formattaValuta(struttureDati.reduce((sum, s) => sum + (s.totaleFatturato / 7 * 12), 0))}
+                    </div>
+                    <div>
+                      <strong>Gap Stimato:</strong><br/>
+                      <span className="text-red-600 font-medium">
+                        {formattaValuta(struttureDati.reduce((sum, s) => sum + s.budgetAnnuale, 0) - struttureDati.reduce((sum, s) => sum + (s.totaleFatturato / 7 * 12), 0))}
+                      </span>
+                    </div>
+                    <div>
+                      <strong>% Raggiungimento:</strong><br/>
+                      <span className="text-blue-600 font-bold">
+                        {((struttureDati.reduce((sum, s) => sum + (s.totaleFatturato / 7 * 12), 0) / struttureDati.reduce((sum, s) => sum + s.budgetAnnuale, 0)) * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="p-3 text-left">Struttura</th>
+                        <th className="p-3 text-right">Media 7m</th>
+                        <th className="p-3 text-right">Proiezione Anno</th>
+                        <th className="p-3 text-right">Budget Anno</th>
+                        <th className="p-3 text-right">Gap Previsto</th>
+                        <th className="p-3 text-center">% Target</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {struttureDati.map((struttura, index) => {
+                        const mediaMensile = struttura.totaleFatturato / 7;
+                        const proiezioneAnnuale = mediaMensile * 12;
+                        const gapAnnuale = struttura.budgetAnnuale - proiezioneAnnuale;
+                        const percentualeTarget = (proiezioneAnnuale / struttura.budgetAnnuale) * 100;
+                        
+                        return (
+                          <tr key={index} className="border-b hover:bg-gray-50">
+                            <td className="p-3 font-medium">{struttura.nome}</td>
+                            <td className="p-3 text-right">{formattaValuta(mediaMensile)}</td>
+                            <td className="p-3 text-right font-medium">{formattaValuta(proiezioneAnnuale)}</td>
+                            <td className="p-3 text-right">{formattaValuta(struttura.budgetAnnuale)}</td>
+                            <td className={`p-3 text-right font-medium ${gapAnnuale <= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {formattaValuta(Math.abs(gapAnnuale))}
+                            </td>
+                            <td className={`p-3 text-center font-bold ${
+                              percentualeTarget >= 95 ? 'text-green-600' :
+                              percentualeTarget >= 80 ? 'text-yellow-600' :
+                              'text-red-600'
+                            }`}>
+                              {percentualeTarget.toFixed(1)}%
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="bg-yellow-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-yellow-800 mb-2">💡 Raccomandazioni Strategiche</h4>
+                  <ul className="text-sm space-y-1">
+                    <li>• <strong>Priorità CTA:</strong> Occupazione al {struttureDati[0].percentualeOccupazioneTeorica.toFixed(1)}% del teorico - ottimizzare {struttureDati[0].postiLetto} posti letto</li>
+                    <li>• <strong>CTA Servizi:</strong> Occupazione al {struttureDati[0].percentualeOccupazioneTeorica.toFixed(1)}% del teorico - Ottimizzare mix Intensivi/Estensivi + Permessi (€{struttureDati[0].tariffaGiornaliera}/die)</li>
+                    <li>• <strong>COSENTINO Strategia:</strong> Surplus {formattaValuta(struttureDati[2].scostamento)} ben pianificato per compensare agosto e contestazioni ASP</li>
+                    <li>• <strong>RSA Performance:</strong> Leggero scostamento {formattaValuta(struttureDati[1].scostamento)} da monitorare</li>
+                    <li>• <strong>Radiologia/FKT:</strong> Performance stabili in linea con budget</li>
+                    <li>• <strong>Gap Recovery CTA:</strong> Focus su ottimizzazione occupazione per recuperare {formattaValuta(Math.abs(struttureDati[0].scostamento))}</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default SiciliaDashboard;
