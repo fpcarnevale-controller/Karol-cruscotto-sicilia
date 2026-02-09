@@ -354,9 +354,9 @@ def pannello_alert(
 
     Parametri:
         st_container: container Streamlit dove scrivere il pannello
-        kpi_list: lista di oggetti KPI (dataclass dal modulo kpi.py).
-                  Ogni KPI ha attributi: codice, nome, valore, target,
-                  alert_livello (LivelliAlert), unita_operativa
+        kpi_list: lista di dizionari KPI. Ogni dizionario ha le chiavi:
+                  "kpi" (nome), "unita_operativa", "valore", "target",
+                  "alert" (stringa: "VERDE"/"GIALLO"/"ROSSO"), "formula"
 
     Ritorna:
         None (scrive direttamente nel container)
@@ -364,11 +364,11 @@ def pannello_alert(
     # Filtra solo KPI con alert ROSSO o GIALLO
     kpi_rossi = [
         kpi for kpi in kpi_list
-        if kpi.alert_livello == LivelliAlert.ROSSO
+        if kpi.get("alert") == "ROSSO"
     ]
     kpi_gialli = [
         kpi for kpi in kpi_list
-        if kpi.alert_livello == LivelliAlert.GIALLO
+        if kpi.get("alert") == "GIALLO"
     ]
 
     totale_alert = len(kpi_rossi) + len(kpi_gialli)
@@ -392,14 +392,15 @@ def pannello_alert(
         )
 
         for kpi in kpi_rossi:
-            uo_testo = kpi.unita_operativa if kpi.unita_operativa else "Consolidato"
+            uo_testo = kpi.get("unita_operativa") or "Consolidato"
+            nome_kpi = kpi.get("kpi", "N/D")
 
             # Determina formato valore per la presentazione
             valore_fmt = _formatta_valore_kpi(kpi)
             target_fmt = _formatta_target_kpi(kpi)
 
             st_container.markdown(
-                f"- **{kpi.nome}** ({uo_testo}): "
+                f"- **{nome_kpi}** ({uo_testo}): "
                 f"**{valore_fmt}** (target: {target_fmt})"
             )
 
@@ -410,13 +411,14 @@ def pannello_alert(
         )
 
         for kpi in kpi_gialli:
-            uo_testo = kpi.unita_operativa if kpi.unita_operativa else "Consolidato"
+            uo_testo = kpi.get("unita_operativa") or "Consolidato"
+            nome_kpi = kpi.get("kpi", "N/D")
 
             valore_fmt = _formatta_valore_kpi(kpi)
             target_fmt = _formatta_target_kpi(kpi)
 
             st_container.markdown(
-                f"- **{kpi.nome}** ({uo_testo}): "
+                f"- **{nome_kpi}** ({uo_testo}): "
                 f"**{valore_fmt}** (target: {target_fmt})"
             )
 
@@ -426,67 +428,100 @@ def pannello_alert(
 # ============================================================================
 
 
-def _formatta_valore_kpi(kpi) -> str:
+def _inferisci_formato_kpi(nome_kpi: str, valore) -> str:
     """
-    Formatta il valore di un KPI in base al suo codice per la visualizzazione
-    nel pannello alert.
+    Inferisce il formato corretto per un valore KPI a partire dal nome del KPI.
+    Quando il nome non fornisce indicazioni sufficienti, utilizza l'ordine
+    di grandezza del valore come fallback.
 
     Parametri:
-        kpi: oggetto KPI con attributi codice e valore
+        nome_kpi: nome descrittivo del KPI (es. "MOL Industriale %")
+        valore: valore numerico da formattare
 
     Ritorna:
         Stringa formattata del valore
     """
-    codici_percentuale = (
-        "KPI_OCC", "KPI_MOL_I", "KPI_MOL_C",
-        "KPI_SEDE_PCT", "KPI_PERS_PCT",
-    )
-    codici_euro = ("KPI_CASSA", "KPI_RIC_GG", "KPI_CPERS_GG")
+    if valore is None or (isinstance(valore, float) and math.isnan(valore)):
+        return "-"
 
-    if kpi.codice in codici_percentuale:
-        return _formatta_valore(kpi.valore, "percentuale")
-    elif kpi.codice in codici_euro:
-        return _formatta_valore(kpi.valore, "euro")
-    elif kpi.codice in ("KPI_DSO_ASP", "KPI_DSO_PRIV", "KPI_DPO"):
-        return _formatta_valore(kpi.valore, "giorni")
-    elif kpi.codice == "KPI_COP_CASSA":
-        return _formatta_valore(kpi.valore, "mesi")
-    elif kpi.codice == "KPI_DSCR":
-        return _formatta_valore(kpi.valore, "decimale")
-    elif kpi.codice == "KPI_ORE_PAZ":
-        return _formatta_valore(kpi.valore, "decimale")
+    nome_lower = nome_kpi.lower()
+
+    # KPI percentuali: contengono %, pct, margine, incidenza, occupancy
+    if any(t in nome_lower for t in (
+        "%", "pct", "percentuale", "margine", "incidenza",
+        "occupancy", "occupazione",
+    )):
+        return _formatta_valore(float(valore), "percentuale")
+
+    # KPI in giorni: DSO, DPO, giorni
+    if any(t in nome_lower for t in ("dso", "dpo", "giorni")):
+        return _formatta_valore(float(valore), "giorni")
+
+    # KPI in mesi: copertura cassa
+    if any(t in nome_lower for t in ("copertura", "mesi")):
+        return _formatta_valore(float(valore), "mesi")
+
+    # KPI indice/rapporto: DSCR
+    if any(t in nome_lower for t in ("dscr", "indice", "rapporto")):
+        return _formatta_valore(float(valore), "decimale")
+
+    # KPI in euro: ricavi, costi, cassa, fatturato, MOL (senza %)
+    if any(t in nome_lower for t in ("ricav", "costo", "cassa", "fattur", "mol")):
+        return _formatta_valore(float(valore), "euro")
+
+    # KPI ore
+    if "ore" in nome_lower:
+        return _formatta_valore(float(valore), "decimale")
+
+    # Fallback: usa l'ordine di grandezza
+    v = abs(float(valore))
+    if v < 1.0:
+        return _formatta_valore(float(valore), "percentuale")
+    elif v > 1000:
+        return _formatta_valore(float(valore), "euro")
     else:
-        return str(kpi.valore)
+        return _formatta_valore(float(valore), "decimale")
+
+
+def _formatta_valore_kpi(kpi) -> str:
+    """
+    Formatta il valore di un KPI per la visualizzazione nel pannello alert.
+    Supporta sia dizionari KPI sia oggetti dataclass.
+
+    Parametri:
+        kpi: dizionario KPI con chiavi "kpi" (nome), "valore"
+             oppure oggetto con attributi nome/codice e valore
+
+    Ritorna:
+        Stringa formattata del valore
+    """
+    if isinstance(kpi, dict):
+        nome = kpi.get("kpi", "")
+        valore = kpi.get("valore")
+    else:
+        nome = getattr(kpi, "nome", "")
+        valore = getattr(kpi, "valore", None)
+
+    return _inferisci_formato_kpi(nome, valore)
 
 
 def _formatta_target_kpi(kpi) -> str:
     """
-    Formatta il target di un KPI in base al suo codice per la visualizzazione
-    nel pannello alert.
+    Formatta il target di un KPI per la visualizzazione nel pannello alert.
+    Supporta sia dizionari KPI sia oggetti dataclass.
 
     Parametri:
-        kpi: oggetto KPI con attributi codice e target
+        kpi: dizionario KPI con chiavi "kpi" (nome), "target"
+             oppure oggetto con attributi nome/codice e target
 
     Ritorna:
         Stringa formattata del target
     """
-    codici_percentuale = (
-        "KPI_OCC", "KPI_MOL_I", "KPI_MOL_C",
-        "KPI_SEDE_PCT", "KPI_PERS_PCT",
-    )
-    codici_euro = ("KPI_CASSA", "KPI_RIC_GG", "KPI_CPERS_GG")
-
-    if kpi.codice in codici_percentuale:
-        return _formatta_valore(kpi.target, "percentuale")
-    elif kpi.codice in codici_euro:
-        return _formatta_valore(kpi.target, "euro")
-    elif kpi.codice in ("KPI_DSO_ASP", "KPI_DSO_PRIV", "KPI_DPO"):
-        return _formatta_valore(kpi.target, "giorni")
-    elif kpi.codice == "KPI_COP_CASSA":
-        return _formatta_valore(kpi.target, "mesi")
-    elif kpi.codice == "KPI_DSCR":
-        return _formatta_valore(kpi.target, "decimale")
-    elif kpi.codice == "KPI_ORE_PAZ":
-        return _formatta_valore(kpi.target, "decimale")
+    if isinstance(kpi, dict):
+        nome = kpi.get("kpi", "")
+        target = kpi.get("target")
     else:
-        return str(kpi.target)
+        nome = getattr(kpi, "nome", "")
+        target = getattr(kpi, "target", None)
+
+    return _inferisci_formato_kpi(nome, target)

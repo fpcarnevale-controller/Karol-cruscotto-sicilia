@@ -101,14 +101,10 @@ def mostra_kpi(risultati: dict, dati: dict):
     n_rossi = sum(1 for k in kpi_filtrati if k.get("alert") == "ROSSO")
 
     col_v, col_g, col_r, col_tot = st.columns(4)
-    with col_v:
-        mostra_kpi_card("Verdi", n_verdi, suffisso="", colore="green")
-    with col_g:
-        mostra_kpi_card("Gialli", n_gialli, suffisso="", colore="orange")
-    with col_r:
-        mostra_kpi_card("Rossi", n_rossi, suffisso="", colore="red")
-    with col_tot:
-        mostra_kpi_card("Totale KPI", len(kpi_filtrati), suffisso="")
+    mostra_kpi_card(col_v, "Verdi", n_verdi, formato="numero")
+    mostra_kpi_card(col_g, "Gialli", n_gialli, formato="numero")
+    mostra_kpi_card(col_r, "Rossi", n_rossi, formato="numero")
+    mostra_kpi_card(col_tot, "Totale KPI", len(kpi_filtrati), formato="numero")
 
     st.markdown("---")
 

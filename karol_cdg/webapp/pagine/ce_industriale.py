@@ -301,28 +301,12 @@ def _mostra_dettaglio_per_uo(ce_industriale: dict, uo_selezionate: list) -> None
 
         # Metriche principali UO
         col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            mostra_kpi_card(
-                etichetta="Ricavi",
-                valore=formatta_euro(ce["totale_ricavi"]),
-            )
-        with col2:
-            mostra_kpi_card(
-                etichetta="Costi Diretti",
-                valore=formatta_euro(ce["totale_costi"]),
-            )
-        with col3:
-            mostra_kpi_card(
-                etichetta="MOL-I",
-                valore=formatta_euro(ce["mol_industriale"]),
-            )
-        with col4:
-            livello = "VERDE" if ce["mol_pct"] >= 0.15 else ("GIALLO" if ce["mol_pct"] >= 0.08 else "ROSSO")
-            mostra_semaforo(
-                etichetta="MOL-I %",
-                valore=formatta_percentuale(ce["mol_pct"]),
-                livello=livello,
-            )
+        mostra_kpi_card(col1, "Ricavi", ce["totale_ricavi"], formato="euro")
+        mostra_kpi_card(col2, "Costi Diretti", ce["totale_costi"], formato="euro")
+        mostra_kpi_card(col3, "MOL-I", ce["mol_industriale"], formato="euro")
+        mostra_kpi_card(col4, "MOL-I %", ce["mol_pct"], formato="percentuale")
+        livello = "VERDE" if ce["mol_pct"] >= 0.15 else ("GIALLO" if ce["mol_pct"] >= 0.08 else "ROSSO")
+        mostra_semaforo(col4, livello)
 
         # Dettaglio ricavi
         st.markdown("**Dettaglio ricavi:**")

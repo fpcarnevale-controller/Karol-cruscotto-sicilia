@@ -23,7 +23,6 @@ from karol_cdg.config import (
     VOCI_COSTI_SEDE,
     SOGLIE_SEMAFORO,
     ALERT_CONFIG,
-    LivelliAlert,
 )
 
 # ============================================================================
@@ -187,28 +186,39 @@ def colore_semaforo(
 # ============================================================================
 
 
-def tabella_ce_industriale(ce_industriale: List[dict]) -> pd.DataFrame:
+def tabella_ce_industriale(
+    ce_industriale: Dict[str, dict],
+    uo_selezionate: Optional[List[str]] = None,
+) -> pd.DataFrame:
     """
     Genera un DataFrame formattato del Conto Economico Industriale
-    per tutte le Unita' Operative, pronto per st.dataframe().
+    per le Unita' Operative selezionate, pronto per st.dataframe().
 
     Parametri:
-        ce_industriale: lista di dizionari CE Industriale (uno per UO),
-                        output di calcola_ce_industriale(). Ogni dict contiene:
-                        codice_uo, nome_uo, totale_ricavi, costi_personale,
-                        costi_acquisti, costi_servizi, costi_ammortamenti,
-                        totale_costi_diretti, mol_industriale, margine_pct_industriale
+        ce_industriale: dizionario CE Industriale indicizzato per codice UO.
+                        Ogni valore contiene: totale_ricavi, totale_costi,
+                        mol_industriale, mol_pct, costi_personale,
+                        costi_acquisti, costi_servizi, costi_ammort,
+                        ricavi (dict), costi (dict)
+        uo_selezionate: lista opzionale di codici UO da includere.
+                        Se None, include tutte le UO presenti.
 
     Ritorna:
         DataFrame Pandas con righe = UO, colonne = voci CE Industriale
         con formattazione euro e percentuale applicata
     """
+    if uo_selezionate is None:
+        uo_selezionate = list(ce_industriale.keys())
+
     righe = []
 
-    for ce in ce_industriale:
-        codice = ce.get("codice_uo", "N/D")
+    for codice in uo_selezionate:
+        ce = ce_industriale.get(codice)
+        if ce is None:
+            continue
+
         uo_info = UNITA_OPERATIVE.get(codice)
-        nome = uo_info.nome if uo_info else ce.get("nome_uo", codice)
+        nome = uo_info.nome if uo_info else codice
 
         righe.append({
             "Codice UO": codice,
@@ -217,10 +227,10 @@ def tabella_ce_industriale(ce_industriale: List[dict]) -> pd.DataFrame:
             "Personale": ce.get("costi_personale", 0.0),
             "Acquisti": ce.get("costi_acquisti", 0.0),
             "Servizi": ce.get("costi_servizi", 0.0),
-            "Ammortamenti": ce.get("costi_ammortamenti", 0.0),
-            "Totale Costi": ce.get("totale_costi_diretti", 0.0),
+            "Ammortamenti": ce.get("costi_ammort", 0.0),
+            "Totale Costi": ce.get("totale_costi", 0.0),
             "MOL Industriale": ce.get("mol_industriale", 0.0),
-            "Margine %": ce.get("margine_pct_industriale", 0.0),
+            "Margine %": ce.get("mol_pct", 0.0),
         })
 
     df = pd.DataFrame(righe)
@@ -265,40 +275,68 @@ def tabella_ce_industriale(ce_industriale: List[dict]) -> pd.DataFrame:
 # ============================================================================
 
 
-def tabella_ce_gestionale(ce_gestionale: List[dict]) -> pd.DataFrame:
+def tabella_ce_gestionale(
+    ce_industriale: Dict[str, dict],
+    ce_gestionale: Optional[Dict[str, dict]] = None,
+    allocazione: Optional[Dict[str, dict]] = None,
+) -> pd.DataFrame:
     """
     Genera un DataFrame formattato del Conto Economico Gestionale
     per tutte le Unita' Operative, pronto per st.dataframe().
 
     Parametri:
-        ce_gestionale: lista di dizionari CE Gestionale (uno per UO),
-                       output di calcola_ce_gestionale(). Ogni dict contiene:
-                       codice_uo, nome_uo, totale_ricavi, mol_industriale,
-                       totale_costi_sede, mol_gestionale, margine_pct_gestionale,
-                       risultato_netto, margine_pct_netto
+        ce_industriale: dizionario CE Industriale indicizzato per codice UO.
+                        Ogni valore contiene: totale_ricavi, mol_industriale,
+                        mol_pct, ecc.
+        ce_gestionale: dizionario CE Gestionale indicizzato per codice UO
+                       (opzionale). Ogni valore contiene: mol_industriale,
+                       costi_sede_allocati, mol_gestionale,
+                       mol_gestionale_pct, totale_ricavi, dettaglio_sede
+        allocazione: dizionario allocazione indicizzato per codice UO
+                     (opzionale, {codice_uo: {codice_sede: importo}})
 
     Ritorna:
         DataFrame Pandas con righe = UO, colonne = voci CE Gestionale
     """
+    if ce_gestionale is None:
+        ce_gestionale = {}
+    if allocazione is None:
+        allocazione = {}
+
+    # Determina le UO da mostrare (unione delle chiavi)
+    codici_uo = list(dict.fromkeys(
+        list(ce_industriale.keys()) + list(ce_gestionale.keys())
+    ))
+
     righe = []
 
-    for ce in ce_gestionale:
-        codice = ce.get("codice_uo", "N/D")
+    for codice in codici_uo:
+        ce_i = ce_industriale.get(codice, {})
+        ce_g = ce_gestionale.get(codice, {})
+
         uo_info = UNITA_OPERATIVE.get(codice)
-        nome = uo_info.nome if uo_info else ce.get("nome_uo", codice)
+        nome = uo_info.nome if uo_info else codice
+
+        totale_ricavi = ce_g.get("totale_ricavi", ce_i.get("totale_ricavi", 0.0))
+        mol_i = ce_g.get("mol_industriale", ce_i.get("mol_industriale", 0.0))
+        costi_sede = ce_g.get("costi_sede_allocati", 0.0)
+        mol_g = ce_g.get("mol_gestionale", 0.0)
+        mol_g_pct = ce_g.get("mol_gestionale_pct", 0.0)
+
+        # Margine % Industriale: da CE Industriale
+        mol_i_pct = ce_i.get("mol_pct", 0.0)
+        if mol_i_pct == 0.0 and totale_ricavi > 0:
+            mol_i_pct = mol_i / totale_ricavi
 
         righe.append({
             "Codice UO": codice,
             "Unità Operativa": nome,
-            "Ricavi": ce.get("totale_ricavi", 0.0),
-            "MOL Industriale": ce.get("mol_industriale", 0.0),
-            "Margine % I": ce.get("margine_pct_industriale", 0.0),
-            "Costi Sede": ce.get("totale_costi_sede", 0.0),
-            "MOL Gestionale": ce.get("mol_gestionale", 0.0),
-            "Margine % G": ce.get("margine_pct_gestionale", 0.0),
-            "Altri Costi": ce.get("totale_altri_costi", 0.0),
-            "Risultato Netto": ce.get("risultato_netto", 0.0),
-            "Margine % Netto": ce.get("margine_pct_netto", 0.0),
+            "Ricavi": totale_ricavi,
+            "MOL Industriale": mol_i,
+            "Margine % I": mol_i_pct,
+            "Costi Sede": costi_sede,
+            "MOL Gestionale": mol_g,
+            "Margine % G": mol_g_pct,
         })
 
     df = pd.DataFrame(righe)
@@ -309,9 +347,9 @@ def tabella_ce_gestionale(ce_gestionale: List[dict]) -> pd.DataFrame:
     # Aggiungi riga di totale consolidato
     colonne_euro = [
         "Ricavi", "MOL Industriale", "Costi Sede",
-        "MOL Gestionale", "Altri Costi", "Risultato Netto",
+        "MOL Gestionale",
     ]
-    colonne_pct = ["Margine % I", "Margine % G", "Margine % Netto"]
+    colonne_pct = ["Margine % I", "Margine % G"]
 
     riga_totale = {
         "Codice UO": "TOTALE",
@@ -325,7 +363,6 @@ def tabella_ce_gestionale(ce_gestionale: List[dict]) -> pd.DataFrame:
     if tot_ricavi != 0:
         riga_totale["Margine % I"] = riga_totale["MOL Industriale"] / tot_ricavi
         riga_totale["Margine % G"] = riga_totale["MOL Gestionale"] / tot_ricavi
-        riga_totale["Margine % Netto"] = riga_totale["Risultato Netto"] / tot_ricavi
     else:
         for col in colonne_pct:
             riga_totale[col] = 0.0
@@ -354,49 +391,66 @@ def tabella_kpi(kpi_list: list) -> pd.DataFrame:
     pronto per st.dataframe().
 
     Parametri:
-        kpi_list: lista di oggetti KPI (dataclass dal modulo kpi.py).
-                  Ogni KPI ha attributi: codice, nome, valore, target,
-                  alert_livello (LivelliAlert), unita_operativa, periodo,
-                  formula_desc
+        kpi_list: lista di dizionari KPI. Ogni dizionario ha le chiavi:
+                  "kpi" (nome), "unita_operativa", "valore", "target",
+                  "alert" (stringa: "VERDE"/"GIALLO"/"ROSSO"), "formula"
 
     Ritorna:
         DataFrame Pandas con righe = KPI, colonne = Nome, Valore, Target,
         Alert, UO, Formula
     """
+    # Mappa stringa alert -> icona semaforo
+    mappa_icone = {
+        "VERDE": "🟢",
+        "GIALLO": "🟡",
+        "ROSSO": "🔴",
+    }
+
     righe = []
 
     for kpi in kpi_list:
-        # Determina formato in base al codice KPI
-        if kpi.codice in ("KPI_OCC", "KPI_MOL_I", "KPI_MOL_C",
-                          "KPI_SEDE_PCT", "KPI_PERS_PCT"):
-            valore_fmt = formatta_percentuale(kpi.valore)
-            target_fmt = formatta_percentuale(kpi.target)
-        elif kpi.codice in ("KPI_CASSA",):
-            valore_fmt = formatta_euro(kpi.valore)
-            target_fmt = formatta_euro(kpi.target)
-        elif kpi.codice in ("KPI_RIC_GG", "KPI_CPERS_GG"):
-            valore_fmt = formatta_euro(kpi.valore)
-            target_fmt = formatta_euro(kpi.target)
+        nome_kpi = kpi.get("kpi", "N/D")
+        valore = kpi.get("valore")
+        target = kpi.get("target")
+        alert = kpi.get("alert", "VERDE")
+        uo = kpi.get("unita_operativa") or "Consolidato"
+        formula = kpi.get("formula", "")
+
+        # Determina formato in base al nome KPI (euristiche sul nome)
+        nome_lower = nome_kpi.lower()
+
+        if any(t in nome_lower for t in (
+            "%", "pct", "percentuale", "margine", "incidenza",
+            "occupancy", "occupazione",
+        )):
+            valore_fmt = formatta_percentuale(valore)
+            target_fmt = formatta_percentuale(target)
+        elif any(t in nome_lower for t in ("ricav", "costo", "cassa", "fattur")):
+            valore_fmt = formatta_euro(valore)
+            target_fmt = formatta_euro(target)
+        elif any(t in nome_lower for t in ("mol",)):
+            # MOL senza % -> euro
+            valore_fmt = formatta_euro(valore)
+            target_fmt = formatta_euro(target)
         else:
             # DSO, DPO, DSCR, ore, copertura cassa: formato numerico
-            valore_fmt = f"{kpi.valore:,.1f}".replace(",", ".").replace(".", ",", 1)
-            target_fmt = f"{kpi.target:,.1f}".replace(",", ".").replace(".", ",", 1)
+            try:
+                valore_fmt = f"{float(valore):,.1f}".replace(",", ".").replace(".", ",", 1) if valore is not None else "-"
+                target_fmt = f"{float(target):,.1f}".replace(",", ".").replace(".", ",", 1) if target is not None else "-"
+            except (TypeError, ValueError):
+                valore_fmt = str(valore) if valore is not None else "-"
+                target_fmt = str(target) if target is not None else "-"
 
         # Icona semaforo
-        mappa_icone = {
-            LivelliAlert.VERDE: "🟢",
-            LivelliAlert.GIALLO: "🟡",
-            LivelliAlert.ROSSO: "🔴",
-        }
-        icona = mappa_icone.get(kpi.alert_livello, "⚪")
+        icona = mappa_icone.get(alert, "⚪")
 
         righe.append({
-            "Nome KPI": kpi.nome,
+            "Nome KPI": nome_kpi,
             "Valore": valore_fmt,
             "Target": target_fmt,
-            "Alert": f"{icona} {kpi.alert_livello.value.upper()}",
-            "UO": kpi.unita_operativa or "Consolidato",
-            "Formula": kpi.formula_desc,
+            "Alert": f"{icona} {alert}",
+            "UO": uo,
+            "Formula": formula,
         })
 
     df = pd.DataFrame(righe)

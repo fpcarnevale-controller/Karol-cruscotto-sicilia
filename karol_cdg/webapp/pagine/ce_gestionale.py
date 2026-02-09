@@ -243,30 +243,14 @@ def _mostra_dettaglio_sede_per_uo(
 
         # Metriche di sintesi UO
         col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            mostra_kpi_card(
-                etichetta="MOL-I",
-                valore=formatta_euro(ce_g["mol_industriale"]),
-            )
-        with col2:
-            mostra_kpi_card(
-                etichetta="Costi Sede",
-                valore=formatta_euro(ce_g["costi_sede_allocati"]),
-            )
-        with col3:
-            mostra_kpi_card(
-                etichetta="MOL-G",
-                valore=formatta_euro(ce_g["mol_gestionale"]),
-            )
-        with col4:
-            livello = "VERDE" if ce_g["mol_gestionale_pct"] >= 0.08 else (
-                "GIALLO" if ce_g["mol_gestionale_pct"] >= 0.0 else "ROSSO"
-            )
-            mostra_semaforo(
-                etichetta="MOL-G %",
-                valore=formatta_percentuale(ce_g["mol_gestionale_pct"]),
-                livello=livello,
-            )
+        mostra_kpi_card(col1, "MOL-I", ce_g["mol_industriale"], formato="euro")
+        mostra_kpi_card(col2, "Costi Sede", ce_g["costi_sede_allocati"], formato="euro")
+        mostra_kpi_card(col3, "MOL-G", ce_g["mol_gestionale"], formato="euro")
+        mostra_kpi_card(col4, "MOL-G %", ce_g["mol_gestionale_pct"], formato="percentuale")
+        livello = "VERDE" if ce_g["mol_gestionale_pct"] >= 0.08 else (
+            "GIALLO" if ce_g["mol_gestionale_pct"] >= 0.0 else "ROSSO"
+        )
+        mostra_semaforo(col4, livello)
 
         # Tabella voci sede
         if voci_sede:
