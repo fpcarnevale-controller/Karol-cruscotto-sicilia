@@ -84,8 +84,18 @@ def ricarica_dati():
 # ============================================================================
 
 with st.sidebar:
-    st.image("https://via.placeholder.com/200x60/1F4E79/FFFFFF?text=KAROL+CDG", width=200)
-    st.markdown("### Controllo di Gestione")
+    # Logo testuale stilizzato (sostituire con st.image("assets/logo.png") se disponibile)
+    LOGO_PATH = ROOT_DIR / "assets" / "logo.png"
+    if LOGO_PATH.exists():
+        st.image(str(LOGO_PATH), width=200)
+    else:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #1F4E79 0%, #2E75B6 100%);
+                    padding: 12px 16px; border-radius: 8px; text-align: center; margin-bottom: 8px;">
+            <span style="color: white; font-size: 1.6rem; font-weight: 800; letter-spacing: 2px;">KAROL</span><br>
+            <span style="color: #B0D0F0; font-size: 0.7rem; letter-spacing: 3px;">CONTROLLO DI GESTIONE</span>
+        </div>
+        """, unsafe_allow_html=True)
     st.markdown("**Gruppo Karol S.p.A.**")
     st.divider()
 
