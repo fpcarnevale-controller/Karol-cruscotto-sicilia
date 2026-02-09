@@ -427,9 +427,10 @@ def mostra_ce_gestionale(risultati: dict, dati: dict) -> None:
     # --- Grafico a barre MOL-I vs Costi Sede vs MOL-G ---
     st.subheader("MOL Industriale vs Costi Sede vs MOL Gestionale per UO")
 
-    df_grafico = _prepara_dati_grafico_mol_sede(ce_industriale, ce_gestionale)
-    if not df_grafico.empty:
-        grafico_barre_confronto_uo(df_grafico)
+    if ce_industriale and ce_gestionale:
+        from karol_cdg.webapp.componenti.grafici import grafico_barre_mol
+        fig_mol = grafico_barre_mol(ce_industriale, ce_gestionale)
+        st.plotly_chart(fig_mol, use_container_width=True)
     else:
         st.info("Nessun dato disponibile per il grafico.")
 

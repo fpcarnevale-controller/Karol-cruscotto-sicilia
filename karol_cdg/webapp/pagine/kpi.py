@@ -147,7 +147,8 @@ def mostra_kpi(risultati: dict, dati: dict):
         if kpi_radar:
             nome_uo = UNITA_OPERATIVE[uo_per_radar].nome if uo_per_radar in UNITA_OPERATIVE else uo_per_radar
             st.markdown(f"**Profilo KPI: {nome_uo} ({uo_per_radar})**")
-            grafico_radar_kpi(kpi_radar, titolo=f"Radar KPI - {nome_uo}")
+            fig_radar = grafico_radar_kpi(kpi_radar, uo_per_radar)
+            st.plotly_chart(fig_radar, use_container_width=True)
         else:
             st.info(f"Nessun KPI disponibile per {uo_per_radar}.")
     else:

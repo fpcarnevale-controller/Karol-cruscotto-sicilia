@@ -373,6 +373,7 @@ def mostra_ce_industriale(risultati: dict, dati: dict) -> None:
     """
     # --- Estrazione dati ---
     ce_industriale = risultati.get("ce_industriale", {})
+    ce_gestionale = risultati.get("ce_gestionale", {})
 
     # --- Titolo ---
     st.title("Conto Economico Industriale")
@@ -408,9 +409,10 @@ def mostra_ce_industriale(risultati: dict, dati: dict) -> None:
 
     with colonna_sinistra:
         st.subheader("Composizione costi per UO")
-        df_costi_cat = _prepara_dati_costi_per_categoria(ce_industriale, uo_selezionate)
-        if not df_costi_cat.empty:
-            grafico_barre_confronto_uo(df_costi_cat)
+        ce_filtrato = {uo: ce_industriale[uo] for uo in uo_selezionate if uo in ce_industriale}
+        if ce_filtrato:
+            fig_costi = grafico_barre_confronto_uo(ce_filtrato)
+            st.plotly_chart(fig_costi, use_container_width=True)
         else:
             st.info("Nessun dato costi disponibile per le UO selezionate.")
 
@@ -430,8 +432,8 @@ def mostra_ce_industriale(risultati: dict, dati: dict) -> None:
             )
             codice_waterfall = _estrai_codice_uo(uo_waterfall)
 
-            dati_waterfall = _prepara_dati_waterfall(ce_industriale, codice_waterfall)
-            grafico_waterfall_ce(dati_waterfall)
+            fig_wf = grafico_waterfall_ce(codice_waterfall, ce_industriale, ce_gestionale)
+            st.plotly_chart(fig_wf, use_container_width=True)
         else:
             st.info("Seleziona almeno una UO per visualizzare il waterfall.")
 

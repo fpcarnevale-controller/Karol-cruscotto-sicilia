@@ -325,19 +325,14 @@ def mostra_home(risultati: dict, dati: dict) -> None:
 
     with colonna_sinistra:
         st.subheader("MOL Industriale vs MOL Gestionale")
-        dati_mol = {}
-        for codice_uo in UO_OPERATIVE:
-            if codice_uo in ce_industriale and codice_uo in ce_gestionale:
-                dati_mol[codice_uo] = {
-                    "mol_industriale": ce_industriale[codice_uo]["mol_industriale"],
-                    "mol_gestionale": ce_gestionale[codice_uo]["mol_gestionale"],
-                }
-        grafico_barre_mol(dati_mol)
+        fig_mol = grafico_barre_mol(ce_industriale, ce_gestionale)
+        st.plotly_chart(fig_mol, use_container_width=True)
 
     with colonna_destra:
         st.subheader("Composizione costi sede")
         if riepilogo_cat:
-            grafico_torta_sede(riepilogo_cat)
+            fig_torta = grafico_torta_sede(riepilogo_cat)
+            st.plotly_chart(fig_torta, use_container_width=True)
         else:
             st.info("Dati di riepilogo costi sede non disponibili.")
 
