@@ -1049,8 +1049,8 @@ def scrivi_dashboard_economica(wb, ce_industriale: dict, ce_gestionale: dict, kp
 # FUNZIONE PRINCIPALE
 # ============================================================================
 
-def elabora_completo(file_path: Path = None):
-    """Esegue l'elaborazione completa e scrive i risultati nell'Excel Master."""
+def elabora_completo(file_path: Path = None, scrivi_excel: bool = True):
+    """Esegue l'elaborazione completa e opzionalmente scrive i risultati nell'Excel Master."""
     if file_path is None:
         file_path = EXCEL_MASTER
 
@@ -1078,18 +1078,19 @@ def elabora_completo(file_path: Path = None):
     kpi_list = calcola_kpi(ce_industriale, ce_gestionale, dati)
     logger.info(f"Calcolati {len(kpi_list)} KPI")
 
-    # 6. Scrittura Excel
-    print("\n--- SCRITTURA RISULTATI SU EXCEL ---")
-    wb = openpyxl.load_workbook(file_path)
+    # 6. Scrittura Excel (opzionale)
+    if scrivi_excel:
+        print("\n--- SCRITTURA RISULTATI SU EXCEL ---")
+        wb = openpyxl.load_workbook(file_path)
 
-    scrivi_ce_industriale(wb, ce_industriale)
-    scrivi_ce_gestionale(wb, ce_industriale, ce_gestionale, allocazione, non_allocati, riepilogo_cat)
-    scrivi_kpi(wb, kpi_list)
-    scrivi_dashboard_economica(wb, ce_industriale, ce_gestionale, kpi_list)
+        scrivi_ce_industriale(wb, ce_industriale)
+        scrivi_ce_gestionale(wb, ce_industriale, ce_gestionale, allocazione, non_allocati, riepilogo_cat)
+        scrivi_kpi(wb, kpi_list)
+        scrivi_dashboard_economica(wb, ce_industriale, ce_gestionale, kpi_list)
 
-    wb.save(file_path)
-    print(f"\nRisultati salvati in: {file_path}")
-    print(f"Dimensione file: {file_path.stat().st_size / 1024:.1f} KB")
+        wb.save(file_path)
+        print(f"\nRisultati salvati in: {file_path}")
+        print(f"Dimensione file: {file_path.stat().st_size / 1024:.1f} KB")
 
     # Riepilogo finale
     print("\n" + "=" * 70)
@@ -1115,6 +1116,8 @@ def elabora_completo(file_path: Path = None):
         "ce_gestionale": ce_gestionale,
         "allocazione": allocazione,
         "kpi": kpi_list,
+        "non_allocati": non_allocati,
+        "riepilogo_cat": riepilogo_cat,
     }
 
 
