@@ -299,7 +299,8 @@ def mostra_home(risultati: dict, dati: dict) -> None:
     kpi_consolidati = _calcola_kpi_consolidati(ce_industriale, ce_gestionale)
 
     riga_kpi_consolidati(
-        ricavi_totali=kpi_consolidati["ricavi_totali"],
+        st,
+        totale_ricavi=kpi_consolidati["ricavi_totali"],
         mol_i=kpi_consolidati["mol_i_totale"],
         mol_i_pct=kpi_consolidati["mol_i_pct"],
         mol_g=kpi_consolidati["mol_g_totale"],
@@ -316,7 +317,7 @@ def mostra_home(risultati: dict, dati: dict) -> None:
     ]
 
     if kpi_critici:
-        pannello_alert(kpi_critici)
+        pannello_alert(st, kpi_critici)
         st.divider()
 
     # --- Grafici: MOL-I vs MOL-G e Torta costi sede ---
