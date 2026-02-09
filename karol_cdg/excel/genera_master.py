@@ -17,7 +17,7 @@ from karol_cdg.config import (
     UNITA_OPERATIVE, VOCI_RICAVI, VOCI_COSTI_DIRETTI, VOCI_COSTI_SEDE,
     VOCI_ALTRI_COSTI, DRIVER_PREDEFINITI, BENCHMARK, ALERT_CONFIG,
     SOGLIE_SEMAFORO, SCENARI_CASH_FLOW, MESI_BREVI_IT, MESI_IT,
-    CategoriaCostoSede, DriverAllocazione, QualificaPersonale,
+    CategoriaCostoSede, DriverAllocazione, QualificaPersonale, StatoUO,
     EXCEL_MASTER, DATA_DIR, BACKUP_DIR, OUTPUT_DIR,
 )
 
@@ -87,7 +87,7 @@ def _crea_foglio_anagrafiche_uo(wb):
     ws = wb.create_sheet("Anagrafiche_UO")
     intestazioni = [
         "Codice", "Nome", "Tipologia", "Regione", "Posti Letto",
-        "Società", "Attiva", "Note"
+        "Società", "Stato", "Attiva", "Note"
     ]
 
     for col, titolo in enumerate(intestazioni, 1):
@@ -101,13 +101,14 @@ def _crea_foglio_anagrafiche_uo(wb):
         ws.cell(row=riga, column=4, value=uo.regione.value)
         ws.cell(row=riga, column=5, value=uo.posti_letto)
         ws.cell(row=riga, column=6, value=uo.societa)
-        ws.cell(row=riga, column=7, value="Sì" if uo.attiva else "No")
-        ws.cell(row=riga, column=8, value=uo.note)
+        ws.cell(row=riga, column=7, value=uo.stato.value)
+        ws.cell(row=riga, column=8, value="Sì" if uo.attiva else "No")
+        ws.cell(row=riga, column=9, value=uo.note)
         for col in range(1, len(intestazioni) + 1):
             ws.cell(row=riga, column=col).font = FONT_NORMALE
             ws.cell(row=riga, column=col).border = BORDO_SOTTILE
 
-    _imposta_larghezza_colonne(ws, {1: 10, 2: 30, 3: 40, 4: 12, 5: 12, 6: 20, 7: 8, 8: 50})
+    _imposta_larghezza_colonne(ws, {1: 10, 2: 30, 3: 40, 4: 12, 5: 12, 6: 20, 7: 22, 8: 8, 9: 55})
     logger.info("Foglio Anagrafiche_UO creato")
 
 
@@ -285,13 +286,7 @@ def _crea_foglio_scadenzario(wb):
         ws.cell(row=1, column=col, value=titolo)
     _applica_stile_intestazione(ws, 1, len(intestazioni))
 
-    # Righe input vuote formattate
-    for riga in range(2, 102):
-        ws.cell(row=riga, column=1).number_format = "DD/MM/YYYY"
-        ws.cell(row=riga, column=4).number_format = '#.##0,00 €'
-        for col in range(1, len(intestazioni) + 1):
-            ws.cell(row=riga, column=col).fill = FILL_INPUT
-            ws.cell(row=riga, column=col).border = BORDO_SOTTILE
+    # Solo header, dati inseriti da import o manualmente
 
     _imposta_larghezza_colonne(ws, {
         1: 15, 2: 22, 3: 20, 4: 15, 5: 25, 6: 18, 7: 28, 8: 30
@@ -553,11 +548,11 @@ def _crea_foglio_cash_flow_strategico(wb):
         "EBITDA",
         "+/- Variazione CCN",
         "- CAPEX",
-        "= FREE CASH FLOW OPERATIVO",
+        "FREE CASH FLOW OPERATIVO",
         "",
         "- Servizio debito",
         "- Imposte",
-        "= FREE CASH FLOW NETTO",
+        "FREE CASH FLOW NETTO",
         "",
         "PFN iniziale",
         "PFN finale",
