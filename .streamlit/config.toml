@@ -1,0 +1,16 @@
+# Karol CDG - Configurazione Streamlit Cloud
+# Tema e parametri server
+
+[theme]
+primaryColor = "#1F4E79"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F4F8"
+textColor = "#262730"
+font = "sans serif"
+
+[server]
+headless = true
+maxUploadSize = 50
+
+[browser]
+gatherUsageStats = false
