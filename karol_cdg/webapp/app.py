@@ -84,9 +84,12 @@ def ricarica_dati():
 # ============================================================================
 
 with st.sidebar:
-    # Logo: cerca SVG, poi PNG, altrimenti logo testuale
-    LOGO_SVG = ROOT_DIR / "assets" / "logo.svg"
-    LOGO_PNG = ROOT_DIR / "assets" / "logo.png"
+    # Logo: cerca SVG (nome originale o logo.svg), poi PNG, altrimenti logo testuale
+    ASSETS_DIR = ROOT_DIR / "assets"
+    LOGO_SVG = ASSETS_DIR / "Karol_strutture-sanitarie.svg"
+    if not LOGO_SVG.exists():
+        LOGO_SVG = ASSETS_DIR / "logo.svg"
+    LOGO_PNG = ASSETS_DIR / "logo.png"
     if LOGO_SVG.exists():
         svg_content = LOGO_SVG.read_text(encoding="utf-8")
         st.markdown(f'<div style="text-align:center; margin-bottom:8px;">{svg_content}</div>',
