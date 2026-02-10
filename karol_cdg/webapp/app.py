@@ -91,9 +91,16 @@ with st.sidebar:
         LOGO_SVG = ASSETS_DIR / "logo.svg"
     LOGO_PNG = ASSETS_DIR / "logo.png"
     if LOGO_SVG.exists():
+        import re
         svg_content = LOGO_SVG.read_text(encoding="utf-8")
-        st.markdown(f'<div style="text-align:center; margin-bottom:8px;">{svg_content}</div>',
-                    unsafe_allow_html=True)
+        # Rimuove dichiarazione XML e commenti che causano problemi nell'embedding
+        svg_content = re.sub(r'<\?xml[^?]*\?>', '', svg_content)
+        svg_content = re.sub(r'<!--.*?-->', '', svg_content, flags=re.DOTALL)
+        # Forza larghezza massima per la sidebar
+        svg_content = svg_content.replace('<svg ', '<svg width="100%" ', 1)
+        st.markdown(
+            f'<div style="text-align:center; margin-bottom:8px; max-width:220px;">{svg_content}</div>',
+            unsafe_allow_html=True)
     elif LOGO_PNG.exists():
         st.image(str(LOGO_PNG), width=200)
     else:
