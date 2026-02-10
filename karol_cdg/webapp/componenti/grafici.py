@@ -665,3 +665,203 @@ def grafico_barre_confronto_benchmark(righe_benchmark: list) -> go.Figure:
     fig.update_layout(**layout)
 
     return fig
+
+
+# ============================================================================
+# 8. WATERFALL LIQUIDITA' (Cash Flow)
+# ============================================================================
+
+
+def crea_waterfall_liquidita(dati: dict) -> go.Figure:
+    """
+    Grafico waterfall della liquidita': da cassa iniziale a cassa finale
+    passando per incassi, uscite personale, fornitori, fiscali, investimenti.
+    """
+    nomi = [
+        "Cassa Iniziale", "Incassi Operativi", "Uscite Personale",
+        "Uscite Fornitori", "Uscite Fiscali", "Investimenti", "Cassa Finale",
+    ]
+    valori = [
+        dati.get("cassa_iniziale", 0),
+        dati.get("incassi_operativi", 0),
+        -dati.get("uscite_personale", 0),
+        -dati.get("uscite_fornitori", 0),
+        -dati.get("uscite_fiscali", 0),
+        -dati.get("uscite_investimenti", 0),
+        0,
+    ]
+    misure = ["absolute", "relative", "relative", "relative",
+              "relative", "relative", "total"]
+
+    fig = go.Figure(go.Waterfall(
+        name="Liquidita'",
+        orientation="v",
+        measure=misure,
+        x=nomi,
+        y=valori,
+        text=[f"EUR {_formato_migliaia(abs(v))}" for v in valori],
+        textposition="outside",
+        textfont=dict(size=10),
+        connector=dict(line=dict(color="#B0B0B0", width=1, dash="dot")),
+        increasing=dict(marker=dict(color=VERDE)),
+        decreasing=dict(marker=dict(color=ROSSO)),
+        totals=dict(marker=dict(color=BLU)),
+    ))
+
+    layout = _layout_base("Waterfall della Liquidita'")
+    layout["yaxis"] = dict(title="Euro", gridcolor="#E0E0E0", tickformat=",.0f")
+    layout["xaxis"] = dict(tickangle=-30)
+    layout["showlegend"] = False
+    fig.update_layout(**layout)
+    return fig
+
+
+# ============================================================================
+# 9. BURN RATE & RUNWAY MULTI-SCENARIO
+# ============================================================================
+
+
+def crea_grafico_burn_rate(df_scenari: pd.DataFrame, soglia: float) -> go.Figure:
+    """Grafico multi-linea proiezione cassa 3 scenari con soglia sicurezza."""
+    fig = go.Figure()
+
+    if "cassa_worst" in df_scenari.columns:
+        fig.add_trace(go.Scatter(
+            x=df_scenari["mese_anno"], y=df_scenari["cassa_worst"],
+            name="Pessimistico", mode="lines",
+            line=dict(color=ROSSO, width=2, dash="dash"),
+            hovertemplate="<b>Pessimistico</b><br>%{x}<br>EUR %{y:,.0f}<extra></extra>",
+        ))
+
+    if "cassa_base" in df_scenari.columns:
+        fig.add_trace(go.Scatter(
+            x=df_scenari["mese_anno"], y=df_scenari["cassa_base"],
+            name="Base", mode="lines+markers",
+            line=dict(color=BLU, width=3), marker=dict(size=5),
+            hovertemplate="<b>Base</b><br>%{x}<br>EUR %{y:,.0f}<extra></extra>",
+        ))
+
+    if "cassa_best" in df_scenari.columns:
+        fig.add_trace(go.Scatter(
+            x=df_scenari["mese_anno"], y=df_scenari["cassa_best"],
+            name="Ottimistico", mode="lines",
+            line=dict(color=VERDE, width=2, dash="dash"),
+            hovertemplate="<b>Ottimistico</b><br>%{x}<br>EUR %{y:,.0f}<extra></extra>",
+        ))
+
+    fig.add_hline(y=soglia, line_dash="dot", line_color=ARANCIONE,
+                  annotation_text=f"Soglia sicurezza: EUR {_formato_migliaia(soglia)}",
+                  annotation_position="top left")
+
+    layout = _layout_base("Proiezione Cassa - Analisi Scenari", altezza=450)
+    layout["yaxis"] = dict(title="Cassa (EUR)", gridcolor="#E0E0E0", tickformat=",.0f")
+    layout["xaxis"] = dict(tickangle=-45)
+    layout["hovermode"] = "x unified"
+    fig.update_layout(**layout)
+    return fig
+
+
+# ============================================================================
+# 10. HEATMAP SCADENZE
+# ============================================================================
+
+
+def crea_heatmap_scadenze(df_scadenze: pd.DataFrame) -> go.Figure:
+    """Heatmap 12x31 delle uscite previste per giorno del mese."""
+    import numpy as np
+
+    matrice = np.zeros((12, 31))
+
+    if not df_scadenze.empty and "data" in df_scadenze.columns:
+        for _, row in df_scadenze.iterrows():
+            d = row["data"]
+            if hasattr(d, "month") and hasattr(d, "day"):
+                matrice[d.month - 1][d.day - 1] += row.get("importo", 0)
+
+    nomi_mesi = list(MESI_BREVI_IT.values())
+    giorni = [str(g) for g in range(1, 32)]
+
+    fig = go.Figure(data=go.Heatmap(
+        z=matrice, x=giorni, y=nomi_mesi,
+        colorscale=[[0.0, "#F0F4F8"], [0.3, "#B0D0F0"],
+                     [0.6, ARANCIONE], [1.0, ROSSO]],
+        hovertemplate="Giorno %{x}<br>Mese: %{y}<br>Uscite: EUR %{z:,.0f}<extra></extra>",
+        colorbar=dict(title="EUR"),
+    ))
+
+    layout = _layout_base("Mappa di Calore Scadenze (Uscite per Giorno)", altezza=400)
+    layout["xaxis"] = dict(title="Giorno del mese", dtick=1)
+    layout["yaxis"] = dict(title="")
+    fig.update_layout(**layout)
+    return fig
+
+
+# ============================================================================
+# 11. DSCR PROSPETTICO
+# ============================================================================
+
+
+def crea_grafico_dscr(
+    df_dscr: pd.DataFrame, soglia_warning: float, soglia_critica: float,
+) -> go.Figure:
+    """Grafico DSCR prospettico con zone colorate verde/giallo/rosso."""
+    fig = go.Figure()
+
+    x_col = "mese_anno" if "mese_anno" in df_dscr.columns else df_dscr.index
+    x_vals = df_dscr[x_col] if isinstance(x_col, str) else x_col
+
+    fig.add_trace(go.Scatter(
+        x=x_vals, y=df_dscr["dscr"], mode="lines+markers", name="DSCR",
+        line=dict(color=BLU_SCURO, width=3), marker=dict(size=6),
+        hovertemplate="<b>DSCR</b>: %{y:.2f}<br>%{x}<extra></extra>",
+    ))
+
+    dscr_max = max(df_dscr["dscr"].max() * 1.2, soglia_warning * 2) if not df_dscr.empty else 3
+
+    fig.add_hrect(y0=0, y1=soglia_critica, fillcolor=ROSSO, opacity=0.1, line_width=0)
+    fig.add_hrect(y0=soglia_critica, y1=soglia_warning, fillcolor=ARANCIONE, opacity=0.1, line_width=0)
+    fig.add_hrect(y0=soglia_warning, y1=dscr_max, fillcolor=VERDE, opacity=0.1, line_width=0)
+    fig.add_hline(y=soglia_critica, line_dash="dot", line_color=ROSSO,
+                  annotation_text=f"Critico ({soglia_critica})")
+    fig.add_hline(y=soglia_warning, line_dash="dot", line_color=ARANCIONE,
+                  annotation_text=f"Warning ({soglia_warning})")
+
+    layout = _layout_base("DSCR Prospettico", altezza=400)
+    layout["yaxis"] = dict(title="DSCR", gridcolor="#E0E0E0", range=[0, dscr_max])
+    layout["xaxis"] = dict(tickangle=-45)
+    layout["showlegend"] = False
+    fig.update_layout(**layout)
+    return fig
+
+
+# ============================================================================
+# 12. PIANO CAPEX
+# ============================================================================
+
+
+def crea_grafico_capex(piano: dict, anno_corrente: int) -> go.Figure:
+    """Grafico a barre piano CAPEX 2024-2030 con evidenziazione anno corrente."""
+    anni = sorted(piano.keys())
+    importi = [piano[a] for a in anni]
+    colori = [BLU_SCURO if a == anno_corrente else BLU for a in anni]
+
+    fig = go.Figure(go.Bar(
+        x=[str(a) for a in anni], y=importi, marker_color=colori,
+        text=[f"EUR {_formato_migliaia(v)}" for v in importi],
+        textposition="outside", textfont=dict(size=11),
+        hovertemplate="<b>Anno %{x}</b><br>CAPEX: EUR %{y:,.0f}<extra></extra>",
+    ))
+
+    if anno_corrente in piano:
+        fig.add_annotation(
+            x=str(anno_corrente), y=piano[anno_corrente],
+            text="Anno corrente", showarrow=True, arrowhead=2,
+            arrowcolor=ARANCIONE,
+            font=dict(color=ARANCIONE, size=11),
+        )
+
+    layout = _layout_base("Piano Investimenti (CAPEX)", altezza=400)
+    layout["yaxis"] = dict(title="EUR", gridcolor="#E0E0E0", tickformat=",.0f")
+    layout["showlegend"] = False
+    fig.update_layout(**layout)
+    return fig

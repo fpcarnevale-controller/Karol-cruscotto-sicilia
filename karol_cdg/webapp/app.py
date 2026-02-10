@@ -121,6 +121,7 @@ with st.sidebar:
             "🏢 Analisi Sede",
             "🎯 KPI",
             "🔮 Scenari",
+            "💰 Cash Flow",
             "📁 Gestione Dati",
         ],
         label_visibility="collapsed",
@@ -185,6 +186,10 @@ elif pagina == "🎯 KPI":
 elif pagina == "🔮 Scenari":
     from karol_cdg.webapp.pagine.scenari import mostra_scenari
     mostra_scenari(risultati, dati)
+
+elif pagina == "💰 Cash Flow":
+    from karol_cdg.webapp.pagine.cash_flow import mostra_cash_flow
+    mostra_cash_flow(risultati, dati)
 
 elif pagina == "📁 Gestione Dati":
     from karol_cdg.webapp.pagine.carica_dati import mostra_carica_dati

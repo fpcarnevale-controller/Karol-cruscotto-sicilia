@@ -112,11 +112,13 @@ def leggi_dati_master(file_path: Path):
     df_sede = leggi_foglio(file_path, "Costi_Sede_Dettaglio")
     df_driver = leggi_foglio(file_path, "Driver_Allocazione")
     df_pers = leggi_foglio(file_path, "Anagrafiche_Personale")
+    df_scad = leggi_foglio(file_path, "Scadenzario")
 
     logger.info(f"  Produzione: {len(df_prod)} righe")
     logger.info(f"  Costi: {len(df_costi)} righe")
     logger.info(f"  Costi sede: {len(df_sede)} righe")
     logger.info(f"  Personale: {len(df_pers)} righe")
+    logger.info(f"  Scadenzario: {len(df_scad)} righe")
 
     return {
         "produzione": df_prod,
@@ -124,6 +126,13 @@ def leggi_dati_master(file_path: Path):
         "costi_sede": df_sede,
         "driver": df_driver,
         "personale": df_pers,
+        # Chiavi con nomi originali per compatibilita' con pagina Cash Flow
+        "Produzione_Mensile": df_prod,
+        "Costi_Mensili": df_costi,
+        "Costi_Sede_Dettaglio": df_sede,
+        "Driver_Allocazione": df_driver,
+        "Anagrafiche_Personale": df_pers,
+        "Scadenzario": df_scad,
     }
 
 

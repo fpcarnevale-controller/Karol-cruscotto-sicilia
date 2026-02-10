@@ -493,3 +493,32 @@ MESI_BREVI_IT = {
     5: "Mag", 6: "Giu", 7: "Lug", 8: "Ago",
     9: "Set", 10: "Ott", 11: "Nov", 12: "Dic",
 }
+
+# ============================================================================
+# CASH FLOW - CONFIGURAZIONE AVANZATA
+# ============================================================================
+
+CASH_FLOW_CONFIG = {
+    "cassa_iniziale_default": 500_000,
+    "soglia_hard_alert": 200_000,
+    "dscr_warning": 1.1,
+    "dscr_critico": 1.0,
+    "servizio_debito_annuale": 180_000,
+    "aliquota_contributiva": 0.33,
+    "capex_piano_industriale": {
+        2024: 150_000, 2025: 200_000, 2026: 350_000,
+        2027: 500_000, 2028: 300_000, 2029: 200_000, 2030: 150_000,
+    },
+    "scadenze_fiscali_tipo": {
+        "F24": {"giorno": 16, "frequenza": "mensile"},
+        "IVA": {"frequenza": "trimestrale", "mesi": [3, 6, 9, 12]},
+        "IRES_IRAP_acconto": {"mese": 6, "giorno": 30},
+        "IRES_IRAP_saldo": {"mese": 11, "giorno": 30},
+    },
+}
+
+SCENARI_CASH_FLOW = {
+    "ottimistico": {"ritardo_incassi": -15, "variazione_costi": 0.0},
+    "base": {"ritardo_incassi": 0, "variazione_costi": 0.0},
+    "pessimistico": {"ritardo_incassi": 30, "variazione_costi": 0.05},
+}
