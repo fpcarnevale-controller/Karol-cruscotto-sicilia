@@ -76,6 +76,67 @@ Esplorazione completa del progetto (45 moduli Python, 23 fogli Master Excel, das
 - KPI con sistema semafori (ROSSO/GIALLO/VERDE) per ogni UO + consolidato gruppo
 - Trend mensili aggregati + singole UO con mini-grafici
 
+## Dashboard v3.0 — 13/02/2026
+
+### Architettura confermata
+- React 18.2.0 + Recharts 2.12.7 via esm.sh + importmap (no bundler)
+- Babel standalone per JSX transformation
+- Deploy: GitHub Pages su branch `claude/add-financial-forecasting-sXecY`
+- URL: https://fpcarnevale-controller.github.io/Karol-cruscotto-sicilia/
+- Commit: `a483e2a`
+
+### Modifiche implementate
+
+**Fase 1 — Ristrutturazione dati e formattazione**
+- `KAROL_DATA`: oggetto centralizzato con breakdown costi per UO (personale, materiali, servizi, utenze, manutenzione, altri), dati budget, ammortamenti, oneri finanziari
+- `BENCHMARK`: costanti settore (pers 55%, MOL-I 15%, MOL-G 8%, occ 90%, costo PL/gg €130, DSO 120gg)
+- Margini (MOL-I, MOL-G, EBIT) calcolati automaticamente da KAROL_DATA
+- KPI semafori auto-generati da benchmark (non più hardcoded)
+- `formatEuro`: tutti gli importi in formato preciso € X.XXX.XXX — eliminati fmtK/fmtM
+
+**Fase 1c — Overview ridisegnata**
+- 6 card costi gestionali (Personale, Materiali, Servizi, Utenze, Manutenzione, Sede) con semaforo vs benchmark
+- Matrice KPI: aggiunta colonna "Costo PL/gg"
+- Click su riga UO naviga direttamente a tab Strutture
+
+**Fase 2 — Conto Economico (nuovo tab)**
+- Sub-tab "CE Consolidato": tabella P&L completa Consuntivo vs Budget con delta e % ricavi
+- Sub-tab "CE per BU": selezione UO + P&L individuale + riga riconciliazione automatica
+- Sub-tab "Forecast": linearizzazione a 12 mesi, confronto vs budget per UO + totale
+
+**Fase 3a — Analisi Costi (tab ridisegnato)**
+- Stacked bar composizione costi per UO (6 categorie)
+- Benchmark incidenza % su ricavi (personale %, costi dir %) con confronto settore
+- Narrative per UO invariate
+
+**Fase 3b — Simulazioni (nuovo tab)**
+- 4 slider: Ricavi (±20%), Personale (±15%), Sede (−30/+10%), Occupancy (±10pp)
+- Impatto real-time su Ricavi/MOL-G/EBIT con delta evidenziato
+- Waterfall delta (MOL-G attuale → variazioni → MOL-G simulato)
+- KPI simulati (MOL-G %, Pers %, Sede %)
+- Pulsante Reset
+
+**Miglioramenti generali**
+- 7 tab totali: Overview | Conto Economico | Strutture | Trend | Cash Flow | Analisi | Simulazioni
+- Footer aggiornato v3.0 con data ultimo aggiornamento da KAROL_DATA.meta
+- Cash Flow: importi waterfall/cassa in formato preciso
+- Strutture: aggiunto Costo PL/gg nel dettaglio UO
+
+### Numeri chiave (invariati rispetto a test)
+| Metrica | Valore |
+|---------|--------|
+| Ricavi Totali | € 9.849.287 |
+| MOL Industriale | € 2.084.759 (21,2%) |
+| Costi Sede | € 1.592.000 (16,2%) |
+| MOL Gestionale | € 492.759 (5,0%) |
+| EBIT | -€ 9.241 |
+| CF Netto | -€ 600.241 |
+
+### File (1.082 righe)
+- `index.html` — SPA completa, deploy-ready
+
+---
+
 ## FASE 2 DA FARE — Automazione caricamento dati
 
 ### Domande da chiarire
@@ -83,3 +144,21 @@ Esplorazione completa del progetto (45 moduli Python, 23 fogli Master Excel, das
 - Frequenza aggiornamento desiderata per ogni fonte dati (settimanale/mensile?)
 - I report CSV/Excel che i software producono: puoi condividerne un campione?
 - Preferenza tra n8n workflow o script Python schedulati?
+
+## PROSSIMI PASSI — Dashboard
+
+### Priorità alta
+- Export PDF/Excel (jsPDF + html2canvas / SheetJS) con modal configurazione
+- Treemap costi per visualizzazione gerarchica
+- Forecast: aggiungere metodo "budget residuo" e "trend ponderato" (ora solo linearizzazione)
+
+### Priorità media
+- Strutture: donut chart per composizione costi UO
+- Cash Flow: CCC (Cash Conversion Cycle), scadenziario tabellare
+- Simulazioni: integrazione con forecast (proiezione multi-anno)
+- Cross-section coherence checks (CE ↔ Analisi Costi, Forecast ↔ Simulazioni)
+
+### Priorità bassa
+- Responsive mobile
+- Dark mode
+- Animazioni transizione tab
