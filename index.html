@@ -1274,6 +1274,71 @@ const KarolDashboard = () => {
               </ResponsiveContainer>
             </div>
 
+            {/* Treemap costi — visualizzazione gerarchica */}
+            <div style={cardS}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Mappa Costi — Treemap Gerarchico</h3>
+              <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Area proporzionale all'importo — Costi diretti UO + Sede HQ</p>
+              {(() => {
+                const catColors = { Personale: '#3b82f6', Materiali: '#8b5cf6', Servizi: '#06b6d4', Utenze: '#f59e0b', Manutenzione: '#ef4444', Altri: '#94a3b8', Sede: '#1e293b' };
+                // Costruisci dati treemap: per ogni UO, le categorie di costo
+                const tmData = [];
+                UO.forEach(u => {
+                  Object.entries(u.costi).forEach(([cat, val]) => {
+                    if (val > 0) {
+                      const catLabel = cat.charAt(0).toUpperCase() + cat.slice(1);
+                      tmData.push({ name: u.cod + ' — ' + catLabel, size: val, uo: u.cod, cat: catLabel, color: catColors[catLabel] || '#94a3b8' });
+                    }
+                  });
+                });
+                // Aggiungi costi sede
+                Object.entries(D.SEDE).forEach(([k, v]) => {
+                  if (k !== 'totale' && v > 0) {
+                    const label = k.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+                    tmData.push({ name: 'SEDE — ' + label, size: v, uo: 'SEDE', cat: 'Sede', color: catColors.Sede });
+                  }
+                });
+                tmData.sort((a, b) => b.size - a.size);
+
+                const CustomContent = (props) => {
+                  const { x, y, width, height, name, size } = props;
+                  if (width < 40 || height < 25) return null;
+                  return (
+                    <g>
+                      <rect x={x} y={y} width={width} height={height} rx={4}
+                        style={{ fill: props.color || '#94a3b8', stroke: '#fff', strokeWidth: 2, opacity: 0.85 }} />
+                      {width > 60 && height > 35 && (
+                        <text x={x + width / 2} y={y + height / 2 - 7} textAnchor="middle" fill="#fff" fontSize={10} fontWeight={600}>
+                          {name?.split(' — ')[0]}
+                        </text>
+                      )}
+                      {width > 60 && height > 35 && (
+                        <text x={x + width / 2} y={y + height / 2 + 8} textAnchor="middle" fill="#ffffffcc" fontSize={9}>
+                          {fmt(size)}
+                        </text>
+                      )}
+                    </g>
+                  );
+                };
+
+                return (
+                  <div>
+                    <ResponsiveContainer width="100%" height={340}>
+                      <Treemap data={tmData} dataKey="size" nameKey="name" content={<CustomContent />}>
+                        <Tooltip formatter={v => [fmt(v), 'Importo']} />
+                      </Treemap>
+                    </ResponsiveContainer>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 10, justifyContent: 'center' }}>
+                      {Object.entries(catColors).map(([cat, col]) => (
+                        <span key={cat} style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ width: 12, height: 12, borderRadius: 3, background: col, opacity: 0.85 }}></span>{cat}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
             {/* Benchmark confronto — incidenza % su ricavi */}
             <div style={cardS}>
               <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Benchmark — Incidenza Costi su Ricavi</h3>
@@ -1417,7 +1482,7 @@ const KarolDashboard = () => {
                   </ResponsiveContainer>
                 </div>
 
-                {/* Margine di sicurezza */}
+                {/* KPI simulati */}
                 <div style={{ ...cardS, padding: '12px 16px' }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: C.t1, marginBottom: 6 }}>KPI Simulati</div>
                   <div style={{ display: 'flex', gap: 12 }}>
@@ -1425,6 +1490,72 @@ const KarolDashboard = () => {
                     <span style={{ fontSize: 11, color: C.t2 }}>Pers %: <strong style={{ color: simTotPers / simTotRic <= 0.55 ? C.verde : C.rosso }}>{fmtPct(simTotPers / simTotRic)}</strong></span>
                     <span style={{ fontSize: 11, color: C.t2 }}>Sede %: <strong style={{ color: simTotSede / simTotRic <= 0.12 ? C.verde : C.rosso }}>{fmtPct(simTotSede / simTotRic)}</strong></span>
                   </div>
+                </div>
+              </div>
+
+              {/* Proiezione multi-anno (full width) */}
+              <div style={{ ...cardS, gridColumn: '1 / -1' }}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Proiezione Multi-Anno — Scenario Simulato</h3>
+                <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Effetto cumulato delle leve what-if su 5 anni (ipotesi: variazione costante annua)</p>
+                {(() => {
+                  const anno0 = D.meta.anno;
+                  const proj = [];
+                  for (let a = 0; a <= 5; a++) {
+                    const compRic = Math.pow(1 + simRic / 100, a);
+                    const compPers = Math.pow(1 + simPers / 100, a);
+                    const compSede = Math.pow(1 + simSede / 100, a);
+                    const ric = TOT.ric * compRic;
+                    const pers = TOT.pers * compPers;
+                    const altriC = TOT.cDir - TOT.pers;
+                    const molI = ric - pers - altriC;
+                    const sede = TOT.sede * compSede;
+                    const molG = molI - sede;
+                    const ebit = molG - TOT.ammort - TOT.oneri_fin;
+                    proj.push({ anno: anno0 + a, Ricavi: Math.round(ric), 'MOL-G': Math.round(molG), EBIT: Math.round(ebit) });
+                  }
+                  return (
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+                      <ResponsiveContainer width="100%" height={260}>
+                        <ComposedChart data={proj} margin={{ top: 10, right: 20, left: 20, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                          <XAxis dataKey="anno" fontSize={12} stroke={C.t2} />
+                          <YAxis tickFormatter={v => fmt(v)} fontSize={9} stroke={C.t3} />
+                          <Tooltip formatter={v => [fmt(v)]} />
+                          <Legend />
+                          <Bar dataKey="Ricavi" fill="#e2e8f0" barSize={28} radius={[3,3,0,0]} />
+                          <Line type="monotone" dataKey="MOL-G" stroke={C.CTA} strokeWidth={2.5} dot={{ r: 4, fill: C.CTA }} />
+                          <Line type="monotone" dataKey="EBIT" stroke={C.rosso} strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3, fill: C.rosso }} />
+                          <ReferenceLine y={0} stroke={C.t3} strokeWidth={1} />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                      <table style={{ borderCollapse: 'collapse', fontSize: 11, alignSelf: 'center' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '2px solid ' + C.bordo }}>
+                            <th style={{ padding: '5px 8px', color: C.t2, textAlign: 'left' }}>Anno</th>
+                            <th style={{ padding: '5px 8px', color: C.t2, textAlign: 'right' }}>Ricavi</th>
+                            <th style={{ padding: '5px 8px', color: C.t2, textAlign: 'right' }}>MOL-G</th>
+                            <th style={{ padding: '5px 8px', color: C.t2, textAlign: 'right' }}>EBIT</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {proj.map((p, i) => (
+                            <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo, background: i === 0 ? '#f0f4f8' : 'transparent' }}>
+                              <td style={{ padding: '5px 8px', fontWeight: i === 0 ? 700 : 500 }}>{p.anno}{i === 0 ? ' (att.)' : ''}</td>
+                              <td style={{ padding: '5px 8px', textAlign: 'right', fontFamily: 'monospace' }}>{fmt(p.Ricavi)}</td>
+                              <td style={{ padding: '5px 8px', textAlign: 'right', fontFamily: 'monospace', color: p['MOL-G'] >= 0 ? C.verde : C.rosso }}>{fmt(p['MOL-G'])}</td>
+                              <td style={{ padding: '5px 8px', textAlign: 'right', fontFamily: 'monospace', color: p.EBIT >= 0 ? C.verde : C.rosso }}>{fmt(p.EBIT)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
+                <div style={{ marginTop: 10, padding: '8px 12px', background: '#f0f4f8', borderRadius: 6, fontSize: 11, color: C.t2 }}>
+                  {simRic === 0 && simPers === 0 && simSede === 0
+                    ? 'Muovi gli slider per vedere la proiezione multi-anno. L\'effetto si compone geometricamente.'
+                    : `Ipotesi: Ricavi ${simRic >= 0 ? '+' : ''}${simRic}%/anno, Personale ${simPers >= 0 ? '+' : ''}${simPers}%/anno, Sede ${simSede >= 0 ? '+' : ''}${simSede}%/anno — compounding su 5 anni.`
+                  }
                 </div>
               </div>
             </div>
