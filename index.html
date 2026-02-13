@@ -71,6 +71,8 @@ const KAROL_DATA = {
       costi: { personale: 1971012, materiali: 22552, servizi: 224063, utenze: 219307, manutenzione: 0, altri: 3315 },
       budget_costi: { personale: 1971012, materiali: 22552, servizi: 224063, utenze: 219307, manutenzione: 0, altri: 3315 },
       sede: 0, ammortamenti: 214000, oneri_fin: 514, // D&A allocata pro-rata ricavi (24% di €893k)
+      // IMMOBILE: in locazione — affitto €219k/anno incluso in utenze
+      immobile: { tipo: 'locazione', affitto_reale: 219307, affitto_figurativo: 0, costo_storico: 0 },
       // NOTA: VLB include personale Centro Gottardo (FKT ~€40k fatture), cucina, trasporto disabili
       occ: 0.900, gg_degenza: 14454,
       rM: [227327, 204228, 226594],
@@ -81,7 +83,10 @@ const KAROL_DATA = {
       costi: { personale: 1668136, materiali: 20355, servizi: 194451, utenze: 4820, manutenzione: 0, altri: 302 },
       budget_costi: { personale: 1668136, materiali: 20355, servizi: 194451, utenze: 4820, manutenzione: 0, altri: 302 },
       sede: 0, ammortamenti: 229000, oneri_fin: 465, // D&A allocata pro-rata ricavi (26% di €893k)
-      // NOTA: include adeguamento CTA €640k/anno — contenzioso Regione €7M+ in risoluzione
+      // IMMOBILE: proprietà Karol S.p.A. — acquistato €3M (2016), mutuo ancora attivo, no affitto a CE
+      // Affitto figurativo al 6% costo storico per normalizzare confronto BU
+      immobile: { tipo: 'proprieta', affitto_reale: 0, affitto_figurativo: 180000, costo_storico: 3000000, anno_acquisto: 2016, ammort_pct: 0.20, da_immob: 90000 },
+      // NOTA: fattura €235k/mese, incassa solo €183k (media 7M 2025). Extra-tariffa €53k/mese = credito contenzioso €7M+
       occ: 0.920, gg_degenza: 13432,
       rM: [244596, 222658, 237082],
       cM: [134740, 141514, 140780],
@@ -91,6 +96,8 @@ const KAROL_DATA = {
       costi: { personale: 2092806, materiali: 1231668, servizi: 626943, utenze: 88474, manutenzione: 0, altri: 14598 },
       budget_costi: { personale: 2092806, materiali: 1231668, servizi: 626943, utenze: 88474, manutenzione: 0, altri: 14598 },
       sede: 0, ammortamenti: 395000, oneri_fin: 5461, // D&A allocata pro-rata ricavi (44% di €893k)
+      // IMMOBILE: proprietà Karol S.p.A. — acquistato €4M, debiti acquisizione accollati, no affitto a CE
+      immobile: { tipo: 'proprieta', affitto_reale: 0, affitto_figurativo: 240000, costo_storico: 4000000, anno_acquisto: 2016, ammort_pct: 0.20, da_immob: 120000 },
       // NOTA: estate non opera — calo fatturato privato Q2-Q3
       occ: 0.860, gg_degenza: 15695,
       rM: [348508, 423023, 443618],
@@ -101,6 +108,8 @@ const KAROL_DATA = {
       costi: { personale: 527070, materiali: 16484, servizi: 62787, utenze: 0, manutenzione: 0, altri: 32 },
       budget_costi: { personale: 527070, materiali: 16484, servizi: 62787, utenze: 0, manutenzione: 0, altri: 32 },
       sede: 0, ammortamenti: 55000, oneri_fin: 4, // D&A allocata pro-rata ricavi (6% di €893k)
+      // IMMOBILE: in locazione — affitto €60k/anno (€5k/mese)
+      immobile: { tipo: 'locazione', affitto_reale: 60000, affitto_figurativo: 0, costo_storico: 0 },
       // NOTA: brucia €300k+/anno — piano chiusura e spostamento 40 PL a BRT
       occ: null, gg_degenza: 7300,
       rM: [57768, 54536, 53932],
@@ -382,6 +391,14 @@ UO.forEach(u => {
   // Budget delta
   u.delta_ricavi = u.ricavi - u.budget_ricavi;
   u.delta_costi = u.costiDir - budgetCostiTot(u);
+  // CE NORMALIZZATO — costo di occupazione equo per confronto BU
+  // CTA/COS: aggiunge affitto figurativo (6% costo storico immobile)
+  // VLB/KCP: invariato (già paga affitto reale)
+  const aff = u.immobile ? u.immobile.affitto_figurativo : 0;
+  u.costo_occupazione = u.immobile ? (u.immobile.affitto_reale + aff) : 0; // costo effettivo + figurativo
+  u.costiNorm = u.costiDir + aff;
+  u.molINorm = u.ricavi - u.costiNorm;
+  u.molINormPct = u.ricavi > 0 ? u.molINorm / u.ricavi : 0;
 });
 
 const TOT = {
@@ -400,6 +417,12 @@ TOT.persPct = TOT.ric > 0 ? TOT.pers / TOT.ric : 0;
 TOT.ebit = TOT.molG - TOT.ammort - TOT.oneri_fin;
 TOT.budget_ric = UO.reduce((s, u) => s + u.budget_ricavi, 0);
 TOT.budget_cDir = UO.reduce((s, u) => s + budgetCostiTot(u), 0);
+// Totali normalizzati (affitto figurativo)
+const TOT_AFFITTI_FIG = UO.reduce((s, u) => s + (u.immobile ? u.immobile.affitto_figurativo : 0), 0); // €420k
+TOT.molINorm = UO.reduce((s, u) => s + u.molINorm, 0);
+TOT.molINormPct = TOT.ric > 0 ? TOT.molINorm / TOT.ric : 0;
+TOT.sedeNorm = TOT.sede - TOT_AFFITTI_FIG; // HQ ridotta: incassa "affitti interni"
+TOT.molGNorm = TOT.molINorm - TOT.sedeNorm;
 
 // KPI semafori auto-calcolati
 const autoKPI = [];
@@ -1359,6 +1382,75 @@ const KarolDashboard = () => {
                 </div>
               );
             })()}
+
+            {/* TABELLA CE NORMALIZZATO — Confronto equo con costo di occupazione */}
+            <div style={{ ...cardS, marginTop: 16 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>CE Industriale Normalizzato — Costo di Occupazione Equo</h3>
+              <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>CTA e COS operano in immobili di proprietà (€7M, mutui attivi in Sede). VLB e KCP pagano affitto. Affitto figurativo al 6% costo storico per confronto equo.</p>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+                  <thead><tr style={{ borderBottom: '2px solid ' + C.primario, background: '#f0f4f8' }}>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: 10, color: C.t2 }}>BU</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: 10, color: C.t2 }}>Ricavi</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: 10, color: C.t2 }}>Costi Dir.</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: 10, color: C.t2 }}>MOL-I</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: 10, color: C.t2 }}>MOL-I %</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'center', fontSize: 10, color: '#92400e', background: '#fef9c3' }}>Occupazione</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: 10, color: C.primario, fontWeight: 700 }}>MOL-I Norm.</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: 10, color: C.primario, fontWeight: 700 }}>MOL-I Norm. %</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'center', fontSize: 10, color: C.t2 }}>Delta</th>
+                  </tr></thead>
+                  <tbody>
+                    {UO.map((u, i) => {
+                      const aff = u.immobile ? u.immobile.affitto_figurativo : 0;
+                      const affR = u.immobile ? u.immobile.affitto_reale : 0;
+                      const occLabel = u.immobile && u.immobile.tipo === 'proprieta'
+                        ? `Fig. ${fmt(aff)}` : affR > 0 ? `Aff. ${fmt(affR)}` : '—';
+                      const occBg = u.immobile && u.immobile.tipo === 'proprieta' ? '#fef9c3' : 'transparent';
+                      const deltaMol = u.molINorm - u.molI;
+                      return (
+                        <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo }}>
+                          <td style={{ padding: '6px 8px', fontWeight: 600 }}><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: u.colore, marginRight: 6 }}></span>{u.cod}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace' }}>{fmt(u.ricavi)}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace' }}>{fmt(u.costiDir)}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', color: u.molI >= 0 ? C.verde : C.rosso }}>{fmt(u.molI)}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', color: u.molIPct >= 0.15 ? C.verde : u.molIPct >= 0.08 ? C.giallo : C.rosso }}>{fmtPct(u.molIPct)}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'center', fontFamily: 'monospace', fontSize: 10, background: occBg, color: aff > 0 ? '#92400e' : C.t2 }}>{occLabel}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: u.molINorm >= 0 ? C.verde : C.rosso }}>{fmt(u.molINorm)}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: u.molINormPct >= 0.15 ? C.verde : u.molINormPct >= 0.08 ? C.giallo : C.rosso }}>{fmtPct(u.molINormPct)}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'center', fontFamily: 'monospace', fontSize: 10, color: deltaMol < 0 ? C.rosso : C.t3 }}>{deltaMol !== 0 ? fmt(deltaMol) : '—'}</td>
+                        </tr>
+                      );
+                    })}
+                    <tr style={{ borderTop: '2px solid ' + C.primario, background: '#f0f4f8' }}>
+                      <td style={{ padding: '6px 8px', fontWeight: 700 }}>TOTALE BU</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{fmt(TOT.ric)}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{fmt(TOT.cDir)}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: TOT.molI >= 0 ? C.verde : C.rosso }}>{fmt(TOT.molI)}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{fmtPct(TOT.molIPct)}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'center', fontFamily: 'monospace', fontSize: 10, background: '#fef9c3', fontWeight: 700 }}>{fmt(TOT_AFFITTI_FIG)}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: TOT.molINorm >= 0 ? C.verde : C.rosso }}>{fmt(TOT.molINorm)}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{fmtPct(TOT.molINormPct)}</td>
+                      <td style={{ padding: '6px 8px' }}></td>
+                    </tr>
+                    <tr style={{ background: '#eff6ff', borderTop: '1px solid ' + C.bordo }}>
+                      <td colSpan={5} style={{ padding: '6px 8px', fontWeight: 600, fontSize: 10, color: C.primario }}>Sede HQ (normalizzata: -€{Math.round(TOT_AFFITTI_FIG/1000)}k "affitti interni" ricevuti)</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'center', fontFamily: 'monospace', fontSize: 10, color: C.verde }}>-{fmt(TOT_AFFITTI_FIG)}</td>
+                      <td colSpan={2} style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontSize: 11, fontWeight: 600, color: C.rosso }}>{fmt(TOT.sedeNorm)}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'center', fontFamily: 'monospace', fontSize: 10, color: C.verde }}>vs {fmt(TOT.sede)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
+                <div style={{ padding: '8px 12px', background: '#fef9c3', borderRadius: 6, fontSize: 11, color: '#92400e' }}>
+                  ⚠ CTA: MOL-I da {fmtPct(UO.find(u=>u.cod==='CTA').molIPct)} a <b>{fmtPct(UO.find(u=>u.cod==='CTA').molINormPct)}</b> con affitto figurativo €180k. Efficienza reale inferiore al dato contabile.
+                </div>
+                <div style={{ padding: '8px 12px', background: '#fef9c3', borderRadius: 6, fontSize: 11, color: '#92400e' }}>
+                  ⚠ COS: MOL-I da {fmtPct(UO.find(u=>u.cod==='COS').molIPct)} a <b>{fmtPct(UO.find(u=>u.cod==='COS').molINormPct)}</b> con affitto figurativo €240k. Sede HQ si riduce da {fmt(TOT.sede)} a {fmt(TOT.sedeNorm)}.
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
