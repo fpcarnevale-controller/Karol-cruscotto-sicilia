@@ -52,9 +52,10 @@ const CustomTooltip = ({ active, payload, label }) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // DATI CE — dal Master Excel (elabora.py output 13/02/2026)
 // ═══════════════════════════════════════════════════════════════════════════════
+// Flag qualità dati per E1 (true = consuntivo reale, false = simulato/placeholder)
 const UO = [
   {
-    cod: 'VLB', nome: 'RSA Villabate', tipo: 'RSA Alzheimer', pl: 44, colore: C.VLB,
+    cod: 'VLB', nome: 'RSA Villabate', tipo: 'RSA Alzheimer', pl: 44, colore: C.VLB, datiReali: false,
     ricavi: 2004045, costiDir: 1675033, molI: 329012, molIPct: .1642,
     sede: 353127, molG: -24115, molGPct: -.0120,
     pers: 1147329, persPct: .5725, occ: .900, ricGg: 138.66,
@@ -64,7 +65,7 @@ const UO = [
     cM: [140731,139023,141794,142431,139408,138816,138345,135571,138366,140063,138567,141919],
   },
   {
-    cod: 'CTA', nome: 'CTA Ex Stagno', tipo: 'Psichiatrico', pl: 40, colore: C.CTA,
+    cod: 'CTA', nome: 'CTA Ex Stagno', tipo: 'Psichiatrico', pl: 40, colore: C.CTA, datiReali: false,
     ricavi: 1895648, costiDir: 1670541, molI: 225107, molIPct: .1187,
     sede: 326072, molG: -100965, molGPct: -.0533,
     pers: 1125426, persPct: .5937, occ: .920, ricGg: 141.19,
@@ -74,7 +75,7 @@ const UO = [
     cM: [139727,138994,137273,138930,139301,139815,137848,136411,139877,142422,140868,139074],
   },
   {
-    cod: 'COS', nome: 'CdC Cosentino', tipo: 'Riabilitazione', pl: 50, colore: C.COS,
+    cod: 'COS', nome: 'CdC Cosentino', tipo: 'Riabilitazione', pl: 50, colore: C.COS, datiReali: false,
     ricavi: 3799179, costiDir: 2924314, molI: 874865, molIPct: .2303,
     sede: 541917, molG: 332949, molGPct: .0876,
     pers: 1790988, persPct: .4714, occ: .860, ricGg: 241.99,
@@ -84,7 +85,7 @@ const UO = [
     cM: [244695,241092,240802,247326,245338,242449,243186,234286,242532,244702,251201,246704],
   },
   {
-    cod: 'LAB', nome: 'Karol Lab', tipo: 'Laboratorio', pl: 0, colore: C.LAB,
+    cod: 'LAB', nome: 'Karol Lab', tipo: 'Laboratorio', pl: 0, colore: C.LAB, datiReali: false,
     ricavi: 1450153, costiDir: 891341, molI: 558813, molIPct: .3853,
     sede: 212873, molG: 345940, molGPct: .2386,
     pers: 438075, persPct: .3021, occ: null, ricGg: null,
@@ -94,7 +95,7 @@ const UO = [
     cM: [74958,73556,74432,75376,76159,75846,73710,69849,73075,74976,74564,74839],
   },
   {
-    cod: 'KCP', nome: 'Karol Casa Protetta', tipo: 'Casa Protetta', pl: 20, colore: C.KCP,
+    cod: 'KCP', nome: 'Karol Casa Protetta', tipo: 'Casa Protetta', pl: 20, colore: C.KCP, datiReali: false,
     ricavi: 700261, costiDir: 603299, molI: 96961, molIPct: .1385,
     sede: 158011, molG: -61050, molGPct: -.0872,
     pers: 391420, persPct: .5590, occ: null, ricGg: null,
@@ -224,6 +225,17 @@ const KarolCdG = () => {
   const nGiallo = KPI.filter(k => k.a === 'GIALLO').length;
   const nVerde = KPI.filter(k => k.a === 'VERDE').length;
 
+  // E2: Completezza dati
+  const uoReali = UO.filter(u => u.datiReali).length;
+  const completezza = Math.round((uoReali / UO.length) * 100);
+  const ultimoAgg = '13/02/2026 08:45';
+
+  // E1: Badge component
+  const BadgeQualita = ({ u }) => {
+    if (u.datiReali) return <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, background: C.verdeBg, color: C.verde, marginLeft: 6, fontWeight: 600 }}>Consuntivo</span>;
+    return <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, background: '#fff7ed', color: '#c2410c', marginLeft: 6, fontWeight: 600 }}>Dati simulati</span>;
+  };
+
   // Trend mensile aggregato
   const trend = mesi.map((m, i) => ({
     mese: m,
@@ -266,7 +278,14 @@ const KarolCdG = () => {
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 13, fontWeight: 600 }}>Anno 2025 — 12 Mesi</div>
-            <div style={{ fontSize: 11, opacity: .6 }}>Dati simulati (test pipeline)</div>
+            <div style={{ fontSize: 11, opacity: .6, marginBottom: 4 }}>Ultimo aggiornamento: {ultimoAgg}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
+              <span style={{ fontSize: 10, opacity: .7 }}>Completezza dati:</span>
+              <div style={{ width: 80, height: 6, borderRadius: 3, background: 'rgba(255,255,255,.2)', overflow: 'hidden' }}>
+                <div style={{ width: `${completezza}%`, height: '100%', borderRadius: 3, background: completezza >= 80 ? '#86efac' : completezza >= 40 ? '#fde68a' : '#fca5a5', transition: 'width .3s' }}></div>
+              </div>
+              <span style={{ fontSize: 10, fontWeight: 600 }}>{completezza}% ({uoReali}/{UO.length} UO reali)</span>
+            </div>
           </div>
         </div>
       </div>
@@ -311,6 +330,57 @@ const KarolCdG = () => {
                 {k.sub && <p style={{ fontSize: 11, color: C.t3, margin: '2px 0 0' }}>{k.sub}</p>}
               </div>
             ))}
+          </div>
+
+          {/* B4: Occupancy Gauge per UO */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 20 }}>
+            {UO.filter(u => u.occ !== null).map((u, i) => {
+              const pct = u.occ * 100;
+              const target = 90;
+              const col = pct >= target ? C.verde : pct >= 80 ? C.giallo : C.rosso;
+              const bg = pct >= target ? C.verdeBg : pct >= 80 ? C.gialloBg : C.rossoBg;
+              const circumference = 2 * Math.PI * 40;
+              const strokeDash = (pct / 100) * circumference;
+              return (
+                <div key={i} className={cardSm} style={{ textAlign: 'center', padding: '12px 8px' }}>
+                  <p style={{ fontSize: 11, color: C.t2, margin: '0 0 8px', fontWeight: 600 }}>
+                    <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: u.colore, marginRight: 4 }}></span>
+                    {u.cod} — Occupancy
+                  </p>
+                  <svg width="100" height="60" viewBox="0 0 100 60" style={{ margin: '0 auto', display: 'block' }}>
+                    {/* Background arc */}
+                    <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke="#e2e8f0" strokeWidth="8" strokeLinecap="round" />
+                    {/* Value arc */}
+                    <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke={col} strokeWidth="8" strokeLinecap="round"
+                      strokeDasharray={`${(pct / 100) * 126} 126`} />
+                    {/* Target mark */}
+                    <line x1={50 + 40 * Math.cos(Math.PI * (1 - target/100))} y1={55 - 40 * Math.sin(Math.PI * (1 - target/100))}
+                      x2={50 + 34 * Math.cos(Math.PI * (1 - target/100))} y2={55 - 34 * Math.sin(Math.PI * (1 - target/100))}
+                      stroke={C.t3} strokeWidth="2" />
+                    <text x="50" y="50" textAnchor="middle" fontSize="16" fontWeight="700" fill={col}>{pct.toFixed(0)}%</text>
+                  </svg>
+                  <p style={{ fontSize: 10, color: C.t3, margin: '4px 0 0' }}>{u.pl} PL | Target {target}%</p>
+                </div>
+              );
+            })}
+            {/* Media gruppo */}
+            {(() => {
+              const uoOcc = UO.filter(u => u.occ !== null);
+              const avg = (uoOcc.reduce((s, u) => s + u.occ, 0) / uoOcc.length * 100);
+              const col = avg >= 90 ? C.verde : avg >= 80 ? C.giallo : C.rosso;
+              return (
+                <div className={cardSm} style={{ textAlign: 'center', padding: '12px 8px', background: '#f8fafc', borderLeft: `4px solid ${C.primario}` }}>
+                  <p style={{ fontSize: 11, color: C.primario, margin: '0 0 8px', fontWeight: 700 }}>MEDIA GRUPPO</p>
+                  <svg width="100" height="60" viewBox="0 0 100 60" style={{ margin: '0 auto', display: 'block' }}>
+                    <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke="#e2e8f0" strokeWidth="8" strokeLinecap="round" />
+                    <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke={col} strokeWidth="8" strokeLinecap="round"
+                      strokeDasharray={`${(avg / 100) * 126} 126`} />
+                    <text x="50" y="50" textAnchor="middle" fontSize="16" fontWeight="700" fill={col}>{avg.toFixed(1)}%</text>
+                  </svg>
+                  <p style={{ fontSize: 10, color: C.t3, margin: '4px 0 0' }}>{UO.filter(u => u.pl > 0).reduce((s, u) => s + u.pl, 0)} PL totali</p>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Row: Scostamento orizzontale + Tabella semaforo */}
@@ -362,7 +432,7 @@ const KarolCdG = () => {
                         <tr key={i} style={{ borderBottom: '1px solid #e2e8f0', cursor: 'pointer' }} onClick={() => setSelUO(u)}>
                           <td style={{ padding: '6px 8px', fontWeight: 600 }}>
                             <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: u.colore, marginRight: 6 }}></span>
-                            {u.cod}
+                            {u.cod}<BadgeQualita u={u} />
                           </td>
                           {cell('MOL % Ind')}{cell('MOL % Gest')}{cell('Pers')}{cell('Occupancy')}
                         </tr>
@@ -679,6 +749,7 @@ const KarolCdG = () => {
                   <span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', background: u.colore, marginRight: 8 }}></span>
                   <h3 style={{ fontSize: 14, fontWeight: 600, color: C.t1, margin: 0 }}>{u.cod} — {u.nome}</h3>
                   <span style={{ marginLeft: 8, fontSize: 11, color: C.t3 }}>({u.tipo}{u.pl > 0 ? `, ${u.pl} PL` : ''})</span>
+                  <BadgeQualita u={u} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
                   {kpis.map((k, i) => {
@@ -717,6 +788,28 @@ const KarolCdG = () => {
         {/* TREND MENSILE */}
         {/* ═══════════════════════════════════════════════════════════════════ */}
         {tab === 'trend' && (<>
+          {/* B3: Multi-UO Overlay */}
+          <div className={card} style={{ marginBottom: 20 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 600, color: C.primario, margin: '0 0 4px' }}>Trend Ricavi per UO — Confronto 12 Mesi</h3>
+            <p style={{ fontSize: 11, color: C.t3, margin: '0 0 12px' }}>Clicca sulla legenda per mostrare/nascondere le singole UO</p>
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart data={mesi.map((m, i) => {
+                const d = { mese: m };
+                UO.forEach(u => { d[u.cod] = u.rM[i]; });
+                return d;
+              })} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="mese" fontSize={11} />
+                <YAxis tickFormatter={v => fmtK(v)} fontSize={10} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend onClick={(e) => {}} wrapperStyle={{ cursor: 'pointer' }} />
+                {UO.map(u => (
+                  <Line key={u.cod} type="monotone" dataKey={u.cod} stroke={u.colore} strokeWidth={2} dot={{ r: 2.5, fill: u.colore }} activeDot={{ r: 5 }} />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
           <div className={card} style={{ marginBottom: 20 }}>
             <h3 style={{ fontSize: 14, fontWeight: 600, color: C.primario, margin: '0 0 12px' }}>Trend Ricavi vs Costi — Gruppo (12 Mesi)</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -742,6 +835,7 @@ const KarolCdG = () => {
                     <span style={{ width: 10, height: 10, borderRadius: '50%', background: u.colore, display: 'inline-block', marginRight: 6 }}></span>
                     <span style={{ fontSize: 13, fontWeight: 600, color: C.t1 }}>{u.cod}</span>
                     <span style={{ fontSize: 11, color: C.t3, marginLeft: 6 }}>{u.tipo}</span>
+                    <BadgeQualita u={u} />
                     <span style={{ marginLeft: 'auto', fontSize: 11, padding: '2px 8px', borderRadius: 12, background: u.molGPct >= .08 ? C.verdeBg : u.molGPct >= 0 ? C.gialloBg : C.rossoBg, color: u.molGPct >= .08 ? C.verde : u.molGPct >= 0 ? C.giallo : C.rosso, fontWeight: 600 }}>
                       MOL-G {fmtPct(u.molGPct)}
                     </span>
