@@ -94,6 +94,12 @@ class LivelliAlert(Enum):
 # ANAGRAFICHE UNITA' OPERATIVE
 # ============================================================================
 
+class StatoUO(Enum):
+    OPERATIVA = "Operativa"
+    IN_ATTESA = "In attesa finanziamento"
+    CLIENTE = "Cliente servizi"
+
+
 @dataclass
 class UnitaOperativa:
     codice: str
@@ -102,6 +108,7 @@ class UnitaOperativa:
     regione: Regione
     posti_letto: int = 0
     attiva: bool = True
+    stato: StatoUO = StatoUO.OPERATIVA
     societa: str = "Karol S.p.A."
     note: str = ""
 
@@ -137,7 +144,9 @@ UNITA_OPERATIVE: Dict[str, UnitaOperativa] = {
         tipologia=[TipologiaStruttura.DAY_SURGERY, TipologiaStruttura.AMBULATORIO],
         regione=Regione.SICILIA,
         posti_letto=0,
-        note="Day Surgery + Ambulatori"
+        attiva=False,
+        stato=StatoUO.IN_ATTESA,
+        note="Day Surgery + Ambulatori - In attesa finanziamento River Rock"
     ),
     "BRG": UnitaOperativa(
         codice="BRG",
@@ -148,8 +157,10 @@ UNITA_OPERATIVE: Dict[str, UnitaOperativa] = {
             TipologiaStruttura.CENTRO_DIURNO
         ],
         regione=Regione.SICILIA,
-        posti_letto=0,
-        note="RSA + FKT + Centro Diurno"
+        posti_letto=80,
+        attiva=False,
+        stato=StatoUO.IN_ATTESA,
+        note="RSA 80 PL + FKT + Centro Diurno - In attesa finanziamento River Rock"
     ),
     "ROM": UnitaOperativa(
         codice="ROM",
@@ -157,8 +168,10 @@ UNITA_OPERATIVE: Dict[str, UnitaOperativa] = {
         tipologia=[TipologiaStruttura.RIABILITAZIONE],
         regione=Regione.LAZIO,
         posti_letto=77,
+        attiva=False,
+        stato=StatoUO.IN_ATTESA,
         societa="Karol S.p.A.",
-        note="Riabilitazione 77 PL"
+        note="Riabilitazione 77 PL - In attesa finanziamento River Rock"
     ),
     "LAB": UnitaOperativa(
         codice="LAB",
@@ -174,8 +187,9 @@ UNITA_OPERATIVE: Dict[str, UnitaOperativa] = {
         tipologia=[TipologiaStruttura.RSA_NON_AUTOSUFF, TipologiaStruttura.RIABILITAZIONE],
         regione=Regione.CALABRIA,
         posti_letto=0,
+        stato=StatoUO.CLIENTE,
         societa="Karol Betania S.r.l.",
-        note="11 strutture RSA/Riabilitazione"
+        note="11 strutture RSA/Riabilitazione - Cliente servizi"
     ),
     "ZAR": UnitaOperativa(
         codice="ZAR",
@@ -183,13 +197,25 @@ UNITA_OPERATIVE: Dict[str, UnitaOperativa] = {
         tipologia=[TipologiaStruttura.RISTORAZIONE],
         regione=Regione.SICILIA,
         posti_letto=0,
-        note="Servizi ristorazione"
+        stato=StatoUO.CLIENTE,
+        note="Servizi ristorazione - Cliente servizi sede"
+    ),
+    "KCP": UnitaOperativa(
+        codice="KCP",
+        nome="Karol Casa Protetta",
+        tipologia=[TipologiaStruttura.RSA_NON_AUTOSUFF],
+        regione=Regione.SICILIA,
+        posti_letto=0,
+        note="Via Sciuti PA"
     ),
 }
 
-# Lista UO Karol S.p.A. (esclude Betania per consolidato separato)
+# Liste UO per tipologia di rapporto
 UO_KAROL_SPA = [cod for cod, uo in UNITA_OPERATIVE.items() if uo.societa == "Karol S.p.A."]
 UO_BETANIA = [cod for cod, uo in UNITA_OPERATIVE.items() if uo.societa == "Karol Betania S.r.l."]
+UO_OPERATIVE = [cod for cod, uo in UNITA_OPERATIVE.items() if uo.stato == StatoUO.OPERATIVA]
+UO_IN_ATTESA = [cod for cod, uo in UNITA_OPERATIVE.items() if uo.stato == StatoUO.IN_ATTESA]
+UO_CLIENTI = [cod for cod, uo in UNITA_OPERATIVE.items() if uo.stato == StatoUO.CLIENTE]
 
 # ============================================================================
 # STRUTTURA CONTO ECONOMICO
@@ -466,4 +492,33 @@ MESI_BREVI_IT = {
     1: "Gen", 2: "Feb", 3: "Mar", 4: "Apr",
     5: "Mag", 6: "Giu", 7: "Lug", 8: "Ago",
     9: "Set", 10: "Ott", 11: "Nov", 12: "Dic",
+}
+
+# ============================================================================
+# CASH FLOW - CONFIGURAZIONE AVANZATA
+# ============================================================================
+
+CASH_FLOW_CONFIG = {
+    "cassa_iniziale_default": 500_000,
+    "soglia_hard_alert": 200_000,
+    "dscr_warning": 1.1,
+    "dscr_critico": 1.0,
+    "servizio_debito_annuale": 180_000,
+    "aliquota_contributiva": 0.33,
+    "capex_piano_industriale": {
+        2024: 150_000, 2025: 200_000, 2026: 350_000,
+        2027: 500_000, 2028: 300_000, 2029: 200_000, 2030: 150_000,
+    },
+    "scadenze_fiscali_tipo": {
+        "F24": {"giorno": 16, "frequenza": "mensile"},
+        "IVA": {"frequenza": "trimestrale", "mesi": [3, 6, 9, 12]},
+        "IRES_IRAP_acconto": {"mese": 6, "giorno": 30},
+        "IRES_IRAP_saldo": {"mese": 11, "giorno": 30},
+    },
+}
+
+SCENARI_CASH_FLOW = {
+    "ottimistico": {"ritardo_incassi": -15, "variazione_costi": 0.0},
+    "base": {"ritardo_incassi": 0, "variazione_costi": 0.0},
+    "pessimistico": {"ritardo_incassi": 30, "variazione_costi": 0.05},
 }

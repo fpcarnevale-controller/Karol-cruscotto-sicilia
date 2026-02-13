@@ -1,632 +1,1447 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Karol CdG — Controllo di Gestione</title>
+<script type="importmap">
+{"imports":{"react":"https://esm.sh/react@18.2.0","react-dom":"https://esm.sh/react-dom@18.2.0","react/jsx-runtime":"https://esm.sh/react@18.2.0/jsx-runtime","recharts":"https://esm.sh/recharts@2.12.7?external=react,react-dom"}}
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="module">
 import React, { useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, PieChart, Pie, Cell } from 'recharts';
+import ReactDOM from 'react-dom';
+import * as Recharts from 'recharts';
+window.React = React;
+window.ReactDOM = ReactDOM;
+window.Recharts = Recharts;
+const s = document.querySelector('script[data-type="babel-source"]');
+if (s) { const c = Babel.transform(s.textContent, {presets:['react']}).code; new Function(c)(); }
+</script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'DM Sans', 'Segoe UI', sans-serif; background: #F0F4F8; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/template" data-type="babel-source">
+const { useState } = React;
+const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, AreaChart, Area, Cell, ReferenceLine, ComposedChart, PieChart, Pie, Treemap } = Recharts;
 
-const SiciliaDashboard = () => {
-  const [showReport, setShowReport] = useState(false);
-  const [showAlerts, setShowAlerts] = useState(false);
-  const [showProiezioni, setShowProiezioni] = useState(false);
-  const [strutturaSelezionata, setStrutturaSelezionata] = useState(null);
-  const [showDataValidation, setShowDataValidation] = useState(false);
+// ============================================================================
+// PALETTE COLORI KAROL — D1
+// ============================================================================
+const C = {
+  primario: '#1F4E79', primarioChiaro: '#2E75B6', primarioScuro: '#163A5C',
+  sfondo: '#F0F4F8', card: '#FFFFFF', bordo: '#e2e8f0',
+  verde: '#059669', verdeBg: '#dcfce7', verdeChiaro: '#10b981',
+  giallo: '#d97706', gialloBg: '#fef9c3', gialloChiaro: '#f59e0b',
+  rosso: '#dc2626', rossoBg: '#fee2e2', rossoChiaro: '#ef4444',
+  viola: '#7c3aed', violaBg: '#ede9fe',
+  VLB: '#0ea5e9', CTA: '#3b82f6', COS: '#8b5cf6', LAB: '#f59e0b', KCP: '#ec4899',
+  budget: '#cbd5e1', t1: '#1e293b', t2: '#64748b', t3: '#94a3b8',
+};
 
-  const struttureDati = [
-    {
-      nome: "CTA - Comunità Terapeutica Assistita",
-      sottotitolo: "Servizi Intensivi ed Estensivi + Permessi Terapeutici", 
-      riga: 4,
-      budgetAnnuale: 2277600,
-      budgetMensile: 189800,
-      postiLetto: 40,
-      tariffaGiornaliera: 156,
-      giorni7Mesi: 212,
-      budgetTeoricoPlenaOccupazione: 1322880,
-      fatturato: [
-        { mese: "Gen", attuale: 101244, budget: 189800 },
-        { mese: "Feb", attuale: 100620, budget: 189800 },
-        { mese: "Mar", attuale: 105612, budget: 189800 },
-        { mese: "Apr", attuale: 104364, budget: 189800 },
-        { mese: "Mag", attuale: 117156, budget: 189800 },
-        { mese: "Giu", attuale: 125800, budget: 189800 },
-        { mese: "Lug", attuale: 626003, budget: 189800 }
-      ],
-      totaleFatturato: 1280799,
-      budgetCumulato7Mesi: 1328600,
-      percentualeRealizzata: 96.8,
-      scostamento: -42081,
-      scostamentoPercentuale: -3.2,
-      percentualeOccupazioneTeorica: 96.8,
-      scostamentoVsBudgetTeorico: -42081,
-      status: "attenzione",
-      criticita: "media",
-      note: "7 mesi operativi - Esclude agosto. Performance vicina al teorico"
+// ============================================================================
+// KAROL_DATA — Struttura centralizzata dati CdG
+// ============================================================================
+const KAROL_DATA = {
+  meta: { anno: 2025, mesi_chiusi: 12, dati_reali: false, ultimo_aggiornamento: '13/02/2026' },
+
+  // Benchmark settore RSA/Healthcare
+  BENCHMARK: {
+    pers_pct: 0.55, mol_i_pct: 0.15, mol_g_pct: 0.08,
+    occ_pct: 0.90, costo_pl_gg: 130, dso: 60, dpo: 90, dscr: 1.2, cop_cassa_mesi: 2.0,
+  },
+
+  // Unità Operative con breakdown costi completo
+  UO: [
+    { cod: 'VLB', nome: 'RSA Villabate', tipo: 'RSA Alzheimer', pl: 44, colore: C.VLB,
+      ricavi: 2004045, budget_ricavi: 2100000,
+      costi: { personale: 1147329, materiali: 189704, servizi: 198000, utenze: 78000, manutenzione: 62000, altri: 0 },
+      budget_costi: { personale: 1120000, materiali: 180000, servizi: 190000, utenze: 75000, manutenzione: 55000, altri: 0 },
+      sede: 353127, ammortamenti: 85000, oneri_fin: 32000,
+      occ: 0.900, gg_degenza: 14454,
+      rM: [169640,149876,173154,168672,174978,166476,164006,154880,163696,174683,170602,173382],
+      cM: [140731,139023,141794,142431,139408,138816,138345,135571,138366,140063,138567,141919],
     },
-    {
-      nome: "RSA",
-      riga: 10,
-      budgetAnnuale: 2456596,
-      budgetMensile: 204716,
-      fatturato: [
-        { mese: "Gen", attuale: 204716, budget: 204716 },
-        { mese: "Feb", attuale: 204716, budget: 204716 },
-        { mese: "Mar", attuale: 204716, budget: 204716 },
-        { mese: "Apr", attuale: 204716, budget: 204716 },
-        { mese: "Mag", attuale: 204716, budget: 204716 },
-        { mese: "Giu", attuale: 204716, budget: 204716 },
-        { mese: "Lug", attuale: 204716, budget: 204716 }
-      ],
-      totaleFatturato: 1421739,
-      budgetCumulato7Mesi: 1433012,
-      percentualeRealizzata: 99.2,
-      scostamento: -11273,
-      scostamentoPercentuale: -0.8,
-      status: "positivo",
-      criticita: "bassa"
+    { cod: 'CTA', nome: 'CTA Ex Stagno', tipo: 'Psichiatrico', pl: 40, colore: C.CTA,
+      ricavi: 1895648, budget_ricavi: 2000000,
+      costi: { personale: 1125426, materiali: 158115, servizi: 215000, utenze: 82000, manutenzione: 52000, altri: 38000 },
+      budget_costi: { personale: 1080000, materiali: 150000, servizi: 200000, utenze: 78000, manutenzione: 48000, altri: 35000 },
+      sede: 326072, ammortamenti: 72000, oneri_fin: 28000,
+      occ: 0.920, gg_degenza: 13432,
+      rM: [159954,144470,163122,157669,165770,157080,153507,148029,153462,166605,161823,164157],
+      cM: [139727,138994,137273,138930,139301,139815,137848,136411,139877,142422,140868,139074],
     },
-    {
-      nome: "Casa di Cura COSENTINO - ACUTI",
-      sottotitolo: "Chirurgia ORTOPEDICA + RIABILITAZIONE",
-      riga: 14,
-      budgetAnnuale: 3944957.84,
-      budgetMensile: 328746.49,
-      budgetCumulato7Mesi: 2301225.41,
-      dettaglioFatturato: {
-        chirurgiaOrtopedica: 1861801.82,
-        riabilitazione: 522172.35
-      },
-      fatturato: [
-        { mese: "Gen", attuale: 340567, budget: 328746.49 },
-        { mese: "Feb", attuale: 340567, budget: 328746.49 },
-        { mese: "Mar", attuale: 340567, budget: 328746.49 },
-        { mese: "Apr", attuale: 340567, budget: 328746.49 },
-        { mese: "Mag", attuale: 340567, budget: 328746.49 },
-        { mese: "Giu", attuale: 340567, budget: 328746.49 },
-        { mese: "Lug", attuale: 340571, budget: 328746.49 }
-      ],
-      totaleFatturato: 2383974.17,
-      percentualeRealizzata: 103.6,
-      scostamento: 82748.76,
-      scostamentoPercentuale: 3.6,
-      status: "positivo",
-      criticita: "bassa",
-      note: "Surplus strategico per compensare agosto e contestazioni ASP"
+    { cod: 'COS', nome: 'CdC Cosentino', tipo: 'Riabilitazione', pl: 50, colore: C.COS,
+      ricavi: 3799179, budget_ricavi: 3700000,
+      costi: { personale: 1790988, materiali: 385326, servizi: 420000, utenze: 155000, manutenzione: 98000, altri: 75000 },
+      budget_costi: { personale: 1750000, materiali: 370000, servizi: 400000, utenze: 148000, manutenzione: 90000, altri: 70000 },
+      sede: 541917, ammortamenti: 120000, oneri_fin: 45000,
+      occ: 0.860, gg_degenza: 15695,
+      rM: [320319,290930,321212,318851,328869,319828,309744,294979,308393,333165,321909,330982],
+      cM: [244695,241092,240802,247326,245338,242449,243186,234286,242532,244702,251201,246704],
     },
-    {
-      nome: "Radiologia rimborso ASL",
-      riga: 20,
-      budgetAnnuale: 370712,
-      budgetMensile: 30892.67,
-      fatturato: [
-        { mese: "Gen", attuale: 30892.67, budget: 30892.67 },
-        { mese: "Feb", attuale: 30892.67, budget: 30892.67 },
-        { mese: "Mar", attuale: 30892.67, budget: 30892.67 },
-        { mese: "Apr", attuale: 30892.67, budget: 30892.67 },
-        { mese: "Mag", attuale: 30892.67, budget: 30892.67 },
-        { mese: "Giu", attuale: 28500.00, budget: 30892.67 },
-        { mese: "Lug", attuale: 32100.00, budget: 30892.67 }
-      ],
-      totaleFatturato: 216063.35,
-      budgetCumulato7Mesi: 216248.69,
-      percentualeRealizzata: 99.9,
-      scostamento: -185.34,
-      scostamentoPercentuale: -0.1,
-      status: "positivo",
-      criticita: "bassa"
+    { cod: 'LAB', nome: 'Karol Lab', tipo: 'Laboratorio', pl: 0, colore: C.LAB,
+      ricavi: 1450153, budget_ricavi: 1400000,
+      costi: { personale: 438075, materiali: 215266, servizi: 125000, utenze: 48000, manutenzione: 35000, altri: 30000 },
+      budget_costi: { personale: 430000, materiali: 210000, servizi: 120000, utenze: 45000, manutenzione: 32000, altri: 28000 },
+      sede: 212873, ammortamenti: 55000, oneri_fin: 15000,
+      occ: null, gg_degenza: null,
+      rM: [123238,120564,123838,126162,120026,116683,116136,111219,116108,127791,130075,118316],
+      cM: [74958,73556,74432,75376,76159,75846,73710,69849,73075,74976,74564,74839],
     },
-    {
-      nome: "FKT-Rimborso SSR",
-      riga: 24,
-      budgetAnnuale: 110919.08,
-      budgetMensile: 9243.26,
-      fatturato: [
-        { mese: "Gen", attuale: 9243.26, budget: 9243.26 },
-        { mese: "Feb", attuale: 9243.26, budget: 9243.26 },
-        { mese: "Mar", attuale: 9243.26, budget: 9243.26 },
-        { mese: "Apr", attuale: 9243.26, budget: 9243.26 },
-        { mese: "Mag", attuale: 9243.26, budget: 9243.26 },
-        { mese: "Giu", attuale: 8800.00, budget: 9243.26 },
-        { mese: "Lug", attuale: 9650.00, budget: 9243.26 }
+    { cod: 'KCP', nome: 'Karol Casa Protetta', tipo: 'Casa Protetta', pl: 20, colore: C.KCP,
+      ricavi: 700261, budget_ricavi: 750000,
+      costi: { personale: 391420, materiali: 78879, servizi: 68000, utenze: 32000, manutenzione: 22000, altri: 11000 },
+      budget_costi: { personale: 380000, materiali: 75000, servizi: 65000, utenze: 30000, manutenzione: 20000, altri: 10000 },
+      sede: 158011, ammortamenti: 38000, oneri_fin: 12000,
+      occ: null, gg_degenza: 7300,
+      rM: [59361,53405,61086,58202,60141,57339,57604,54021,57324,61888,58959,60931],
+      cM: [49419,50019,50686,50607,50544,50694,49326,48620,50241,51418,51571,50155],
+    },
+  ],
+
+  // Costi sede HQ
+  SEDE: { totale: 1592000, personale_hq: 680000, affitti: 320000, consulenze: 245000, IT: 142000, assicurazioni: 95000, altri: 110000 },
+
+  // Cash Flow
+  cashflow: {
+    waterfallRaw: [
+      { voce: 'Ricavi', valore: 9849287, tipo: 'entrata' },
+      { voce: 'Personale', valore: -4893238, tipo: 'uscita' },
+      { voce: 'Materiali', valore: -1027290, tipo: 'uscita' },
+      { voce: 'Servizi/Utenze', valore: -1421000, tipo: 'uscita' },
+      { voce: 'Altri Costi', valore: -423000, tipo: 'uscita' },
+      { voce: 'MOL-I', valore: 2084759, tipo: 'subtotale' },
+      { voce: 'Costi Sede', valore: -1592000, tipo: 'uscita' },
+      { voce: 'MOL-G', valore: 492759, tipo: 'subtotale' },
+      { voce: 'Ammortamenti', valore: -370000, tipo: 'uscita' },
+      { voce: 'Oneri Fin.', valore: -132000, tipo: 'uscita' },
+      { voce: 'Risultato Op.', valore: -9241, tipo: 'subtotale' },
+      { voce: 'Var. CCN', valore: -145000, tipo: 'uscita' },
+      { voce: 'CF Operativo', valore: 347759, tipo: 'subtotale' },
+      { voce: 'CAPEX', valore: -280000, tipo: 'uscita' },
+      { voce: 'Free CF', valore: 67759, tipo: 'subtotale' },
+      { voce: 'Debito', valore: -520000, tipo: 'uscita' },
+      { voce: 'Imposte', valore: -148000, tipo: 'uscita' },
+      { voce: 'CF Netto', valore: -600241, tipo: 'finale' },
+    ],
+    cassaSett: [
+      { s: 'S1', saldo: 420, incassi: 180, pag: 150 }, { s: 'S2', saldo: 390, incassi: 120, pag: 150 },
+      { s: 'S3', saldo: 340, incassi: 100, pag: 150 }, { s: 'S4', saldo: 510, incassi: 320, pag: 150 },
+      { s: 'S5', saldo: 460, incassi: 100, pag: 150 }, { s: 'S6', saldo: 380, incassi: 70, pag: 150 },
+      { s: 'S7', saldo: 290, incassi: 60, pag: 150 },  { s: 'S8', saldo: 240, incassi: 100, pag: 150 },
+      { s: 'S9', saldo: 210, incassi: 120, pag: 150 },  { s: 'S10', saldo: 180, incassi: 120, pag: 150 },
+      { s: 'S11', saldo: 350, incassi: 320, pag: 150 }, { s: 'S12', saldo: 400, incassi: 200, pag: 150 },
+    ],
+    scenari: [
+      { anno: '2025', ott: 350, base: 250, pess: 80 },
+      { anno: '2026', ott: 720, base: 480, pess: 120 },
+      { anno: '2027', ott: 1150, base: 750, pess: -50 },
+      { anno: '2028', ott: 1650, base: 1050, pess: -180 },
+      { anno: '2029', ott: 2250, base: 1400, pess: -350 },
+    ],
+    kpi: { dso: 45, dpo: 75, dscr: 1.15, cop_cassa: 1.8, ccn: 145000, capex: 280000, debito_annuo: 520000 },
+    // Scadenziario crediti/debiti (simulato)
+    scadenziario: {
+      crediti: [
+        { fascia: '0-30 gg', importo: 380000, pct: 0.31 },
+        { fascia: '31-60 gg', importo: 420000, pct: 0.34 },
+        { fascia: '61-90 gg', importo: 285000, pct: 0.23 },
+        { fascia: '> 90 gg', importo: 145000, pct: 0.12 },
       ],
-      totaleFatturato: 64666.30,
-      budgetCumulato7Mesi: 64702.82,
-      percentualeRealizzata: 99.9,
-      scostamento: -36.52,
-      scostamentoPercentuale: -0.1,
-      status: "positivo",
-      criticita: "bassa"
-    }
-  ];
+      debiti: [
+        { fascia: '0-30 gg', importo: 210000, pct: 0.27 },
+        { fascia: '31-60 gg', importo: 290000, pct: 0.37 },
+        { fascia: '61-90 gg', importo: 185000, pct: 0.24 },
+        { fascia: '> 90 gg', importo: 95000, pct: 0.12 },
+      ],
+      totCrediti: 1230000,
+      totDebiti: 780000,
+    },
+  },
 
-  const datiCriticita = [
-    { nome: 'Alta', valore: struttureDati.filter(s => s.criticita === 'alta').length, colore: '#ef4444' },
-    { nome: 'Media', valore: struttureDati.filter(s => s.criticita === 'media').length, colore: '#f59e0b' },
-    { nome: 'Bassa', valore: struttureDati.filter(s => s.criticita === 'bassa').length, colore: '#10b981' }
-  ];
+  narrative: [
+    { uo: 'VLB', alert: 'GIALLO', testo: 'MOL-I 16,4% in target, ma costi sede (17,6% ricavi) assorbono il margine → MOL-G -€24.115. Azione: rinegoziare allocazione sede o aumentare occupancy oltre 90%.', outlook: 'Strutturale' },
+    { uo: 'CTA', alert: 'ROSSO', testo: 'MOL-G -€100.965. Personale al 59,4% dei ricavi. Costo servizi (€215.000) elevato. Azione: ottimizzare mix medici/OSS e rinegoziare servizi esternalizzati.', outlook: 'Persistente' },
+    { uo: 'COS', alert: 'VERDE', testo: 'Best performer. MOL-I 23%, MOL-G 8,8%. Mix ricavi diversificato. Ricavo/giornata €242 il più alto.', outlook: 'Favorevole' },
+    { uo: 'LAB', alert: 'VERDE', testo: 'Top performer con MOL-G 23,9%. Asset-light, personale solo 30,2%. Potenziale per crescita volumi.', outlook: 'Molto favorevole' },
+    { uo: 'KCP', alert: 'ROSSO', testo: 'MOL-G -€61.050 (-8,7%). Diseconomie di scala: 20 PL, sede 22,6% ricavi. Valutare accorpamento con VLB.', outlook: 'Strutturale' },
+    { uo: 'GRUPPO', alert: 'ROSSO', testo: 'MOL-G €492.759 (5,0%) sotto target 8%. Costi sede €1.592.000 (16,2%). COS+LAB generano margine, VLB/CTA/KCP lo erodono. CF netto -€600.241 per debito (€520.000) e CAPEX (€280.000).', outlook: 'Critico — piano efficientamento necessario' },
+  ],
+};
 
-  const datiPerformance = struttureDati.map(struttura => ({
-    nome: struttura.nome.length > 12 ? struttura.nome.substring(0, 12) + "..." : struttura.nome,
-    Realizzato: struttura.totaleFatturato,
-    Budget: struttura.budgetCumulato7Mesi,
-    Percentuale: struttura.percentualeRealizzata,
-    Scostamento: struttura.scostamento
-  }));
+// ============================================================================
+// COMPUTED — Aggregati calcolati da KAROL_DATA
+// ============================================================================
+const D = KAROL_DATA;
+const UO = D.UO;
+const BENCH = D.BENCHMARK;
 
-  // Calcolo totali CORRETTI per 7 mesi
-  const totaleRealizzato = struttureDati.reduce((sum, s) => sum + s.totaleFatturato, 0);
-  const totaleBudget = struttureDati.reduce((sum, s) => sum + s.budgetCumulato7Mesi, 0);
-  const percentualeTotale = totaleBudget > 0 ? (totaleRealizzato / totaleBudget) * 100 : 0;
-  const scostamentoTotale = totaleRealizzato - totaleBudget;
+// Helper costi totali per UO
+const costiTot = u => Object.values(u.costi).reduce((s, v) => s + v, 0);
+const budgetCostiTot = u => Object.values(u.budget_costi).reduce((s, v) => s + v, 0);
 
-  const formattaValuta = (valore) => {
-    return `€${Math.round(valore).toLocaleString('it-IT')}`;
+// Calcola MOL-I, MOL-G, margini per ogni UO
+UO.forEach(u => {
+  u.costiDir = costiTot(u);
+  u.molI = u.ricavi - u.costiDir;
+  u.molIPct = u.ricavi > 0 ? u.molI / u.ricavi : 0;
+  u.molG = u.molI - u.sede;
+  u.molGPct = u.ricavi > 0 ? u.molG / u.ricavi : 0;
+  u.persPct = u.ricavi > 0 ? u.costi.personale / u.ricavi : 0;
+  u.ricGg = u.gg_degenza ? u.ricavi / u.gg_degenza : null;
+  u.costo_pl_gg = (u.pl && u.gg_degenza) ? u.costiDir / u.gg_degenza : null;
+  // EBIT (risultato operativo)
+  u.ebit = u.molG - u.ammortamenti - u.oneri_fin;
+  // Budget delta
+  u.delta_ricavi = u.ricavi - u.budget_ricavi;
+  u.delta_costi = u.costiDir - budgetCostiTot(u);
+});
+
+const TOT = {
+  ric: UO.reduce((s, u) => s + u.ricavi, 0),
+  cDir: UO.reduce((s, u) => s + u.costiDir, 0),
+  pers: UO.reduce((s, u) => s + u.costi.personale, 0),
+  molI: UO.reduce((s, u) => s + u.molI, 0),
+  sede: D.SEDE.totale,
+  ammort: UO.reduce((s, u) => s + u.ammortamenti, 0),
+  oneri_fin: UO.reduce((s, u) => s + u.oneri_fin, 0),
+};
+TOT.molIPct = TOT.ric > 0 ? TOT.molI / TOT.ric : 0;
+TOT.molG = TOT.molI - TOT.sede;
+TOT.molGPct = TOT.ric > 0 ? TOT.molG / TOT.ric : 0;
+TOT.persPct = TOT.ric > 0 ? TOT.pers / TOT.ric : 0;
+TOT.ebit = TOT.molG - TOT.ammort - TOT.oneri_fin;
+TOT.budget_ric = UO.reduce((s, u) => s + u.budget_ricavi, 0);
+TOT.budget_cDir = UO.reduce((s, u) => s + budgetCostiTot(u), 0);
+
+// KPI semafori auto-calcolati
+const autoKPI = [];
+UO.forEach(u => {
+  autoKPI.push({ kpi: 'MOL-I %', uo: u.cod, v: u.molIPct, tgt: BENCH.mol_i_pct, a: u.molIPct >= BENCH.mol_i_pct ? 'VERDE' : u.molIPct >= BENCH.mol_i_pct * 0.7 ? 'GIALLO' : 'ROSSO' });
+  autoKPI.push({ kpi: 'MOL-G %', uo: u.cod, v: u.molGPct, tgt: BENCH.mol_g_pct, a: u.molGPct >= BENCH.mol_g_pct ? 'VERDE' : u.molGPct >= 0 ? 'GIALLO' : 'ROSSO' });
+  autoKPI.push({ kpi: 'Pers. %', uo: u.cod, v: u.persPct, tgt: BENCH.pers_pct, a: u.persPct <= BENCH.pers_pct ? 'VERDE' : u.persPct <= BENCH.pers_pct * 1.1 ? 'GIALLO' : 'ROSSO' });
+  if (u.occ !== null) autoKPI.push({ kpi: 'Occ. %', uo: u.cod, v: u.occ, tgt: BENCH.occ_pct, a: u.occ >= BENCH.occ_pct ? 'VERDE' : u.occ >= BENCH.occ_pct * 0.9 ? 'GIALLO' : 'ROSSO' });
+  if (u.costo_pl_gg !== null) autoKPI.push({ kpi: 'Costo PL/gg', uo: u.cod, v: u.costo_pl_gg, tgt: BENCH.costo_pl_gg, a: u.costo_pl_gg <= BENCH.costo_pl_gg ? 'VERDE' : u.costo_pl_gg <= BENCH.costo_pl_gg * 1.15 ? 'GIALLO' : 'ROSSO' });
+});
+const KPI = autoKPI;
+
+// Waterfall calcolato
+const { waterfallRaw, cassaSett, scenari } = D.cashflow;
+let rt = 0;
+const waterfall = waterfallRaw.map(w => {
+  if (w.tipo === 'entrata') { rt = w.valore; return { ...w, base: 0, barra: w.valore, col: C.verde }; }
+  if (w.tipo === 'uscita') { const r = { ...w, base: Math.min(rt, rt + w.valore), barra: Math.abs(w.valore), col: C.rosso }; rt += w.valore; return r; }
+  if (w.tipo === 'subtotale') { rt = w.valore; return { ...w, base: 0, barra: Math.abs(w.valore), col: w.valore >= 0 ? '#2563eb' : '#b91c1c' }; }
+  rt = w.valore; return { ...w, base: 0, barra: Math.abs(w.valore), col: w.valore >= 0 ? '#047857' : '#b91c1c' };
+});
+
+const narrative = D.narrative;
+
+// ============================================================================
+// HELPERS — formattazione importi PRECISI (no abbreviazioni)
+// ============================================================================
+const formatEuro = v => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
+const fmt = formatEuro;
+const fmtPct = v => (v * 100).toFixed(1) + '%';
+const mesi = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+
+const Semaforo = ({ valore, testo, verdeMin, gialloMin, invertito }) => {
+  let colore, sfondo;
+  if (invertito) {
+    colore = valore <= verdeMin ? C.verde : valore <= gialloMin ? C.giallo : C.rosso;
+  } else {
+    colore = valore >= verdeMin ? C.verde : valore >= gialloMin ? C.giallo : C.rosso;
+  }
+  sfondo = colore === C.verde ? C.verdeBg : colore === C.giallo ? C.gialloBg : C.rossoBg;
+  return React.createElement('span', { style: { background: sfondo, color: colore, padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600 } }, testo || (typeof valore === 'number' ? (valore % 1 === 0 ? valore : valore.toFixed(1)) : valore));
+};
+
+const Badge = ({ reale }) => {
+  if (reale) return React.createElement('span', { style: { fontSize: 9, padding: '1px 6px', borderRadius: 10, background: C.verdeBg, color: C.verde, marginLeft: 6, fontWeight: 600 } }, 'Consuntivo');
+  return React.createElement('span', { style: { fontSize: 9, padding: '1px 6px', borderRadius: 10, background: '#fff7ed', color: '#c2410c', marginLeft: 6, fontWeight: 600 } }, 'Dati simulati');
+};
+
+const alertCol = a => ({ color: a === 'ROSSO' ? C.rosso : a === 'GIALLO' ? C.giallo : C.verde, bg: a === 'ROSSO' ? C.rossoBg : a === 'GIALLO' ? C.gialloBg : C.verdeBg });
+
+// Helper delta con freccia
+const DeltaBadge = ({ v, inverse }) => {
+  const pos = inverse ? v <= 0 : v >= 0;
+  const col = pos ? C.verde : C.rosso;
+  const bg = pos ? C.verdeBg : C.rossoBg;
+  const arrow = v > 0 ? '▲' : v < 0 ? '▼' : '—';
+  return React.createElement('span', { style: { fontSize: 10, padding: '2px 6px', borderRadius: 8, background: bg, color: col, fontWeight: 600 } }, arrow + ' ' + formatEuro(Math.abs(v)));
+};
+
+// ============================================================================
+// COMPONENTE PRINCIPALE
+// ============================================================================
+const KarolDashboard = () => {
+  const [tab, setTab] = useState('overview');
+  const [selUO, setSelUO] = useState(null);
+  const [ceView, setCeView] = useState('consolidato');
+  const [simRic, setSimRic] = useState(0);
+  const [simPers, setSimPers] = useState(0);
+  const [simOcc, setSimOcc] = useState(0);
+  const [simSede, setSimSede] = useState(0);
+  const [showExport, setShowExport] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [fcMethod, setFcMethod] = useState('lin');
+
+  // ---- Export PDF ----
+  const exportPDF = async () => {
+    setExporting(true);
+    try {
+      const { jsPDF } = window.jspdf;
+      const content = document.getElementById('dashboard-content');
+      const canvas = await html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#F0F4F8' });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfW = pdf.internal.pageSize.getWidth();
+      const pdfH = (canvas.height * pdfW) / canvas.width;
+      let pos = 0;
+      const pageH = pdf.internal.pageSize.getHeight();
+      while (pos < pdfH) {
+        if (pos > 0) pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, -pos, pdfW, pdfH);
+        pos += pageH;
+      }
+      pdf.save('Karol_CdG_' + tab + '_' + new Date().toISOString().slice(0,10) + '.pdf');
+    } catch(e) { alert('Errore export PDF: ' + e.message); }
+    setExporting(false);
+    setShowExport(false);
   };
 
-  const formattaPercentuale = (valore) => {
-    return `${valore.toFixed(1)}%`;
+  // ---- Export Excel ----
+  const exportExcel = () => {
+    setExporting(true);
+    try {
+      const wb = XLSX.utils.book_new();
+
+      // Foglio Riepilogo
+      const riepilogo = [
+        ['KAROL S.p.A. — Controllo di Gestione Sicilia'],
+        ['Anno ' + D.meta.anno + ' — ' + D.meta.mesi_chiusi + ' mesi'],
+        [],
+        ['UO', 'Ricavi', 'Costi Dir.', 'MOL-I', 'MOL-I %', 'Sede', 'MOL-G', 'MOL-G %', 'Pers %', 'Occ %'],
+        ...UO.map(u => [u.cod + ' — ' + u.nome, u.ricavi, u.costiDir, u.molI, u.molIPct, u.sede, u.molG, u.molGPct, u.persPct, u.occ]),
+        [],
+        ['TOTALE', TOT.ric, TOT.cDir, TOT.molI, TOT.molIPct, TOT.sede, TOT.molG, TOT.molGPct, TOT.persPct, ''],
+      ];
+      const ws1 = XLSX.utils.aoa_to_sheet(riepilogo);
+      ws1['!cols'] = [{ wch: 28 }, ...Array(9).fill({ wch: 16 })];
+      XLSX.utils.book_append_sheet(wb, ws1, 'Riepilogo');
+
+      // Foglio CE Consolidato
+      const ceRows = [
+        ['Voce', 'Consuntivo', 'Budget', 'Delta', '% Ricavi'],
+        ['Ricavi', TOT.ric, TOT.budget_ric, TOT.ric - TOT.budget_ric, 1],
+        ['Personale', -TOT.pers, -UO.reduce((s,u) => s + u.budget_costi.personale, 0), '', ''],
+        ['Materiali', -UO.reduce((s,u) => s + u.costi.materiali, 0), -UO.reduce((s,u) => s + u.budget_costi.materiali, 0), '', ''],
+        ['Servizi', -UO.reduce((s,u) => s + u.costi.servizi, 0), -UO.reduce((s,u) => s + u.budget_costi.servizi, 0), '', ''],
+        ['Utenze', -UO.reduce((s,u) => s + u.costi.utenze, 0), -UO.reduce((s,u) => s + u.budget_costi.utenze, 0), '', ''],
+        ['Manutenzione', -UO.reduce((s,u) => s + u.costi.manutenzione, 0), -UO.reduce((s,u) => s + u.budget_costi.manutenzione, 0), '', ''],
+        ['MOL Industriale', TOT.molI, TOT.budget_ric - TOT.budget_cDir, '', TOT.molIPct],
+        ['Costi Sede', -TOT.sede, -1550000, '', ''],
+        ['MOL Gestionale', TOT.molG, '', '', TOT.molGPct],
+        ['Ammortamenti', -TOT.ammort, -350000, '', ''],
+        ['Oneri Finanziari', -TOT.oneri_fin, -125000, '', ''],
+        ['Risultato Operativo', TOT.ebit, '', '', ''],
+      ];
+      const ws2 = XLSX.utils.aoa_to_sheet(ceRows);
+      ws2['!cols'] = [{ wch: 22 }, ...Array(4).fill({ wch: 18 })];
+      XLSX.utils.book_append_sheet(wb, ws2, 'CE Consolidato');
+
+      // Foglio Trend Mensile
+      const trendRows = [
+        ['Mese', ...UO.map(u => u.cod + ' Ricavi'), ...UO.map(u => u.cod + ' Costi')],
+        ...mesi.map((m, i) => [m, ...UO.map(u => u.rM[i]), ...UO.map(u => u.cM[i])]),
+      ];
+      const ws3 = XLSX.utils.aoa_to_sheet(trendRows);
+      XLSX.utils.book_append_sheet(wb, ws3, 'Trend Mensile');
+
+      // Foglio KPI
+      const kpiRows = [
+        ['UO', 'KPI', 'Valore', 'Target', 'Semaforo'],
+        ...KPI.map(k => [k.uo, k.kpi, k.v, k.tgt, k.a]),
+      ];
+      const ws4 = XLSX.utils.aoa_to_sheet(kpiRows);
+      XLSX.utils.book_append_sheet(wb, ws4, 'KPI');
+
+      // Foglio Cash Flow
+      const cfRows = [
+        ['Voce', 'Importo', 'Tipo'],
+        ...waterfallRaw.map(w => [w.voce, w.valore, w.tipo]),
+        [],
+        ['KPI Cash Flow'],
+        ['DSO ASP', D.cashflow.kpi.dso],
+        ['DPO Fornitori', D.cashflow.kpi.dpo],
+        ['DSCR', D.cashflow.kpi.dscr],
+        ['Copertura Cassa (mesi)', D.cashflow.kpi.cop_cassa],
+      ];
+      const ws5 = XLSX.utils.aoa_to_sheet(cfRows);
+      XLSX.utils.book_append_sheet(wb, ws5, 'Cash Flow');
+
+      XLSX.writeFile(wb, 'Karol_CdG_Report_' + new Date().toISOString().slice(0,10) + '.xlsx');
+    } catch(e) { alert('Errore export Excel: ' + e.message); }
+    setExporting(false);
+    setShowExport(false);
   };
+
+  const nR = KPI.filter(k => k.a === 'ROSSO').length;
+  const nG = KPI.filter(k => k.a === 'GIALLO').length;
+  const nV = KPI.filter(k => k.a === 'VERDE').length;
+  const uoReali = D.meta.dati_reali ? UO.length : 0;
+
+  // Scostamento MOL-G
+  const scost = [...UO].map(u => ({ nome: u.cod, nomeC: u.nome, scost: u.molG, fill: u.molG >= 0 ? C.verde : C.rosso })).sort((a,b) => a.scost - b.scost);
+
+  // Trend multi-UO
+  const trendUO = mesi.map((m, i) => { const d = { mese: m }; UO.forEach(u => { d[u.cod] = u.rM[i]; }); return d; });
+
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: '📊' },
+    { id: 'ce', label: 'Conto Economico', icon: '📋' },
+    { id: 'strutture', label: 'Strutture', icon: '🏥' },
+    { id: 'trend', label: 'Trend', icon: '📈' },
+    { id: 'cashflow', label: 'Cash Flow', icon: '💰' },
+    { id: 'analisi', label: 'Analisi', icon: '🔍' },
+    { id: 'simulazioni', label: 'Simulazioni', icon: '🎛️' },
+  ];
+
+  const cardS = { background: C.card, borderRadius: 10, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', border: '1px solid ' + C.bordo };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8 text-center relative">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Cruscotto Flusso di Cassa - Sicilia
-          </h1>
-          <p className="text-lg text-gray-600 mb-4">
-            Gruppo Karol - Sicilia | Attività Sanitarie e Socio Sanitarie - Prestazioni Convenzionate
-          </p>
-          
-          <button
-            onClick={() => setShowDataValidation(!showDataValidation)}
-            className="absolute top-0 right-0 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            ⚠️ Valida Dati
-          </button>
-          
-          {showDataValidation && (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mt-4 text-left">
-              <h3 className="font-semibold text-orange-800 mb-2">Validazione Dati - Righe Excel & Calcolo Scostamento:</h3>
-              <div className="text-sm text-orange-700 space-y-2">
-                <div className="bg-white p-3 rounded border border-orange-300">
-                  <h4 className="font-semibold mb-2">📊 Calcolo Scostamento Totale: {formattaValuta(scostamentoTotale)}</h4>
-                  <div className="space-y-1 font-mono text-xs">
-                    {struttureDati.map((struttura, index) => (
-                      <div key={index} className="flex justify-between">
-                        <span>{struttura.nome.substring(0, 25)}...</span>
-                        <span className={struttura.scostamento >= 0 ? 'text-green-600' : 'text-red-600'}>
-                          {formattaValuta(struttura.scostamento)}
-                        </span>
-                      </div>
-                    ))}
-                    <div className="border-t pt-1 mt-2 font-bold">
-                      <div className="flex justify-between">
-                        <span>TOTALE SCOSTAMENTO:</span>
-                        <span className="text-red-600">{formattaValuta(scostamentoTotale)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-blue-50 p-3 rounded border border-blue-300">
-                  <h4 className="font-semibold mb-2">🏥 CTA - Parametri Operativi (7 mesi):</h4>
-                  <div className="text-xs space-y-1">
-                    <div>• <strong>Posti Letto:</strong> {struttureDati[0].postiLetto}</div>
-                    <div>• <strong>Tariffa Pro Die:</strong> €{struttureDati[0].tariffaGiornaliera}/giorno</div>
-                    <div>• <strong>Giorni Operativi (Gen-Lug):</strong> {struttureDati[0].giorni7Mesi}</div>
-                    <div>• <strong>Budget Teorico Piena Occupazione:</strong> {formattaValuta(struttureDati[0].budgetTeoricoPlenaOccupazione)}</div>
-                    <div>• <strong>Fatturato Effettivo:</strong> {formattaValuta(struttureDati[0].totaleFatturato)}</div>
-                    <div>• <strong>% Occupazione Teorica:</strong> {struttureDati[0].percentualeOccupazioneTeorica.toFixed(1)}%</div>
-                    <div>• <strong>Scostamento vs Teorico:</strong> {formattaValuta(struttureDati[0].scostamentoVsBudgetTeorico)}</div>
-                    <div className="mt-2 text-yellow-800 bg-yellow-100 p-2 rounded">
-                      <strong>⚠️ Note:</strong> {struttureDati[0].note}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-green-50 p-3 rounded border border-green-300">
-                  <h4 className="font-semibold mb-2">🏢 COSENTINO - Strategia Acuti:</h4>
-                  <div className="text-xs space-y-1">
-                    <div>• <strong>Budget Annuo Acuti:</strong> {formattaValuta(struttureDati[2].budgetAnnuale)}</div>
-                    <div>• <strong>Budget 7 mesi (7/12):</strong> {formattaValuta(struttureDati[2].budgetCumulato7Mesi)}</div>
-                    <div>• <strong>Chirurgia ORTOPEDICA:</strong> {formattaValuta(struttureDati[2].dettaglioFatturato.chirurgiaOrtopedica)}</div>
-                    <div>• <strong>RIABILITAZIONE:</strong> {formattaValuta(struttureDati[2].dettaglioFatturato.riabilitazione)}</div>
-                    <div>• <strong>Totale Fatturato:</strong> {formattaValuta(struttureDati[2].totaleFatturato)}</div>
-                    <div>• <strong>Surplus Strategico:</strong> +{formattaValuta(struttureDati[2].scostamento)}</div>
-                    <div className="mt-2 text-green-800 bg-green-100 p-2 rounded">
-                      <strong>✅ Strategia:</strong> {struttureDati[2].note}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="text-xs">
-                  {struttureDati.map((struttura, index) => (
-                    <div key={index} className="flex justify-between border-b py-1">
-                      <span>{struttura.nome}</span>
-                      <span className="font-mono">Riga {struttura.riga} | Budget: {formattaValuta(struttura.budgetAnnuale)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+    <div id="dashboard-content" style={{ background: C.sfondo, minHeight: '100vh', fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
+      {/* HEADER */}
+      <div style={{ background: 'linear-gradient(135deg, ' + C.primario + ' 0%, ' + C.primarioChiaro + ' 100%)', padding: '20px 32px', color: 'white' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: 2 }}>KAROL</div>
+            <div style={{ fontSize: 12, opacity: 0.7, letterSpacing: 3, marginTop: 2 }}>CONTROLLO DI GESTIONE</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <button onClick={() => setShowExport(true)}
+              style={{ padding: '8px 18px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8, color: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', backdropFilter: 'blur(4px)' }}>
+              📥 Export
+            </button>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 15, fontWeight: 600 }}>Sicilia — Anno {D.meta.anno} ({D.meta.mesi_chiusi} Mesi)</div>
+            <div style={{ fontSize: 11, opacity: 0.7, marginTop: 4 }}>
+              Completezza dati: {uoReali}/{UO.length} UO reali
+              <span style={{ display: 'inline-block', width: 60, height: 5, borderRadius: 3, background: 'rgba(255,255,255,.2)', marginLeft: 8, verticalAlign: 'middle', overflow: 'hidden' }}>
+                <span style={{ display: 'block', width: (uoReali/UO.length*100) + '%', height: '100%', borderRadius: 3, background: '#fca5a5' }}></span>
+              </span>
             </div>
-          )}
-        </div>
-
-        {/* KPI Cards - CORRETTI A 7 MESI */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-blue-500">
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Fatturato Totale (7 mesi)</h3>
-            <p className="text-3xl font-bold text-blue-600">{formattaValuta(totaleRealizzato)}</p>
-          </div>
-          
-          <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-green-500">
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Budget Totale (7 mesi)</h3>
-            <p className="text-3xl font-bold text-green-600">{formattaValuta(totaleBudget)}</p>
-          </div>
-          
-          <div className={`bg-white rounded-2xl shadow-lg p-6 border-l-4 ${percentualeTotale >= 80 ? 'border-green-500' : percentualeTotale >= 60 ? 'border-yellow-500' : 'border-red-500'}`}>
-            <h3 className="text-sm font-medium text-gray-500 mb-2">% Realizzazione</h3>
-            <p className={`text-3xl font-bold ${percentualeTotale >= 80 ? 'text-green-600' : percentualeTotale >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-              {formattaPercentuale(percentualeTotale)}
-            </p>
-          </div>
-          
-          <div className={`bg-white rounded-2xl shadow-lg p-6 border-l-4 ${scostamentoTotale >= 0 ? 'border-green-500' : 'border-red-500'}`}>
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Scostamento</h3>
-            <p className={`text-3xl font-bold ${scostamentoTotale >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formattaValuta(scostamentoTotale)}
-            </p>
           </div>
         </div>
+      </div>
 
-        {/* Main Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg p-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">Performance vs Budget per Struttura</h3>
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={datiPerformance} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="nome" 
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                  fontSize={12}
-                />
-                <YAxis tickFormatter={(value) => `€${(value / 1000).toFixed(0)}k`} />
-                <Tooltip 
-                  formatter={(value, name) => [formattaValuta(value), name === 'Realizzato' ? 'Fatturato' : 'Budget']}
-                  labelFormatter={(label) => `Struttura: ${label}`}
-                />
-                <Legend />
-                <Bar dataKey="Budget" fill="#e5e7eb" name="Budget" />
-                <Bar dataKey="Realizzato" fill="#3b82f6" name="Fatturato" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">Livello di Criticità</h3>
-            <ResponsiveContainer width="100%" height={350}>
-              <PieChart>
-                <Pie
-                  data={datiCriticita}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="valore"
-                  label={({ nome, valore }) => valore > 0 ? `${nome}: ${valore}` : ''}
-                >
-                  {datiCriticita.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.colore} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Export e Azioni Rapide */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">Azioni Rapide</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-              onClick={() => setShowReport(true)}
-            >
-              📊 Genera Report
-            </button>
-            
-            <button
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-              onClick={() => setShowAlerts(true)}
-            >
-              🚨 Verifica Alert
-            </button>
-            
-            <button
-              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-              onClick={() => setShowProiezioni(true)}
-            >
-              📈 Proiezione Annuale
-            </button>
-          </div>
-        </div>
-
-        {/* Modal Report */}
-        {showReport && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 max-w-4xl w-full mx-4 max-h-screen overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-gray-900">📊 Report Dettagliato Gruppo Karol - Sicilia</h3>
-                <button
-                  onClick={() => setShowReport(false)}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
-                >
-                  ×
-                </button>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-blue-800 mb-2">📈 Sintesi Esecutiva</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <strong>Periodo:</strong> Gennaio - Luglio 2025 (7 mesi)
-                    </div>
-                    <div>
-                      <strong>Performance Totale:</strong> {formattaPercentuale(percentualeTotale)}
-                    </div>
-                    <div>
-                      <strong>Fatturato Realizzato:</strong> {formattaValuta(totaleRealizzato)}
-                    </div>
-                    <div>
-                      <strong>Scostamento Budget:</strong> {formattaValuta(scostamentoTotale)}
-                    </div>
-                  </div>
+      {/* EXPORT MODAL */}
+      {showExport && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setShowExport(false)}>
+          <div style={{ background: C.card, borderRadius: 16, padding: '28px 32px', width: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}
+            onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Export Report</h3>
+            <p style={{ fontSize: 12, color: C.t3, marginBottom: 20 }}>Karol CdG — Anno {D.meta.anno}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <button onClick={exportPDF} disabled={exporting}
+                style={{ padding: '14px 20px', background: C.rosso + '10', border: '2px solid ' + C.rosso + '30', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, fontFamily: 'inherit' }}>
+                <span style={{ fontSize: 24 }}>📄</span>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>Export PDF</div>
+                  <div style={{ fontSize: 11, color: C.t3 }}>Snapshot del tab attivo ({tab})</div>
                 </div>
-                
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs border border-gray-200">
-                    <thead className="bg-gray-100">
-                      <tr>
-                        <th className="p-2 text-left border">Struttura</th>
-                        <th className="p-2 text-right border">Budget Ann.</th>
-                        <th className="p-2 text-right border">Fatt. 7m</th>
-                        <th className="p-2 text-right border">Budget 7m</th>
-                        <th className="p-2 text-right border">% Real.</th>
-                        <th className="p-2 text-right border">Scostamento</th>
-                        <th className="p-2 text-center border">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {struttureDati.map((struttura, index) => (
-                        <tr key={index} className="border-b">
-                          <td className="p-2 border">{struttura.nome}</td>
-                          <td className="p-2 text-right border">{formattaValuta(struttura.budgetAnnuale)}</td>
-                          <td className="p-2 text-right border font-medium">{formattaValuta(struttura.totaleFatturato)}</td>
-                          <td className="p-2 text-right border">{formattaValuta(struttura.budgetCumulato7Mesi)}</td>
-                          <td className={`p-2 text-right border font-medium ${
-                            struttura.percentualeRealizzata >= 90 ? 'text-green-600' : 
-                            struttura.percentualeRealizzata >= 80 ? 'text-yellow-600' : 'text-red-600'
-                          }`}>
-                            {formattaPercentuale(struttura.percentualeRealizzata)}
-                          </td>
-                          <td className={`p-2 text-right border font-medium ${
-                            struttura.scostamento >= 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {formattaValuta(struttura.scostamento)}
-                          </td>
-                          <td className="p-2 text-center border">
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              struttura.criticita === 'alta' ? 'bg-red-100 text-red-800' :
-                              struttura.criticita === 'media' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-green-100 text-green-800'
-                            }`}>
-                              {struttura.status === 'positivo' ? '✅' : '⚠️'}
-                            </span>
-                          </td>
-                        </tr>
+              </button>
+              <button onClick={exportExcel} disabled={exporting}
+                style={{ padding: '14px 20px', background: C.verde + '10', border: '2px solid ' + C.verde + '30', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, fontFamily: 'inherit' }}>
+                <span style={{ fontSize: 24 }}>📊</span>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>Export Excel</div>
+                  <div style={{ fontSize: 11, color: C.t3 }}>Report completo: Riepilogo, CE, Trend, KPI, Cash Flow</div>
+                </div>
+              </button>
+            </div>
+            {exporting && <div style={{ textAlign: 'center', marginTop: 16, fontSize: 13, color: C.primario, fontWeight: 600 }}>Generazione in corso...</div>}
+            <button onClick={() => setShowExport(false)}
+              style={{ marginTop: 16, width: '100%', padding: '10px', background: 'transparent', border: '1px solid ' + C.bordo, borderRadius: 8, cursor: 'pointer', fontSize: 13, color: C.t2, fontFamily: 'inherit' }}>
+              Chiudi
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* KPI CARDS */}
+      <div style={{ maxWidth: 1280, margin: '-20px auto 0', padding: '0 24px', position: 'relative', zIndex: 1 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: 12 }}>
+          {[
+            { label: 'Ricavi Totali', valore: fmt(TOT.ric), colore: C.CTA },
+            { label: 'MOL Industriale', valore: fmt(TOT.molI), sub: fmtPct(TOT.molIPct), colore: C.verde },
+            { label: 'Costi Sede', valore: fmt(TOT.sede), sub: fmtPct(TOT.sede / TOT.ric) + ' ricavi', colore: C.viola },
+            { label: 'MOL Gestionale', valore: fmt(TOT.molG), sub: fmtPct(TOT.molGPct), colore: TOT.molG >= 0 ? C.verde : C.rosso },
+            { label: 'DSO ASP', valore: D.cashflow.kpi.dso + ' gg', sub: 'Target <' + BENCH.dso, colore: D.cashflow.kpi.dso > BENCH.dso ? C.giallo : C.verde },
+            { label: 'Copertura Cassa', valore: D.cashflow.kpi.cop_cassa + ' mesi', sub: 'Target >' + BENCH.cop_cassa_mesi, colore: D.cashflow.kpi.cop_cassa < BENCH.cop_cassa_mesi ? C.giallo : C.verde },
+            { label: 'Alert', valore: (nR+nG) + ' attivi', sub: nR + ' rossi / ' + nG + ' gialli / ' + nV + ' verdi', colore: nR > 0 ? C.rosso : C.giallo },
+          ].map((kpi, i) => (
+            <div key={i} style={{ background: C.card, borderRadius: 10, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid ' + kpi.colore, borderTop: '1px solid #f1f5f9' }}>
+              <div style={{ fontSize: 11, color: C.t3, fontWeight: 500, marginBottom: 6 }}>{kpi.label}</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: kpi.colore }}>{kpi.valore}</div>
+              {kpi.sub && <div style={{ fontSize: 11, color: C.t3, marginTop: 2 }}>{kpi.sub}</div>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* TAB NAVIGATION */}
+      <div style={{ maxWidth: 1280, margin: '20px auto 0', padding: '0 24px' }}>
+        <div style={{ display: 'flex', gap: 4, borderBottom: '2px solid ' + C.bordo }}>
+          {tabs.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              style={{ padding: '10px 20px', border: 'none', cursor: 'pointer', background: tab === t.id ? C.card : 'transparent', color: tab === t.id ? C.primario : C.t2, fontWeight: tab === t.id ? 700 : 500, fontSize: 14, borderBottom: tab === t.id ? '3px solid ' + C.primario : '3px solid transparent', borderRadius: '8px 8px 0 0', transition: 'all 0.2s', fontFamily: 'inherit' }}>
+              {t.icon} {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* CONTENT */}
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '20px 24px 40px' }}>
+
+        {/* ======================== OVERVIEW ======================== */}
+        {tab === 'overview' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            {/* 6 Card Costi Gestionali */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+              {[
+                { label: 'Personale', valore: TOT.pers, pct: TOT.persPct, bench: BENCH.pers_pct, icon: '👥', inv: true },
+                { label: 'Materiali/Farmaci', valore: UO.reduce((s,u) => s + u.costi.materiali, 0), pct: UO.reduce((s,u) => s + u.costi.materiali, 0) / TOT.ric, bench: 0.12, icon: '💊', inv: true },
+                { label: 'Servizi', valore: UO.reduce((s,u) => s + u.costi.servizi, 0), pct: UO.reduce((s,u) => s + u.costi.servizi, 0) / TOT.ric, bench: 0.12, icon: '🔧', inv: true },
+                { label: 'Utenze', valore: UO.reduce((s,u) => s + u.costi.utenze, 0), pct: UO.reduce((s,u) => s + u.costi.utenze, 0) / TOT.ric, bench: 0.05, icon: '⚡', inv: true },
+                { label: 'Manutenzione', valore: UO.reduce((s,u) => s + u.costi.manutenzione, 0), pct: UO.reduce((s,u) => s + u.costi.manutenzione, 0) / TOT.ric, bench: 0.03, icon: '🏗️', inv: true },
+                { label: 'Costi Sede/HQ', valore: TOT.sede, pct: TOT.sede / TOT.ric, bench: 0.12, icon: '🏢', inv: true },
+              ].map((c, i) => {
+                const ok = c.inv ? c.pct <= c.bench : c.pct >= c.bench;
+                const warn = c.inv ? c.pct <= c.bench * 1.15 : c.pct >= c.bench * 0.85;
+                const col = ok ? C.verde : warn ? C.giallo : C.rosso;
+                const bg = ok ? C.verdeBg : warn ? C.gialloBg : C.rossoBg;
+                return (
+                  <div key={i} style={{ ...cardS, padding: '14px 16px', borderLeft: '3px solid ' + col }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <span style={{ fontSize: 11, color: C.t3, fontWeight: 500 }}>{c.icon} {c.label}</span>
+                      <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 8, background: bg, color: col, fontWeight: 600 }}>{fmtPct(c.pct)}</span>
+                    </div>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: C.t1 }}>{fmt(c.valore)}</div>
+                    <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>Bench: {fmtPct(c.bench)}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              {/* B1: Bar orizzontale scostamento MOL-G */}
+              <div style={cardS}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Scostamento MOL-G per UO</h3>
+                <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Divergenza dal breakeven per unità operativa</p>
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={scost} layout="vertical" margin={{ left: 50, right: 50 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                    <XAxis type="number" tickFormatter={v => fmt(v)} fontSize={10} stroke={C.t3} />
+                    <YAxis type="category" dataKey="nome" fontSize={12} width={45} stroke={C.t2} />
+                    <Tooltip formatter={v => [fmt(v), 'MOL-G']} />
+                    <ReferenceLine x={0} stroke={C.t3} strokeWidth={1.5} />
+                    <Bar dataKey="scost" name="MOL-G" radius={[0, 4, 4, 0]} barSize={22}>
+                      {scost.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+                <div style={{ textAlign: 'center', marginTop: 8, fontSize: 13, fontWeight: 600, color: TOT.molG >= 0 ? C.verde : C.rosso }}>
+                  MOL-G Gruppo: {fmt(TOT.molG)}
+                </div>
+              </div>
+
+              {/* B2: Tabella semaforo aggiornata con Costo PL/gg */}
+              <div style={cardS}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Matrice KPI per UO</h3>
+                <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Semaforo performance operativa</p>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid ' + C.bordo }}>
+                      {['UO', 'MOL-I %', 'MOL-G %', 'Pers. %', 'Occ. %', 'Costo PL/gg'].map(h => (
+                        <th key={h} style={{ padding: '8px 4px', textAlign: h === 'UO' ? 'left' : 'center', color: C.t2, fontWeight: 600, fontSize: 10 }}>{h}</th>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-semibold mb-2">💡 Raccomandazioni</h4>
-                  <ul className="text-sm space-y-1">
-                    <li>• <strong>CTA (ex-INTENSIVI):</strong> Performance 96.8% su budget teorico - Servizi: Intensivi/Estensivi + Permessi Terapeutici</li>
-                    <li>• <strong>COSENTINO:</strong> Surplus strategico +{formattaValuta(struttureDati[2].scostamento)} per compensare agosto</li>
-                    <li>• <strong>RSA:</strong> Leggero scostamento {formattaValuta(struttureDati[1].scostamento)} da monitorare</li>
-                    <li>• <strong>Strutture RADIOLOGIA/FKT:</strong> Performance stabili in linea con obiettivi</li>
-                  </ul>
-                </div>
-
-                <div className="text-center">
-                  <button
-                    onClick={() => {
-                      const reportText = `GRUPPO KAROL - SICILIA - REPORT 7 MESI\n\nPerformance Totale: ${formattaPercentuale(percentualeTotale)}\nFatturato: ${formattaValuta(totaleRealizzato)}\nScostamento: ${formattaValuta(scostamentoTotale)}`;
-                      navigator.clipboard.writeText(reportText).then(() => {
-                        alert('✅ Report copiato negli appunti!');
-                      });
-                    }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
-                  >
-                    📋 Copia Report
-                  </button>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {UO.map((u, i) => {
+                      const kpis = KPI.filter(k => k.uo === u.cod);
+                      const cell = (name) => {
+                        const k = kpis.find(x => x.kpi.startsWith(name));
+                        if (!k) return <td style={{ textAlign: 'center', color: C.t3, fontSize: 11 }}>n/d</td>;
+                        const ac = alertCol(k.a);
+                        const display = name === 'Costo PL' ? fmt(k.v) : fmtPct(k.v);
+                        return <td style={{ textAlign: 'center' }}><span style={{ background: ac.bg, color: ac.color, padding: '2px 6px', borderRadius: 10, fontSize: 10, fontWeight: 600, fontFamily: 'monospace' }}>{display}</span></td>;
+                      };
+                      return (
+                        <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo, cursor: 'pointer' }} onClick={() => { setSelUO(u); setTab('strutture'); }}>
+                          <td style={{ padding: '10px 4px', fontWeight: 600, color: C.t1, fontSize: 12 }}>
+                            <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: u.colore, marginRight: 6 }}></span>
+                            {u.cod}
+                          </td>
+                          {cell('MOL-I')}{cell('MOL-G')}{cell('Pers')}{cell('Occ')}{cell('Costo PL')}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <div style={{ marginTop: 12, display: 'flex', gap: 16, justifyContent: 'center' }}>
+                  {[{ c: C.verdeBg, t: C.verde, l: 'In target' }, { c: C.gialloBg, t: C.giallo, l: 'Attenzione' }, { c: C.rossoBg, t: C.rosso, l: 'Critico' }]
+                    .map(leg => <span key={leg.l} style={{ fontSize: 10, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 10, height: 10, borderRadius: 3, background: leg.c, border: '1px solid ' + leg.t }}></span>{leg.l}
+                    </span>)}
                 </div>
               </div>
+            </div>
+
+            {/* Sintesi direzionale */}
+            <div style={cardS}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 12 }}>Sintesi Direzionale</h3>
+              {narrative.filter(n => n.uo === 'GRUPPO').map((n, i) => {
+                const ac = alertCol(n.alert);
+                return (
+                  <div key={i} style={{ padding: '12px 16px', background: ac.bg, borderRadius: 8, borderLeft: '4px solid ' + ac.color, marginBottom: 8 }}>
+                    <p style={{ fontSize: 12, color: C.t1, lineHeight: 1.6, marginBottom: 4 }}>{n.testo}</p>
+                    <p style={{ fontSize: 11, color: C.t2, fontStyle: 'italic' }}>Outlook: {n.outlook}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* Modal Alerts */}
-        {showAlerts && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-gray-900">🚨 Sistema Alert - Monitoraggio Criticità</h3>
-                <button
-                  onClick={() => setShowAlerts(false)}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
-                >
-                  ×
-                </button>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="border-l-4 border-red-500 bg-red-50 p-4">
-                  <h4 className="font-semibold text-red-800 mb-2">🔴 ALERT CRITICI (Performance &lt; 70%)</h4>
-                  {struttureDati.filter(s => s.percentualeRealizzata < 70).length > 0 ? (
-                    struttureDati.filter(s => s.percentualeRealizzata < 70).map((struttura, idx) => (
-                      <div key={idx} className="bg-white p-3 rounded mb-2 border border-red-200">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <strong>{struttura.nome}</strong>
-                            <p className="text-sm text-gray-600">Riga Excel: {struttura.riga}</p>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-red-700 font-bold">{struttura.percentualeRealizzata.toFixed(1)}%</div>
-                            <div className="text-sm text-red-600">{formattaValuta(struttura.scostamento)}</div>
-                          </div>
-                        </div>
-                        <div className="mt-2 text-sm bg-red-100 p-2 rounded">
-                          <strong>Azione CTA:</strong> Ottimizzare occupazione {struttura.postiLetto} posti letto 
-                          ({struttura.percentualeOccupazioneTeorica.toFixed(1)}% vs teorico). 
-                          Gap teorico: {formattaValuta(struttura.scostamentoVsBudgetTeorico)}
-                          <br/><small>Servizi: Intensivi/Estensivi + Permessi Terapeutici</small>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-green-700 bg-green-100 p-2 rounded">✅ Nessun alert critico</div>
-                  )}
-                </div>
+        {/* ======================== CONTO ECONOMICO ======================== */}
+        {tab === 'ce' && (() => {
+          // CE Consolidato righe
+          const ceRighe = [
+            { voce: 'Ricavi', val: TOT.ric, bud: TOT.budget_ric, cls: 'header' },
+            { voce: '  Personale', val: -TOT.pers, bud: -UO.reduce((s,u) => s + u.budget_costi.personale, 0), cls: 'costo' },
+            { voce: '  Materiali/Farmaci', val: -UO.reduce((s,u) => s + u.costi.materiali, 0), bud: -UO.reduce((s,u) => s + u.budget_costi.materiali, 0), cls: 'costo' },
+            { voce: '  Servizi', val: -UO.reduce((s,u) => s + u.costi.servizi, 0), bud: -UO.reduce((s,u) => s + u.budget_costi.servizi, 0), cls: 'costo' },
+            { voce: '  Utenze', val: -UO.reduce((s,u) => s + u.costi.utenze, 0), bud: -UO.reduce((s,u) => s + u.budget_costi.utenze, 0), cls: 'costo' },
+            { voce: '  Manutenzione', val: -UO.reduce((s,u) => s + u.costi.manutenzione, 0), bud: -UO.reduce((s,u) => s + u.budget_costi.manutenzione, 0), cls: 'costo' },
+            { voce: '  Altri costi diretti', val: -UO.reduce((s,u) => s + u.costi.altri, 0), bud: -UO.reduce((s,u) => s + u.budget_costi.altri, 0), cls: 'costo' },
+            { voce: 'MOL Industriale', val: TOT.molI, bud: TOT.budget_ric - TOT.budget_cDir, cls: 'subtotale' },
+            { voce: '  Costi Sede/HQ', val: -TOT.sede, bud: -1550000, cls: 'costo' },
+            { voce: 'MOL Gestionale', val: TOT.molG, bud: (TOT.budget_ric - TOT.budget_cDir) - 1550000, cls: 'subtotale' },
+            { voce: '  Ammortamenti', val: -TOT.ammort, bud: -350000, cls: 'costo' },
+            { voce: '  Oneri finanziari', val: -TOT.oneri_fin, bud: -125000, cls: 'costo' },
+            { voce: 'Risultato Operativo', val: TOT.ebit, bud: (TOT.budget_ric - TOT.budget_cDir) - 1550000 - 350000 - 125000, cls: 'totale' },
+          ];
 
-                <div className="border-l-4 border-green-500 bg-green-50 p-4">
-                  <h4 className="font-semibold text-green-800 mb-2">🟢 PERFORMANCE OTTIMALI (≥90%)</h4>
-                  <div className="space-y-2">
-                    {struttureDati.filter(s => s.percentualeRealizzata >= 90).map((struttura, idx) => (
-                      <div key={idx} className="bg-white p-3 rounded border border-green-200">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <strong>{struttura.nome}</strong>
-                            <p className="text-sm text-gray-600">Riga Excel: {struttura.riga}</p>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-green-700 font-bold">{struttura.percentualeRealizzata.toFixed(1)}%</div>
-                            <div className="text-sm text-green-600">{formattaValuta(struttura.scostamento)}</div>
-                          </div>
-                        </div>
-                      </div>
+          // CE per singola BU
+          const ceBU = (u) => [
+            { voce: 'Ricavi', val: u.ricavi, bud: u.budget_ricavi, cls: 'header' },
+            { voce: '  Personale', val: -u.costi.personale, bud: -u.budget_costi.personale, cls: 'costo' },
+            { voce: '  Materiali', val: -u.costi.materiali, bud: -u.budget_costi.materiali, cls: 'costo' },
+            { voce: '  Servizi', val: -u.costi.servizi, bud: -u.budget_costi.servizi, cls: 'costo' },
+            { voce: '  Utenze', val: -u.costi.utenze, bud: -u.budget_costi.utenze, cls: 'costo' },
+            { voce: '  Manutenzione', val: -u.costi.manutenzione, bud: -u.budget_costi.manutenzione, cls: 'costo' },
+            { voce: '  Altri', val: -u.costi.altri, bud: -u.budget_costi.altri, cls: 'costo' },
+            { voce: 'MOL Industriale', val: u.molI, bud: u.budget_ricavi - budgetCostiTot(u), cls: 'subtotale' },
+            { voce: '  Quota Sede', val: -u.sede, bud: -u.sede * 0.95, cls: 'costo' },
+            { voce: 'MOL Gestionale', val: u.molG, bud: (u.budget_ricavi - budgetCostiTot(u)) - u.sede * 0.95, cls: 'subtotale' },
+            { voce: '  Ammortamenti', val: -u.ammortamenti, bud: -u.ammortamenti * 0.95, cls: 'costo' },
+            { voce: '  Oneri finanziari', val: -u.oneri_fin, bud: -u.oneri_fin * 0.95, cls: 'costo' },
+            { voce: 'Risultato Operativo', val: u.ebit, bud: (u.budget_ricavi - budgetCostiTot(u)) - u.sede * 0.95 - u.ammortamenti * 0.95 - u.oneri_fin * 0.95, cls: 'totale' },
+          ];
+
+          // Forecast — 3 metodi
+          const mC = D.meta.mesi_chiusi;
+          const mR = 12 - mC; // mesi residui
+          const forecastCalc = UO.map(u => {
+            const ricMese = u.ricavi / mC;
+            const costMese = u.costiDir / mC;
+            // Linearizzazione: media mensile × 12
+            const lin_ric = ricMese * 12;
+            const lin_cost = costMese * 12;
+            // Budget residuo: consuntivo YTD + budget residuo proporzionale
+            const budRicMese = u.budget_ricavi / 12;
+            const budCostMese = budgetCostiTot(u) / 12;
+            const bud_ric = u.ricavi + budRicMese * mR;
+            const bud_cost = u.costiDir + budCostMese * mR;
+            // Trend ponderato: media mobile ponderata ultimi 3 mesi × residui + YTD
+            const rM = u.rM || [];
+            const cM = u.cM || [];
+            const w3ric = rM.length >= 3 ? (rM[rM.length-1]*3 + rM[rM.length-2]*2 + rM[rM.length-3]*1) / 6 : ricMese;
+            const w3cost = cM.length >= 3 ? (cM[cM.length-1]*3 + cM[cM.length-2]*2 + cM[cM.length-3]*1) / 6 : costMese;
+            const trnd_ric = u.ricavi + w3ric * mR;
+            const trnd_cost = u.costiDir + w3cost * mR;
+            return {
+              cod: u.cod, nome: u.nome, colore: u.colore,
+              lin: { ric: lin_ric, cost: lin_cost, molI: lin_ric - lin_cost },
+              bud: { ric: bud_ric, cost: bud_cost, molI: bud_ric - bud_cost },
+              trnd: { ric: trnd_ric, cost: trnd_cost, molI: trnd_ric - trnd_cost },
+            };
+          });
+          const fcData = forecastCalc.map(f => ({ ...f, fc: f[fcMethod] }));
+
+          const CETable = ({ righe }) => (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid ' + C.bordo, background: '#f8fafc' }}>
+                  <th style={{ padding: '10px 8px', textAlign: 'left', color: C.t2, fontWeight: 600, width: '35%' }}>Voce</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right', color: C.t2, fontWeight: 600 }}>Consuntivo</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right', color: C.t2, fontWeight: 600 }}>Budget</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right', color: C.t2, fontWeight: 600 }}>Delta</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right', color: C.t2, fontWeight: 600 }}>% Ricavi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {righe.map((r, i) => {
+                  const delta = r.val - r.bud;
+                  const isH = r.cls === 'header' || r.cls === 'subtotale' || r.cls === 'totale';
+                  const bg = r.cls === 'totale' ? '#f0f4f8' : r.cls === 'subtotale' ? '#f8fafc' : 'transparent';
+                  const fw = isH ? 700 : 400;
+                  const ricRef = righe[0].val;
+                  return (
+                    <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo, background: bg }}>
+                      <td style={{ padding: '8px', fontWeight: fw, color: C.t1, fontSize: isH ? 13 : 12 }}>{r.voce}</td>
+                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: fw, color: C.t1, fontFamily: 'monospace' }}>{fmt(r.val)}</td>
+                      <td style={{ padding: '8px', textAlign: 'right', color: C.t2, fontFamily: 'monospace' }}>{fmt(r.bud)}</td>
+                      <td style={{ padding: '8px', textAlign: 'right' }}>
+                        <span style={{ color: delta >= 0 ? C.verde : C.rosso, fontWeight: 600, fontFamily: 'monospace', fontSize: 11 }}>
+                          {delta >= 0 ? '+' : ''}{fmt(delta)}
+                        </span>
+                      </td>
+                      <td style={{ padding: '8px', textAlign: 'right', color: C.t3, fontSize: 11, fontFamily: 'monospace' }}>
+                        {ricRef !== 0 ? fmtPct(Math.abs(r.val) / Math.abs(ricRef)) : '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          );
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Sub-tab navigation */}
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[{ id: 'consolidato', l: 'CE Consolidato' }, { id: 'perbu', l: 'CE per BU' }, { id: 'forecast', l: 'Forecast' }].map(st => (
+                  <button key={st.id} onClick={() => setCeView(st.id)}
+                    style={{ padding: '8px 18px', border: '2px solid ' + (ceView === st.id ? C.primario : C.bordo), background: ceView === st.id ? C.primario + '10' : C.card, borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: ceView === st.id ? 700 : 500, color: ceView === st.id ? C.primario : C.t2, fontFamily: 'inherit' }}>
+                    {st.l}
+                  </button>
+                ))}
+              </div>
+
+              {/* CE Consolidato */}
+              {ceView === 'consolidato' && (
+                <div style={cardS}>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Conto Economico Consolidato — Gruppo Karol Sicilia</h3>
+                  <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Anno {D.meta.anno} — {D.meta.mesi_chiusi} mesi | Consuntivo vs Budget</p>
+                  <CETable righe={ceRighe} />
+                  <div style={{ marginTop: 16, padding: '10px 14px', background: TOT.ebit >= 0 ? C.verdeBg : C.rossoBg, borderRadius: 8, borderLeft: '4px solid ' + (TOT.ebit >= 0 ? C.verde : C.rosso) }}>
+                    <p style={{ fontSize: 12, color: C.t1 }}>
+                      Risultato operativo: <strong>{fmt(TOT.ebit)}</strong> — MOL-G {fmtPct(TOT.molGPct)} (target {fmtPct(BENCH.mol_g_pct)})
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* CE per BU */}
+              {ceView === 'perbu' && (
+                <div>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                    {UO.map(u => (
+                      <button key={u.cod} onClick={() => setSelUO(u)}
+                        style={{ padding: '8px 16px', border: '2px solid ' + (selUO && selUO.cod === u.cod ? u.colore : C.bordo), background: selUO && selUO.cod === u.cod ? u.colore + '15' : C.card, borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: selUO && selUO.cod === u.cod ? u.colore : C.t2, fontFamily: 'inherit' }}>
+                        {u.cod} — {u.nome}
+                      </button>
                     ))}
                   </div>
+                  {(() => {
+                    const u = selUO || UO[0];
+                    return (
+                      <div style={cardS}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                          <div>
+                            <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1 }}>CE — {u.nome}</h3>
+                            <p style={{ fontSize: 11, color: C.t2 }}>{u.tipo}{u.pl > 0 ? ' — ' + u.pl + ' PL' : ''}</p>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <span style={{ fontSize: 18, fontWeight: 700, color: u.molG >= 0 ? C.verde : C.rosso }}>{fmt(u.molG)}</span>
+                            <div style={{ fontSize: 10, color: C.t3 }}>MOL-G ({fmtPct(u.molGPct)})</div>
+                          </div>
+                        </div>
+                        <CETable righe={ceBU(u)} />
+                        {/* Riconciliazione */}
+                        <div style={{ marginTop: 12, padding: '8px 12px', background: '#f8fafc', borderRadius: 6, fontSize: 11, color: C.t2 }}>
+                          Riconciliazione: Ricavi {fmt(u.ricavi)} − Costi Diretti {fmt(u.costiDir)} = MOL-I {fmt(u.molI)} − Sede {fmt(u.sede)} = MOL-G {fmt(u.molG)} ✓
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
+              )}
 
-        {/* Modal Proiezioni */}
-        {showProiezioni && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 max-w-4xl w-full mx-4 max-h-screen overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-gray-900">📈 Proiezioni Fine Anno 2025</h3>
-                <button
-                  onClick={() => setShowProiezioni(false)}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
-                >
-                  ×
-                </button>
-              </div>
-              
-              <div className="space-y-6">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-blue-800 mb-2">📊 Scenario Gruppo Karol - Sicilia</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <strong>Budget Annuale Totale:</strong><br/>
-                      {formattaValuta(struttureDati.reduce((sum, s) => sum + s.budgetAnnuale, 0))}
-                    </div>
-                    <div>
-                      <strong>Proiezione Totale:</strong><br/>
-                      {formattaValuta(struttureDati.reduce((sum, s) => sum + (s.totaleFatturato / 7 * 12), 0))}
-                    </div>
-                    <div>
-                      <strong>Gap Stimato:</strong><br/>
-                      <span className="text-red-600 font-medium">
-                        {formattaValuta(struttureDati.reduce((sum, s) => sum + s.budgetAnnuale, 0) - struttureDati.reduce((sum, s) => sum + (s.totaleFatturato / 7 * 12), 0))}
-                      </span>
-                    </div>
-                    <div>
-                      <strong>% Raggiungimento:</strong><br/>
-                      <span className="text-blue-600 font-bold">
-                        {((struttureDati.reduce((sum, s) => sum + (s.totaleFatturato / 7 * 12), 0) / struttureDati.reduce((sum, s) => sum + s.budgetAnnuale, 0)) * 100).toFixed(1)}%
-                      </span>
-                    </div>
+              {/* Forecast */}
+              {ceView === 'forecast' && (() => {
+                const methods = [
+                  { id: 'lin', l: 'Linearizzazione', desc: 'Media mensile × 12' },
+                  { id: 'bud', l: 'Budget Residuo', desc: 'YTD + budget pro-rata residuo' },
+                  { id: 'trnd', l: 'Trend Ponderato', desc: 'YTD + media mobile 3M ponderata × residuo' },
+                ];
+                const totFcRic = fcData.reduce((s,f) => s + f.fc.ric, 0);
+                const totFcMolI = fcData.reduce((s,f) => s + f.fc.molI, 0);
+                const totFcVsBud = totFcRic - TOT.budget_ric;
+                // Barchart confronto metodi
+                const barFcData = UO.map((u, i) => ({
+                  cod: u.cod,
+                  Budget: u.budget_ricavi,
+                  Linearizzazione: forecastCalc[i].lin.ric,
+                  'Budget Residuo': forecastCalc[i].bud.ric,
+                  'Trend Ponderato': forecastCalc[i].trnd.ric,
+                }));
+                return (
+                <div style={cardS}>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Forecast Anno — Confronto Metodi</h3>
+                  <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>Proiezione basata su {mC} mesi consuntivati, {mR} mesi residui</p>
+                  {/* Selettore metodo */}
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                    {methods.map(m => (
+                      <button key={m.id} onClick={() => setFcMethod(m.id)}
+                        style={{ padding: '6px 14px', border: '2px solid ' + (fcMethod === m.id ? C.primario : C.bordo), background: fcMethod === m.id ? C.primario + '10' : 'white', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: fcMethod === m.id ? 700 : 500, color: fcMethod === m.id ? C.primario : C.t2, fontFamily: 'inherit' }}>
+                        {m.l}
+                        <div style={{ fontSize: 9, color: C.t3, fontWeight: 400 }}>{m.desc}</div>
+                      </button>
+                    ))}
                   </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-100">
-                      <tr>
-                        <th className="p-3 text-left">Struttura</th>
-                        <th className="p-3 text-right">Media 7m</th>
-                        <th className="p-3 text-right">Proiezione Anno</th>
-                        <th className="p-3 text-right">Budget Anno</th>
-                        <th className="p-3 text-right">Gap Previsto</th>
-                        <th className="p-3 text-center">% Target</th>
+                  {/* Tabella forecast */}
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid ' + C.bordo, background: '#f8fafc' }}>
+                        <th style={{ padding: '8px', textAlign: 'left', color: C.t2 }}>UO</th>
+                        <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Consuntivo YTD</th>
+                        <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Forecast 12M</th>
+                        <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Budget Anno</th>
+                        <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Fc vs Budget</th>
+                        <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>MOL-I Fc</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {struttureDati.map((struttura, index) => {
-                        const mediaMensile = struttura.totaleFatturato / 7;
-                        const proiezioneAnnuale = mediaMensile * 12;
-                        const gapAnnuale = struttura.budgetAnnuale - proiezioneAnnuale;
-                        const percentualeTarget = (proiezioneAnnuale / struttura.budgetAnnuale) * 100;
-                        
+                      {fcData.map((f, i) => {
+                        const u = UO[i];
+                        const fcVsBud = f.fc.ric - u.budget_ricavi;
                         return (
-                          <tr key={index} className="border-b hover:bg-gray-50">
-                            <td className="p-3 font-medium">{struttura.nome}</td>
-                            <td className="p-3 text-right">{formattaValuta(mediaMensile)}</td>
-                            <td className="p-3 text-right font-medium">{formattaValuta(proiezioneAnnuale)}</td>
-                            <td className="p-3 text-right">{formattaValuta(struttura.budgetAnnuale)}</td>
-                            <td className={`p-3 text-right font-medium ${gapAnnuale <= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                              {formattaValuta(Math.abs(gapAnnuale))}
+                          <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo }}>
+                            <td style={{ padding: '8px', fontWeight: 600, color: C.t1 }}>
+                              <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: f.colore, marginRight: 6 }}></span>
+                              {f.cod}
                             </td>
-                            <td className={`p-3 text-center font-bold ${
-                              percentualeTarget >= 95 ? 'text-green-600' :
-                              percentualeTarget >= 80 ? 'text-yellow-600' :
-                              'text-red-600'
-                            }`}>
-                              {percentualeTarget.toFixed(1)}%
+                            <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace' }}>{fmt(u.ricavi)}</td>
+                            <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 600 }}>{fmt(f.fc.ric)}</td>
+                            <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace', color: C.t2 }}>{fmt(u.budget_ricavi)}</td>
+                            <td style={{ padding: '8px', textAlign: 'right' }}>
+                              <span style={{ color: fcVsBud >= 0 ? C.verde : C.rosso, fontWeight: 600, fontFamily: 'monospace', fontSize: 11 }}>
+                                {fcVsBud >= 0 ? '+' : ''}{fmt(fcVsBud)}
+                              </span>
                             </td>
+                            <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace', color: f.fc.molI >= 0 ? C.verde : C.rosso, fontWeight: 600 }}>{fmt(f.fc.molI)}</td>
                           </tr>
                         );
                       })}
+                      <tr style={{ borderTop: '2px solid ' + C.primario, background: '#f0f4f8' }}>
+                        <td style={{ padding: '8px', fontWeight: 700 }}>TOTALE</td>
+                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace' }}>{fmt(TOT.ric)}</td>
+                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace' }}>{fmt(totFcRic)}</td>
+                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: C.t2 }}>{fmt(TOT.budget_ric)}</td>
+                        <td style={{ padding: '8px', textAlign: 'right' }}>
+                          <span style={{ color: totFcVsBud >= 0 ? C.verde : C.rosso, fontWeight: 700, fontFamily: 'monospace' }}>{totFcVsBud >= 0 ? '+' : ''}{fmt(totFcVsBud)}</span>
+                        </td>
+                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: totFcMolI >= 0 ? C.verde : C.rosso }}>{fmt(totFcMolI)}</td>
+                      </tr>
                     </tbody>
                   </table>
+                  {/* Grafico confronto metodi */}
+                  <div style={{ marginTop: 16 }}>
+                    <h4 style={{ fontSize: 13, fontWeight: 600, color: C.t1, marginBottom: 8 }}>Confronto Metodi — Ricavi Forecast per UO</h4>
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart data={barFcData} margin={{ top: 10, right: 20, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis dataKey="cod" fontSize={12} stroke={C.t2} />
+                        <YAxis tickFormatter={v => fmt(v)} fontSize={9} stroke={C.t3} />
+                        <Tooltip formatter={v => [fmt(v)]} />
+                        <Legend />
+                        <Bar dataKey="Budget" fill="#94a3b8" barSize={16} />
+                        <Bar dataKey="Linearizzazione" fill="#3b82f6" barSize={16} />
+                        <Bar dataKey="Budget Residuo" fill="#8b5cf6" barSize={16} />
+                        <Bar dataKey="Trend Ponderato" fill="#06b6d4" barSize={16} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  {/* Note metodo */}
+                  <div style={{ marginTop: 12, padding: '10px 14px', background: '#f0f4f8', borderRadius: 8, fontSize: 11, color: C.t2 }}>
+                    <strong>Metodo attivo: {methods.find(m => m.id === fcMethod)?.l}</strong> — {methods.find(m => m.id === fcMethod)?.desc}.
+                    {fcMethod === 'lin' && ' Ipotesi: ritmo costante nei mesi residui uguale alla media YTD.'}
+                    {fcMethod === 'bud' && ' Ipotesi: mesi residui seguono il budget originale, consuntivo acquisito.'}
+                    {fcMethod === 'trnd' && ' Ipotesi: trend recente (pesi 3-2-1 su ultimi 3 mesi) proiettato sui mesi residui.'}
+                  </div>
                 </div>
+                );
+              })()}
+            </div>
+          );
+        })()}
 
-                <div className="bg-yellow-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-yellow-800 mb-2">💡 Raccomandazioni Strategiche</h4>
-                  <ul className="text-sm space-y-1">
-                    <li>• <strong>Priorità CTA:</strong> Occupazione al {struttureDati[0].percentualeOccupazioneTeorica.toFixed(1)}% del teorico - ottimizzare {struttureDati[0].postiLetto} posti letto</li>
-                    <li>• <strong>CTA Servizi:</strong> Occupazione al {struttureDati[0].percentualeOccupazioneTeorica.toFixed(1)}% del teorico - Ottimizzare mix Intensivi/Estensivi + Permessi (€{struttureDati[0].tariffaGiornaliera}/die)</li>
-                    <li>• <strong>COSENTINO Strategia:</strong> Surplus {formattaValuta(struttureDati[2].scostamento)} ben pianificato per compensare agosto e contestazioni ASP</li>
-                    <li>• <strong>RSA Performance:</strong> Leggero scostamento {formattaValuta(struttureDati[1].scostamento)} da monitorare</li>
-                    <li>• <strong>Radiologia/FKT:</strong> Performance stabili in linea con budget</li>
-                    <li>• <strong>Gap Recovery CTA:</strong> Focus su ottimizzazione occupazione per recuperare {formattaValuta(Math.abs(struttureDati[0].scostamento))}</li>
-                  </ul>
+        {/* ======================== STRUTTURE ======================== */}
+        {tab === 'strutture' && (
+          <div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+              {UO.map(u => (
+                <button key={u.cod} onClick={() => setSelUO(u)}
+                  style={{ padding: '8px 16px', border: '2px solid ' + (selUO && selUO.cod === u.cod ? u.colore : C.bordo), background: selUO && selUO.cod === u.cod ? u.colore + '15' : C.card, borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: selUO && selUO.cod === u.cod ? u.colore : C.t2, fontFamily: 'inherit' }}>
+                  {u.cod} — {u.nome}
+                </button>
+              ))}
+            </div>
+            {(() => {
+              const u = selUO || UO[0];
+              const data = mesi.map((m, i) => ({ mese: m, Ricavi: u.rM[i], Costi: u.cM[i], MOL: u.rM[i] - u.cM[i] }));
+              const uKpi = KPI.filter(k => k.uo === u.cod);
+              const uNarr = narrative.find(n => n.uo === u.cod);
+              return (
+                <div style={cardS}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <div>
+                      <h3 style={{ fontSize: 17, fontWeight: 700, color: C.t1 }}>{u.nome} <Badge reale={u.datiReali} /></h3>
+                      <p style={{ fontSize: 12, color: C.t2 }}>{u.tipo}{u.pl > 0 ? ' — ' + u.pl + ' PL' : ''} | Ricavo/gg: {u.ricGg ? fmt(Math.round(u.ricGg)) : 'n/a'}{u.costo_pl_gg ? ' | Costo PL/gg: ' + fmt(Math.round(u.costo_pl_gg)) : ''}</p>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: u.molG >= 0 ? C.verde : C.rosso }}>{fmt(u.molG)}</div>
+                      <div style={{ fontSize: 11, color: C.t3 }}>MOL Gestionale ({fmtPct(u.molGPct)})</div>
+                    </div>
+                  </div>
+                  {/* KPI */}
+                  <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+                    {uKpi.map((k, i) => {
+                      const ac = alertCol(k.a);
+                      return (
+                        <div key={i} style={{ padding: '8px 12px', borderRadius: 8, background: ac.bg, borderLeft: '3px solid ' + ac.color, flex: '1 1 120px' }}>
+                          <div style={{ fontSize: 10, color: C.t2 }}>{k.kpi}</div>
+                          <div style={{ fontSize: 18, fontWeight: 700, color: ac.color }}>{fmtPct(k.v)}</div>
+                          <div style={{ fontSize: 9, color: C.t3 }}>vs {fmtPct(k.tgt)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Narrative */}
+                  {uNarr && (
+                    <div style={{ padding: '10px 14px', background: alertCol(uNarr.alert).bg, borderRadius: 8, borderLeft: '4px solid ' + alertCol(uNarr.alert).color, marginBottom: 16 }}>
+                      <p style={{ fontSize: 12, color: C.t1, lineHeight: 1.5 }}>{uNarr.testo}</p>
+                    </div>
+                  )}
+                  {/* Donut composizione costi + Chart trend */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16 }}>
+                    <div>
+                      <h4 style={{ fontSize: 12, fontWeight: 600, color: C.t2, marginBottom: 8 }}>Composizione Costi</h4>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <PieChart>
+                          <Pie data={[
+                            { name: 'Personale', value: u.costi.personale, fill: '#3b82f6' },
+                            { name: 'Materiali', value: u.costi.materiali, fill: '#8b5cf6' },
+                            { name: 'Servizi', value: u.costi.servizi, fill: '#06b6d4' },
+                            { name: 'Utenze', value: u.costi.utenze, fill: '#f59e0b' },
+                            { name: 'Manut.', value: u.costi.manutenzione, fill: '#ef4444' },
+                            { name: 'Altri', value: u.costi.altri, fill: '#94a3b8' },
+                          ].filter(d => d.value > 0)} dataKey="value" innerRadius={50} outerRadius={80} paddingAngle={2}>
+                          </Pie>
+                          <Tooltip formatter={v => [fmt(v)]} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
+                        {[
+                          { c: '#3b82f6', l: 'Pers.' }, { c: '#8b5cf6', l: 'Mat.' }, { c: '#06b6d4', l: 'Serv.' },
+                          { c: '#f59e0b', l: 'Uten.' }, { c: '#ef4444', l: 'Man.' }, { c: '#94a3b8', l: 'Altri' },
+                        ].map(leg => <span key={leg.l} style={{ fontSize: 9, display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: 2, background: leg.c }}></span>{leg.l}
+                        </span>)}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: 12, fontWeight: 600, color: C.t2, marginBottom: 8 }}>Trend Mensile Ricavi vs Costi</h4>
+                      <ResponsiveContainer width="100%" height={250}>
+                        <ComposedChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                          <XAxis dataKey="mese" fontSize={12} stroke={C.t3} />
+                          <YAxis tickFormatter={v => fmt(v)} fontSize={9} stroke={C.t3} />
+                          <Tooltip formatter={v => [fmt(v)]} />
+                          <Legend />
+                          <Bar dataKey="Ricavi" fill={u.colore} radius={[4,4,0,0]} barSize={18} />
+                          <Bar dataKey="Costi" fill={C.budget} radius={[4,4,0,0]} barSize={18} />
+                          <Line type="monotone" dataKey="MOL" name="MOL-I" stroke={C.verde} strokeWidth={2} dot={{ r: 3 }} />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
                 </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* ======================== TREND ======================== */}
+        {tab === 'trend' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* B3: Multi-UO overlay */}
+            <div style={cardS}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Trend Ricavi per UO — Confronto 12 Mesi</h3>
+              <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Clicca sulla legenda per nascondere/mostrare le linee</p>
+              <ResponsiveContainer width="100%" height={380}>
+                <LineChart data={trendUO} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="mese" fontSize={12} stroke={C.t3} />
+                  <YAxis tickFormatter={v => fmt(v)} fontSize={11} stroke={C.t3} />
+                  <Tooltip formatter={(v, name) => [fmt(v), name]} />
+                  <Legend />
+                  {UO.map(u => (
+                    <Line key={u.cod} type="monotone" dataKey={u.cod} stroke={u.colore} strokeWidth={u.cod === 'COS' ? 3 : 2} dot={{ r: 3 }} activeDot={{ r: 6 }} />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            {/* Mini sparklines per UO */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 12 }}>
+              {UO.map(u => {
+                const data = mesi.map((m, i) => ({ m, R: u.rM[i], C: u.cM[i] }));
+                return (
+                  <div key={u.cod} style={{ ...cardS, padding: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                      <span style={{ width: 10, height: 10, borderRadius: '50%', background: u.colore, display: 'inline-block', marginRight: 6 }}></span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: C.t1 }}>{u.cod}</span>
+                      <span style={{ fontSize: 11, color: C.t3, marginLeft: 6 }}>{u.tipo}</span>
+                      <Badge reale={u.datiReali} />
+                      <span style={{ marginLeft: 'auto', fontSize: 11, padding: '2px 8px', borderRadius: 12, background: u.molGPct >= .08 ? C.verdeBg : u.molGPct >= 0 ? C.gialloBg : C.rossoBg, color: u.molGPct >= .08 ? C.verde : u.molGPct >= 0 ? C.giallo : C.rosso, fontWeight: 600 }}>
+                        MOL-G {fmtPct(u.molGPct)}
+                      </span>
+                    </div>
+                    <ResponsiveContainer width="100%" height={120}>
+                      <LineChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                        <XAxis dataKey="m" fontSize={9} tick={{ fill: C.t3 }} />
+                        <YAxis tickFormatter={v => (v/1000).toFixed(0) + 'k'} fontSize={9} width={38} />
+                        <Tooltip formatter={v => [fmt(v)]} />
+                        <Line type="monotone" dataKey="R" name="Ricavi" stroke={u.colore} strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="C" name="Costi" stroke={C.rossoChiaro} strokeWidth={1.5} dot={false} strokeDasharray="4 3" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ======================== CASH FLOW ======================== */}
+        {tab === 'cashflow' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* C1: Waterfall */}
+            <div style={cardS}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Composizione Cash Flow Annuale</h3>
+              <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Waterfall da Ricavi a Cash Flow Netto — Gruppo Karol Sicilia</p>
+              <ResponsiveContainer width="100%" height={340}>
+                <BarChart data={waterfall} margin={{ top: 20, right: 20, left: 20, bottom: 50 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="voce" fontSize={10} angle={-35} textAnchor="end" height={60} stroke={C.t2} />
+                  <YAxis tickFormatter={v => fmt(v)} fontSize={11} stroke={C.t3} />
+                  <Tooltip formatter={(v, name) => { if (name === 'base') return ['','']; return [fmt(v), 'Valore']; }} />
+                  <Bar dataKey="base" stackId="a" fill="transparent" />
+                  <Bar dataKey="barra" stackId="a" radius={[3,3,0,0]} barSize={36}>
+                    {waterfall.map((d, i) => <Cell key={i} fill={d.col} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 8 }}>
+                {[{ c: C.verde, l: 'Entrate' }, { c: C.rosso, l: 'Uscite' }, { c: '#2563eb', l: 'Subtotali' }, { c: '#b91c1c', l: 'CF Netto (neg.)' }]
+                  .map(leg => <span key={leg.l} style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ width: 12, height: 12, borderRadius: 3, background: leg.c }}></span>{leg.l}
+                  </span>)}
+              </div>
+            </div>
+
+            {/* C2+C3: Cassa + Scenari */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={cardS}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Saldo Cassa — 12 Settimane</h3>
+                <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Soglia minima €200k (linea tratteggiata)</p>
+                <ResponsiveContainer width="100%" height={260}>
+                  <AreaChart data={cassaSett} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="gradC" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={C.CTA} stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor={C.CTA} stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis dataKey="s" fontSize={11} stroke={C.t3} />
+                    <YAxis tickFormatter={v => '€' + v + '.000'} fontSize={10} stroke={C.t3} domain={[0, 600]} />
+                    <Tooltip formatter={v => ['€' + v + '.000']} />
+                    <ReferenceLine y={200} stroke={C.rosso} strokeDasharray="6 4" strokeWidth={2} label={{ value: 'Soglia min.', position: 'right', fontSize: 10, fill: C.rosso }} />
+                    <Area type="monotone" dataKey="saldo" name="Saldo" stroke={C.CTA} strokeWidth={2.5} fill="url(#gradC)" dot={(props) => {
+                      const { cx, cy, payload } = props;
+                      if (payload.saldo < 200) return <circle cx={cx} cy={cy} r={5} fill={C.rosso} stroke="white" strokeWidth={2} />;
+                      return <circle cx={cx} cy={cy} r={3} fill={C.CTA} stroke="white" strokeWidth={1.5} />;
+                    }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+                <div style={{ marginTop: 8, padding: '8px 12px', background: C.rossoBg, borderRadius: 6, fontSize: 11, color: C.rosso, fontWeight: 500 }}>
+                  ⚠️ S10: Saldo €180k sotto soglia — possibile tensione di cassa per ritardo incassi ASP
+                </div>
+              </div>
+
+              <div style={cardS}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Cash Flow Cumulato — Scenari 5 Anni</h3>
+                <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Ottimistico / Base / Pessimistico (€k cumulati)</p>
+                <ResponsiveContainer width="100%" height={260}>
+                  <ComposedChart data={scenari} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis dataKey="anno" fontSize={12} stroke={C.t3} />
+                    <YAxis tickFormatter={v => '€' + v + '.000'} fontSize={11} stroke={C.t3} />
+                    <Tooltip formatter={v => ['€' + v + '.000']} />
+                    <Legend />
+                    <ReferenceLine y={0} stroke={C.t3} strokeWidth={1} />
+                    <Line type="monotone" dataKey="ott" name="Ottimistico" stroke={C.verde} strokeWidth={2} dot={{ r: 4, fill: C.verde }} />
+                    <Line type="monotone" dataKey="base" name="Base" stroke={C.CTA} strokeWidth={3} dot={{ r: 4, fill: C.CTA }} />
+                    <Line type="monotone" dataKey="pess" name="Pessimistico" stroke={C.rosso} strokeWidth={2} strokeDasharray="6 3" dot={{ r: 4, fill: C.rosso }} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+                <div style={{ marginTop: 8, padding: '8px 12px', background: '#fffbeb', borderRadius: 6, fontSize: 11, color: '#92400e' }}>
+                  Scenario pessimistico: CF negativo dal 2027 — necessaria rinegoziazione debito o riduzione CAPEX
+                </div>
+              </div>
+            </div>
+
+            {/* C4: KPI Cash Flow */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+              {[
+                { label: 'DSO ASP', valore: D.cashflow.kpi.dso + ' gg', target: '< ' + BENCH.dso + ' gg', sem: React.createElement(Semaforo, { valore: D.cashflow.kpi.dso, verdeMin: BENCH.dso, gialloMin: BENCH.dso * 1.5, invertito: true }) },
+                { label: 'DPO Fornitori', valore: D.cashflow.kpi.dpo + ' gg', target: '< ' + BENCH.dpo + ' gg', sem: React.createElement(Semaforo, { valore: D.cashflow.kpi.dpo, verdeMin: BENCH.dpo, gialloMin: BENCH.dpo * 1.3, invertito: true }) },
+                { label: 'DSCR', valore: '1.15x', target: '> 1.2x', sem: React.createElement(Semaforo, { valore: 1.15, verdeMin: 1.2, gialloMin: 1.0 }) },
+                { label: 'Copertura Cassa', valore: '1.8 mesi', target: '> 2.0 mesi', sem: React.createElement(Semaforo, { valore: 1.8, verdeMin: 2.0, gialloMin: 1.0 }) },
+              ].map((kpi, i) => (
+                <div key={i} style={{ ...cardS, textAlign: 'center' }}>
+                  <div style={{ fontSize: 11, color: C.t3, fontWeight: 500 }}>{kpi.label}</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: C.t1, margin: '6px 0' }}>{kpi.valore}</div>
+                  <div style={{ marginBottom: 6 }}>{kpi.sem}</div>
+                  <div style={{ fontSize: 10, color: C.t3 }}>Target: {kpi.target}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* C5: CCC + Scadenziario */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              {/* Cash Conversion Cycle */}
+              <div style={cardS}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 12 }}>Cash Conversion Cycle</h3>
+                {(() => {
+                  const kp = D.cashflow.kpi;
+                  const dio = 15; // Days Inventory Outstanding (stimato per servizi)
+                  const ccc = kp.dso + dio - kp.dpo;
+                  const cccBench = BENCH.dso + 15 - BENCH.dpo;
+                  const items = [
+                    { label: 'DSO (incasso clienti ASP)', val: kp.dso, unit: 'gg', col: '#3b82f6', op: '+' },
+                    { label: 'DIO (ciclo scorte/servizi)', val: dio, unit: 'gg', col: '#8b5cf6', op: '+' },
+                    { label: 'DPO (pagamento fornitori)', val: kp.dpo, unit: 'gg', col: '#06b6d4', op: '-' },
+                    { label: 'CCC', val: ccc, unit: 'gg', col: ccc <= cccBench ? C.verde : ccc <= cccBench * 1.5 ? C.giallo : C.rosso, op: '=' },
+                  ];
+                  return (
+                    <div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {items.map((it, i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: i === 3 ? '#f0f4f8' : 'white', borderRadius: 6, border: '1px solid ' + (i === 3 ? it.col : C.bordo) }}>
+                            <span style={{ fontSize: 16, fontWeight: 700, color: C.t3, width: 16, textAlign: 'center' }}>{it.op}</span>
+                            <span style={{ flex: 1, fontSize: 12, color: C.t1, fontWeight: i === 3 ? 700 : 500 }}>{it.label}</span>
+                            <span style={{ fontSize: 18, fontWeight: 700, color: it.col, fontFamily: 'monospace' }}>{it.val} {it.unit}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ marginTop: 12, padding: '8px 12px', background: ccc <= 0 ? C.verdeBg : '#fffbeb', borderRadius: 6, fontSize: 11, color: ccc <= 0 ? C.verde : '#92400e' }}>
+                        {ccc <= 0
+                          ? 'CCC negativo: Karol incassa prima di pagare — posizione finanziaria favorevole.'
+                          : `CCC ${ccc} gg: ${ccc} giorni di finanziamento del ciclo operativo. Benchmark settore: ${cccBench} gg.`
+                        }
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Scadenziario crediti/debiti */}
+              <div style={cardS}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 12 }}>Scadenziario Crediti / Debiti</h3>
+                {(() => {
+                  const sc = D.cashflow.scadenziario;
+                  const thS = { padding: '6px 8px', textAlign: 'right', color: C.t2, fontSize: 11 };
+                  const tdS = { padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontSize: 12 };
+                  return (
+                    <div>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 }}>
+                        <thead>
+                          <tr style={{ borderBottom: '2px solid ' + C.bordo }}>
+                            <th style={{ ...thS, textAlign: 'left' }}>Fascia</th>
+                            <th style={thS}>Crediti</th>
+                            <th style={thS}>%</th>
+                            <th style={thS}>Debiti</th>
+                            <th style={thS}>%</th>
+                            <th style={thS}>Saldo</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sc.crediti.map((cr, i) => {
+                            const db = sc.debiti[i];
+                            const saldo = cr.importo - db.importo;
+                            return (
+                              <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo }}>
+                                <td style={{ padding: '6px 8px', fontSize: 12, fontWeight: 500 }}>{cr.fascia}</td>
+                                <td style={{ ...tdS, color: C.verde }}>{fmt(cr.importo)}</td>
+                                <td style={{ ...tdS, color: C.t3, fontSize: 10 }}>{fmtPct(cr.pct)}</td>
+                                <td style={{ ...tdS, color: C.rosso }}>{fmt(db.importo)}</td>
+                                <td style={{ ...tdS, color: C.t3, fontSize: 10 }}>{fmtPct(db.pct)}</td>
+                                <td style={{ ...tdS, fontWeight: 600, color: saldo >= 0 ? C.verde : C.rosso }}>{saldo >= 0 ? '+' : ''}{fmt(saldo)}</td>
+                              </tr>
+                            );
+                          })}
+                          <tr style={{ borderTop: '2px solid ' + C.primario, background: '#f0f4f8' }}>
+                            <td style={{ padding: '6px 8px', fontWeight: 700, fontSize: 12 }}>Totale</td>
+                            <td style={{ ...tdS, fontWeight: 700, color: C.verde }}>{fmt(sc.totCrediti)}</td>
+                            <td style={{ ...tdS, color: C.t3 }}>100%</td>
+                            <td style={{ ...tdS, fontWeight: 700, color: C.rosso }}>{fmt(sc.totDebiti)}</td>
+                            <td style={{ ...tdS, color: C.t3 }}>100%</td>
+                            <td style={{ ...tdS, fontWeight: 700, color: (sc.totCrediti - sc.totDebiti) >= 0 ? C.verde : C.rosso }}>{fmt(sc.totCrediti - sc.totDebiti)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <div style={{ flex: 1, padding: '8px 10px', background: C.verdeBg, borderRadius: 6, fontSize: 11, color: C.verde, textAlign: 'center' }}>
+                          Crediti entro 60gg: {fmtPct(sc.crediti[0].pct + sc.crediti[1].pct)}
+                        </div>
+                        <div style={{ flex: 1, padding: '8px 10px', background: C.rossoBg, borderRadius: 6, fontSize: 11, color: C.rosso, textAlign: 'center' }}>
+                          Debiti oltre 60gg: {fmtPct(sc.debiti[2].pct + sc.debiti[3].pct)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
         )}
+
+        {/* ======================== ANALISI COSTI ======================== */}
+        {tab === 'analisi' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            {/* Composizione costi per categoria — Stacked Bar */}
+            <div style={cardS}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Composizione Costi per UO</h3>
+              <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Stacked bar — Breakdown categorie di costo</p>
+              <ResponsiveContainer width="100%" height={320}>
+                <BarChart data={UO.map(u => ({
+                  nome: u.cod, Personale: u.costi.personale, Materiali: u.costi.materiali,
+                  Servizi: u.costi.servizi, Utenze: u.costi.utenze, Manutenzione: u.costi.manutenzione, Altri: u.costi.altri
+                }))} margin={{ top: 10, right: 20, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="nome" fontSize={12} stroke={C.t2} />
+                  <YAxis tickFormatter={v => fmt(v)} fontSize={9} stroke={C.t3} />
+                  <Tooltip formatter={v => [fmt(v)]} />
+                  <Legend />
+                  <Bar dataKey="Personale" stackId="a" fill="#3b82f6" />
+                  <Bar dataKey="Materiali" stackId="a" fill="#8b5cf6" />
+                  <Bar dataKey="Servizi" stackId="a" fill="#06b6d4" />
+                  <Bar dataKey="Utenze" stackId="a" fill="#f59e0b" />
+                  <Bar dataKey="Manutenzione" stackId="a" fill="#ef4444" />
+                  <Bar dataKey="Altri" stackId="a" fill="#94a3b8" radius={[4,4,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Benchmark confronto — incidenza % su ricavi */}
+            <div style={cardS}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Benchmark — Incidenza Costi su Ricavi</h3>
+              <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Confronto UO vs benchmark settore</p>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={UO.map(u => ({
+                  nome: u.cod,
+                  'Pers %': +(u.persPct * 100).toFixed(1),
+                  'Bench Pers': +(BENCH.pers_pct * 100).toFixed(1),
+                  'Costi Dir %': +((u.costiDir / u.ricavi) * 100).toFixed(1),
+                }))} layout="vertical" margin={{ left: 45, right: 30 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                  <XAxis type="number" domain={[0, 100]} tickFormatter={v => v + '%'} fontSize={11} stroke={C.t3} />
+                  <YAxis type="category" dataKey="nome" fontSize={12} stroke={C.t2} />
+                  <Tooltip formatter={v => [v + '%']} />
+                  <Legend />
+                  <Bar dataKey="Pers %" fill="#3b82f6" barSize={14} radius={[0,4,4,0]} />
+                  <Bar dataKey="Bench Pers" fill="#cbd5e1" barSize={14} radius={[0,4,4,0]} />
+                  <Bar dataKey="Costi Dir %" fill="#8b5cf6" barSize={14} radius={[0,4,4,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Narrative per UO */}
+            <div style={cardS}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 12 }}>Variance Analysis — Narrative</h3>
+              {narrative.map((n, i) => {
+                const u = UO.find(x => x.cod === n.uo);
+                const ac = alertCol(n.alert);
+                return (
+                  <div key={i} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 10, background: ac.bg, borderLeft: '5px solid ' + ac.color }}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+                      {u && <span style={{ width: 10, height: 10, borderRadius: '50%', background: u.colore, display: 'inline-block', marginRight: 8 }}></span>}
+                      <span style={{ fontWeight: 700, fontSize: 14, color: C.t1 }}>{n.uo === 'GRUPPO' ? 'GRUPPO KAROL' : n.uo + ' — ' + (u ? u.nome : '')}</span>
+                      <span style={{ marginLeft: 8, fontSize: 11, padding: '2px 8px', borderRadius: 12, background: ac.color, color: '#fff' }}>{n.alert}</span>
+                      <span style={{ marginLeft: 'auto', fontFamily: 'monospace', fontSize: 13, fontWeight: 600, color: (u ? u.molG : TOT.molG) >= 0 ? C.verde : C.rosso }}>
+                        MOL-G: {fmt(u ? u.molG : TOT.molG)}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 12, color: C.t1, lineHeight: 1.6, marginBottom: 4 }}>{n.testo}</p>
+                    <p style={{ fontSize: 11, color: C.t2, fontStyle: 'italic', borderTop: '1px solid ' + ac.color + '33', paddingTop: 6 }}>
+                      <strong>Outlook:</strong> {n.outlook}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ======================== SIMULAZIONI ======================== */}
+        {tab === 'simulazioni' && (() => {
+          // Calcola impatto simulazione
+          const simTotRic = TOT.ric * (1 + simRic / 100);
+          const simTotPers = TOT.pers * (1 + simPers / 100);
+          const simTotSede = TOT.sede * (1 + simSede / 100);
+          const simAltriCosti = TOT.cDir - TOT.pers;
+          const simMolI = simTotRic - simTotPers - simAltriCosti;
+          const simMolG = simMolI - simTotSede;
+          const simEbit = simMolG - TOT.ammort - TOT.oneri_fin;
+
+          const deltaRic = simTotRic - TOT.ric;
+          const deltaMolG = simMolG - TOT.molG;
+          const deltaEbit = simEbit - TOT.ebit;
+
+          const SliderRow = ({ label, value, setter, min, max, step, unit }) => (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: C.t1 }}>{label}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: value === 0 ? C.t3 : value > 0 ? C.verde : C.rosso, fontFamily: 'monospace' }}>
+                  {value > 0 ? '+' : ''}{value}{unit || '%'}
+                </span>
+              </div>
+              <input type="range" min={min} max={max} step={step || 1} value={value}
+                onChange={e => setter(Number(e.target.value))}
+                style={{ width: '100%', accentColor: C.primario }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: C.t3 }}>
+                <span>{min}{unit || '%'}</span><span>0</span><span>+{max}{unit || '%'}</span>
+              </div>
+            </div>
+          );
+
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              {/* Panel sliders */}
+              <div style={cardS}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Leve What-If</h3>
+                <p style={{ fontSize: 11, color: C.t3, marginBottom: 20 }}>Trascina gli slider per simulare variazioni % su base annua</p>
+                <SliderRow label="Ricavi (variazione %)" value={simRic} setter={setSimRic} min={-20} max={20} />
+                <SliderRow label="Costo Personale (variazione %)" value={simPers} setter={setSimPers} min={-15} max={15} />
+                <SliderRow label="Costi Sede (variazione %)" value={simSede} setter={setSimSede} min={-30} max={10} />
+                <SliderRow label="Occupancy (delta pp)" value={simOcc} setter={setSimOcc} min={-10} max={10} />
+                <button onClick={() => { setSimRic(0); setSimPers(0); setSimOcc(0); setSimSede(0); }}
+                  style={{ marginTop: 8, padding: '8px 20px', background: C.primario, color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' }}>
+                  Reset
+                </button>
+              </div>
+
+              {/* Panel risultati */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={cardS}>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 16 }}>Impatto Simulazione</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                    {[
+                      { label: 'Ricavi Sim.', val: simTotRic, delta: deltaRic, base: TOT.ric },
+                      { label: 'MOL-G Sim.', val: simMolG, delta: deltaMolG, base: TOT.molG },
+                      { label: 'EBIT Sim.', val: simEbit, delta: deltaEbit, base: TOT.ebit },
+                    ].map((r, i) => (
+                      <div key={i} style={{ padding: 12, borderRadius: 8, background: r.delta >= 0 ? C.verdeBg : C.rossoBg, textAlign: 'center' }}>
+                        <div style={{ fontSize: 10, color: C.t3, marginBottom: 4 }}>{r.label}</div>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: C.t1 }}>{fmt(r.val)}</div>
+                        <div style={{ fontSize: 11, color: r.delta >= 0 ? C.verde : C.rosso, fontWeight: 600, marginTop: 2 }}>
+                          {r.delta >= 0 ? '+' : ''}{fmt(r.delta)}
+                        </div>
+                        <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>Base: {fmt(r.base)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Waterfall impatto */}
+                <div style={cardS}>
+                  <h3 style={{ fontSize: 13, fontWeight: 700, color: C.t1, marginBottom: 8 }}>Waterfall Impatto</h3>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={[
+                      { voce: 'MOL-G Attuale', base: 0, val: TOT.molG, col: C.primario },
+                      { voce: 'Δ Ricavi', base: TOT.molG, val: deltaRic, col: deltaRic >= 0 ? C.verde : C.rosso },
+                      { voce: 'Δ Personale', base: TOT.molG + deltaRic, val: -(simTotPers - TOT.pers), col: simTotPers <= TOT.pers ? C.verde : C.rosso },
+                      { voce: 'Δ Sede', base: simMolI - simTotSede + (simTotSede - TOT.sede), val: -(simTotSede - TOT.sede), col: simTotSede <= TOT.sede ? C.verde : C.rosso },
+                      { voce: 'MOL-G Sim.', base: 0, val: simMolG, col: simMolG >= 0 ? '#047857' : '#b91c1c' },
+                    ]} margin={{ top: 10, right: 10, left: 10, bottom: 30 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="voce" fontSize={10} angle={-25} textAnchor="end" height={50} stroke={C.t2} />
+                      <YAxis tickFormatter={v => fmt(v)} fontSize={9} stroke={C.t3} />
+                      <Tooltip formatter={v => [fmt(v)]} />
+                      <Bar dataKey="base" stackId="a" fill="transparent" />
+                      <Bar dataKey="val" stackId="a" radius={[3,3,0,0]} barSize={32}>
+                        {[0,1,2,3,4].map(i => <Cell key={i} fill={[C.primario, deltaRic >= 0 ? C.verde : C.rosso, simTotPers <= TOT.pers ? C.verde : C.rosso, simTotSede <= TOT.sede ? C.verde : C.rosso, simMolG >= 0 ? '#047857' : '#b91c1c'][i]} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Margine di sicurezza */}
+                <div style={{ ...cardS, padding: '12px 16px' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: C.t1, marginBottom: 6 }}>KPI Simulati</div>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <span style={{ fontSize: 11, color: C.t2 }}>MOL-G %: <strong style={{ color: simMolG / simTotRic >= 0.08 ? C.verde : C.rosso }}>{fmtPct(simMolG / simTotRic)}</strong></span>
+                    <span style={{ fontSize: 11, color: C.t2 }}>Pers %: <strong style={{ color: simTotPers / simTotRic <= 0.55 ? C.verde : C.rosso }}>{fmtPct(simTotPers / simTotRic)}</strong></span>
+                    <span style={{ fontSize: 11, color: C.t2 }}>Sede %: <strong style={{ color: simTotSede / simTotRic <= 0.12 ? C.verde : C.rosso }}>{fmtPct(simTotSede / simTotRic)}</strong></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+      </div>
+
+      {/* FOOTER */}
+      <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 11, color: C.t3, borderTop: '1px solid ' + C.bordo }}>
+        Karol CdG v3.0 — Gruppo Karol S.p.A. — Cruscotto Controllo di Gestione Sicilia | Aggiornamento: {D.meta.ultimo_aggiornamento}
       </div>
     </div>
   );
 };
 
-export default SiciliaDashboard;
+ReactDOM.render(React.createElement(KarolDashboard), document.getElementById('root'));
+</script>
+</body>
+</html>
