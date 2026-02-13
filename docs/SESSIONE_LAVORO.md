@@ -196,14 +196,43 @@ Esplorazione completa del progetto (45 moduli Python, 23 fogli Master Excel, das
 - I report CSV/Excel che i software producono: puoi condividerne un campione?
 - Preferenza tra n8n workflow o script Python schedulati?
 
-## PROSSIMI PASSI — Dashboard
+## v3.4 — Dati Reali Q1 2025
+
+### Fonti analizzate
+1. **DATI_CE_KSPA_31032025.xlsx** — CE Q1 2025 (375 righe, 18 CDC)
+2. **HR_KSPA_Anno2025.xlsx** — Costi personale HR (8.726 righe)
+3. **Produzione_Gruppo_gen-agosto.2025.xlsx** — Produzione/fatturato Q1
+4. **CentriCosto_PianoConti_Karol2024.xlsx** — Struttura CDC
+5. **strutture centri di costo e o ricavo.pdf** — Mappatura strutture
+
+### Operazioni eseguite
+- Mappatura 18 CDC → 4 UO + HQ + LAB (controllata fuori perimetro)
+- Riconciliazione CE vs HR vs Produzione (delta personale +14% HR vs CE per TFR/INAIL/mens.agg)
+- Annualizzazione Q1 × 4 lineare
+- KAROL_DATA aggiornato con dati reali:
+  - 4 UO operative (VLB, CTA, COS, KCP) — LAB estratta in oggetto separato
+  - SEDE/HQ con breakdown costi reali
+  - Waterfall corretto con flusso Ricavi BU → costi → MOL-I → Proventi HQ → Sede → MOL-G → Risultato
+  - Narrative con analisi reale per struttura
+  - mesiDisp = 3 (Gen-Mar) per trend charts
+- Report analisi: `docs/ANALISI_Q1_2025.md`
+
+### Risultati chiave
+- MOL-I BU: €1.986k (18,1%) — sopra benchmark 15%
+- Sede HQ: €2.335k (21,3% ricavi BU) — anomalia critica
+- MOL-G: -€140k — gruppo in perdita per eccesso costi sede
+- VLB personale 75%, KCP 79% — insostenibili
+- CTA e COS performanti (MOL-I 33% e 16,6%)
+
+## PROSSIMI PASSI
+
+### Priorità alta
+- Budget 2025 separato da consuntivo (quando disponibile)
+- Dati Q2-Q4 per trend reale mensile
+- Drill-down consulenze HQ (€812k) per tipo e contratto
+- Allocazione sede a UO con driver (personale, PL, ricavi)
 
 ### Priorità media
-- Simulazioni: integrazione con forecast (proiezione multi-anno)
-- Cross-section coherence checks (CE ↔ Analisi Costi, Forecast ↔ Simulazioni)
-- Treemap costi per visualizzazione gerarchica
-
-### Priorità bassa
 - Responsive mobile
 - Dark mode
-- Animazioni transizione tab
+- Export PDF: aggiungere pagina dettaglio per BU

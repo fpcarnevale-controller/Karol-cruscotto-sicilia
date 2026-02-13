@@ -51,7 +51,8 @@ const C = {
 // KAROL_DATA — Struttura centralizzata dati CdG
 // ============================================================================
 const KAROL_DATA = {
-  meta: { anno: 2025, mesi_chiusi: 12, dati_reali: false, ultimo_aggiornamento: '13/02/2026' },
+  meta: { anno: 2025, mesi_chiusi: 3, dati_reali: true, ultimo_aggiornamento: '13/02/2026',
+    fonte: 'CE Q1 31/03/2025 + HR Zucchetti Q1 + Produzione Q1', metodo_ann: 'Q1×4 lineare' },
 
   // Benchmark settore RSA/Healthcare
   BENCHMARK: {
@@ -59,79 +60,83 @@ const KAROL_DATA = {
     occ_pct: 0.90, costo_pl_gg: 130, dso: 60, dpo: 90, dscr: 1.2, cop_cassa_mesi: 2.0,
   },
 
-  // Unità Operative con breakdown costi completo
+  // Unità Operative — DATI REALI Q1 2025 annualizzati (×4)
+  // Personale: fonte HR Zucchetti (più completo di CE C1=67, include TFR/INAIL/mensilità agg.)
+  // Altri costi: fonte CE DARE per C1 (materiali=55, servizi=57+59+61+63, utenze=65, altri=71)
+  // Ricavi: fonte CE AVERE (incl. convenzionato + privato + ambulatori + adeguamenti)
+  // LAB: fuori perimetro gruppo, riportata separatamente
   UO: [
     { cod: 'VLB', nome: 'RSA Villabate', tipo: 'RSA Alzheimer', pl: 44, colore: C.VLB,
-      ricavi: 2004045, budget_ricavi: 2100000,
-      costi: { personale: 1147329, materiali: 189704, servizi: 198000, utenze: 78000, manutenzione: 62000, altri: 0 },
-      budget_costi: { personale: 1120000, materiali: 180000, servizi: 190000, utenze: 75000, manutenzione: 55000, altri: 0 },
-      sede: 353127, ammortamenti: 85000, oneri_fin: 32000,
+      ricavi: 2632599, budget_ricavi: 2632599, // Q1 658.150 × 4
+      costi: { personale: 1971012, materiali: 22552, servizi: 224063, utenze: 219307, manutenzione: 0, altri: 3315 },
+      budget_costi: { personale: 1971012, materiali: 22552, servizi: 224063, utenze: 219307, manutenzione: 0, altri: 3315 },
+      sede: 0, ammortamenti: 0, oneri_fin: 514,
       occ: 0.900, gg_degenza: 14454,
-      rM: [169640,149876,173154,168672,174978,166476,164006,154880,163696,174683,170602,173382],
-      cM: [140731,139023,141794,142431,139408,138816,138345,135571,138366,140063,138567,141919],
+      rM: [227327, 204228, 226594],
+      cM: [155958, 173522, 163273],
     },
     { cod: 'CTA', nome: 'CTA Ex Stagno', tipo: 'Psichiatrico', pl: 40, colore: C.CTA,
-      ricavi: 1895648, budget_ricavi: 2000000,
-      costi: { personale: 1125426, materiali: 158115, servizi: 215000, utenze: 82000, manutenzione: 52000, altri: 38000 },
-      budget_costi: { personale: 1080000, materiali: 150000, servizi: 200000, utenze: 78000, manutenzione: 48000, altri: 35000 },
-      sede: 326072, ammortamenti: 72000, oneri_fin: 28000,
+      ricavi: 2817347, budget_ricavi: 2817347, // Q1 704.337 × 4
+      costi: { personale: 1668136, materiali: 20355, servizi: 194451, utenze: 4820, manutenzione: 0, altri: 302 },
+      budget_costi: { personale: 1668136, materiali: 20355, servizi: 194451, utenze: 4820, manutenzione: 0, altri: 302 },
+      sede: 0, ammortamenti: 0, oneri_fin: 465,
       occ: 0.920, gg_degenza: 13432,
-      rM: [159954,144470,163122,157669,165770,157080,153507,148029,153462,166605,161823,164157],
-      cM: [139727,138994,137273,138930,139301,139815,137848,136411,139877,142422,140868,139074],
+      rM: [244596, 222658, 237082],
+      cM: [134740, 141514, 140780],
     },
     { cod: 'COS', nome: 'CdC Cosentino', tipo: 'Riabilitazione', pl: 50, colore: C.COS,
-      ricavi: 3799179, budget_ricavi: 3700000,
-      costi: { personale: 1790988, materiali: 385326, servizi: 420000, utenze: 155000, manutenzione: 98000, altri: 75000 },
-      budget_costi: { personale: 1750000, materiali: 370000, servizi: 400000, utenze: 148000, manutenzione: 90000, altri: 70000 },
-      sede: 541917, ammortamenti: 120000, oneri_fin: 45000,
+      ricavi: 4860598, budget_ricavi: 4860598, // Q1 1.215.149 × 4
+      costi: { personale: 2092806, materiali: 1231668, servizi: 626943, utenze: 88474, manutenzione: 0, altri: 14598 },
+      budget_costi: { personale: 2092806, materiali: 1231668, servizi: 626943, utenze: 88474, manutenzione: 0, altri: 14598 },
+      sede: 0, ammortamenti: 0, oneri_fin: 5461,
       occ: 0.860, gg_degenza: 15695,
-      rM: [320319,290930,321212,318851,328869,319828,309744,294979,308393,333165,321909,330982],
-      cM: [244695,241092,240802,247326,245338,242449,243186,234286,242532,244702,251201,246704],
-    },
-    { cod: 'LAB', nome: 'Karol Lab', tipo: 'Laboratorio', pl: 0, colore: C.LAB,
-      ricavi: 1450153, budget_ricavi: 1400000,
-      costi: { personale: 438075, materiali: 215266, servizi: 125000, utenze: 48000, manutenzione: 35000, altri: 30000 },
-      budget_costi: { personale: 430000, materiali: 210000, servizi: 120000, utenze: 45000, manutenzione: 32000, altri: 28000 },
-      sede: 212873, ammortamenti: 55000, oneri_fin: 15000,
-      occ: null, gg_degenza: null,
-      rM: [123238,120564,123838,126162,120026,116683,116136,111219,116108,127791,130075,118316],
-      cM: [74958,73556,74432,75376,76159,75846,73710,69849,73075,74976,74564,74839],
+      rM: [348508, 423023, 443618],
+      cM: [176692, 168717, 177792],
     },
     { cod: 'KCP', nome: 'Karol Casa Protetta', tipo: 'Casa Protetta', pl: 20, colore: C.KCP,
-      ricavi: 700261, budget_ricavi: 750000,
-      costi: { personale: 391420, materiali: 78879, servizi: 68000, utenze: 32000, manutenzione: 22000, altri: 11000 },
-      budget_costi: { personale: 380000, materiali: 75000, servizi: 65000, utenze: 30000, manutenzione: 20000, altri: 10000 },
-      sede: 158011, ammortamenti: 38000, oneri_fin: 12000,
+      ricavi: 664941, budget_ricavi: 664941, // Q1 166.235 × 4
+      costi: { personale: 527070, materiali: 16484, servizi: 62787, utenze: 0, manutenzione: 0, altri: 32 },
+      budget_costi: { personale: 527070, materiali: 16484, servizi: 62787, utenze: 0, manutenzione: 0, altri: 32 },
+      sede: 0, ammortamenti: 0, oneri_fin: 4,
       occ: null, gg_degenza: 7300,
-      rM: [59361,53405,61086,58202,60141,57339,57604,54021,57324,61888,58959,60931],
-      cM: [49419,50019,50686,50607,50544,50694,49326,48620,50241,51418,51571,50155],
+      rM: [57768, 54536, 53932],
+      cM: [42490, 45721, 43557],
     },
   ],
 
-  // Costi sede HQ
-  SEDE: { totale: 1592000, personale_hq: 680000, affitti: 320000, consulenze: 245000, IT: 142000, assicurazioni: 95000, altri: 110000 },
+  // LAB — Fuori perimetro gruppo, monitoraggio separato
+  LAB: {
+    cod: 'LAB', nome: 'Karol Lab', tipo: 'Laboratorio Controllata',
+    ricavi_q1: 0, costi_q1_personale: 39443, costi_q1_ce: 34525,
+    nota: 'Azienda controllata — non inclusa nei totali di gruppo. Costo personale HR Q1: €39.443, costo CE Q1: €34.525. Nessun ricavo attribuito nel CE Q1.',
+  },
+
+  // Costi sede HQ — da CE Div.18 × 4
+  // Personale HQ da HR Zucchetti: €292.951 Q1 → €1.171.805 FY
+  SEDE: { totale: 2335144, personale_hq: 1171805, affitti: 92861, consulenze: 811812, IT: 0, assicurazioni: 0, altri: 165619,
+    oneri_fin: 91009, imposte: 68239,
+    ricavi_hq: 208790, // CE AVERE Div.18 × 4 (proventi finanziari, sopravvenienze)
+    nota: 'Totale costi HQ Q1 €583.786 × 4. Include: personale €1.172k, consulenze/servizi €812k, altri oneri €166k, affitti €93k, oneri fin. €91k, imposte €68k.' },
 
   // Cash Flow
   cashflow: {
+    // Waterfall calcolato da dati reali Q1×4 — BU operative (escluso LAB)
+    // Ricavi BU: 10.975.485 | Personale BU: 6.259.024 | Mat: 1.291.059 | Servizi: 1.108.244 | Utenze: 312.601 | Altri: 18.247
+    // MOL-I BU: 1.986.310 | Sede HQ: 2.335.144 | MOL-G: -348.834
     waterfallRaw: [
-      { voce: 'Ricavi', valore: 9849287, tipo: 'entrata' },
-      { voce: 'Personale', valore: -4893238, tipo: 'uscita' },
-      { voce: 'Materiali', valore: -1027290, tipo: 'uscita' },
-      { voce: 'Servizi/Utenze', valore: -1421000, tipo: 'uscita' },
-      { voce: 'Altri Costi', valore: -423000, tipo: 'uscita' },
-      { voce: 'MOL-I', valore: 2084759, tipo: 'subtotale' },
-      { voce: 'Costi Sede', valore: -1592000, tipo: 'uscita' },
-      { voce: 'MOL-G', valore: 492759, tipo: 'subtotale' },
-      { voce: 'Ammortamenti', valore: -370000, tipo: 'uscita' },
-      { voce: 'Oneri Fin.', valore: -132000, tipo: 'uscita' },
-      { voce: 'Risultato Op.', valore: -9241, tipo: 'subtotale' },
-      { voce: 'Var. CCN', valore: -145000, tipo: 'uscita' },
-      { voce: 'CF Operativo', valore: 347759, tipo: 'subtotale' },
-      { voce: 'CAPEX', valore: -280000, tipo: 'uscita' },
-      { voce: 'Free CF', valore: 67759, tipo: 'subtotale' },
-      { voce: 'Debito', valore: -520000, tipo: 'uscita' },
-      { voce: 'Imposte', valore: -148000, tipo: 'uscita' },
-      { voce: 'CF Netto', valore: -600241, tipo: 'finale' },
+      { voce: 'Ricavi BU', valore: 10975485, tipo: 'entrata' },
+      { voce: 'Personale', valore: -6259024, tipo: 'uscita' },
+      { voce: 'Materiali', valore: -1291059, tipo: 'uscita' },
+      { voce: 'Servizi', valore: -1108244, tipo: 'uscita' },
+      { voce: 'Utenze/Affitti', valore: -312601, tipo: 'uscita' },
+      { voce: 'Altri Costi', valore: -18247, tipo: 'uscita' },
+      { voce: 'MOL-I BU', valore: 1986310, tipo: 'subtotale' },
+      { voce: 'Proventi HQ', valore: 208790, tipo: 'entrata' },
+      { voce: 'Costi Sede', valore: -2335144, tipo: 'uscita' },
+      { voce: 'MOL-G', valore: -140044, tipo: 'subtotale' },
+      { voce: 'Oneri Fin.', valore: -97453, tipo: 'uscita' },
+      { voce: 'Imposte', valore: -68239, tipo: 'uscita' },
+      { voce: 'Risultato', valore: -305736, tipo: 'finale' },
     ],
     cassaSett: [
       { s: 'S1', saldo: 420, incassi: 180, pag: 150 }, { s: 'S2', saldo: 390, incassi: 120, pag: 150 },
@@ -169,12 +174,11 @@ const KAROL_DATA = {
   },
 
   narrative: [
-    { uo: 'VLB', alert: 'GIALLO', testo: 'MOL-I 16,4% in target, ma costi sede (17,6% ricavi) assorbono il margine → MOL-G -€24.115. Azione: rinegoziare allocazione sede o aumentare occupancy oltre 90%.', outlook: 'Strutturale' },
-    { uo: 'CTA', alert: 'ROSSO', testo: 'MOL-G -€100.965. Personale al 59,4% dei ricavi. Costo servizi (€215.000) elevato. Azione: ottimizzare mix medici/OSS e rinegoziare servizi esternalizzati.', outlook: 'Persistente' },
-    { uo: 'COS', alert: 'VERDE', testo: 'Best performer. MOL-I 23%, MOL-G 8,8%. Mix ricavi diversificato. Ricavo/giornata €242 il più alto.', outlook: 'Favorevole' },
-    { uo: 'LAB', alert: 'VERDE', testo: 'Top performer con MOL-G 23,9%. Asset-light, personale solo 30,2%. Potenziale per crescita volumi.', outlook: 'Molto favorevole' },
-    { uo: 'KCP', alert: 'ROSSO', testo: 'MOL-G -€61.050 (-8,7%). Diseconomie di scala: 20 PL, sede 22,6% ricavi. Valutare accorpamento con VLB.', outlook: 'Strutturale' },
-    { uo: 'GRUPPO', alert: 'ROSSO', testo: 'MOL-G €492.759 (5,0%) sotto target 8%. Costi sede €1.592.000 (16,2%). COS+LAB generano margine, VLB/CTA/KCP lo erodono. CF netto -€600.241 per debito (€520.000) e CAPEX (€280.000).', outlook: 'Critico — piano efficientamento necessario' },
+    { uo: 'VLB', alert: 'ROSSO', testo: 'Personale 74,9% dei ricavi — il più critico del gruppo. MOL-I 7,3% (Q1 €48k annualizzato €192k). Utenze/affitti €219k pesano. 67 dipendenti per 44 PL. Azione urgente: revisione organico e mix contrattuale OSS/infermieri.', outlook: 'Critico — necessario intervento immediato' },
+    { uo: 'CTA', alert: 'VERDE', testo: 'Miglior MOL-I % del gruppo (33%). Ricavi Q1 €704k includono adeguamento CTA €160k. Personale 59,2% comunque elevato (49 dipendenti, 40 PL). Costi servizi €194k contenuti. Ricavo/giornata tra i più alti.', outlook: 'Favorevole — monitorare sostenibilità adeguamento' },
+    { uo: 'COS', alert: 'VERDE', testo: 'Top performer per volumi: ricavi FY stimati €4,86M. MOL-I 16,5%. Materiali elevati (€1,23M) per attività chirurgica/riabilitativa. Personale 43,1% — il migliore. Mix ricavi diversificato (degenza + ambulatori + radiologia).', outlook: 'Favorevole' },
+    { uo: 'KCP', alert: 'ROSSO', testo: 'Personale 79,3% dei ricavi — situazione insostenibile. MOL-I appena €59k su €665k ricavi (8,8%). 24 dipendenti su 20 PL = diseconomie di scala. Valutare accorpamento operativo con VLB o esternalizzazione servizi.', outlook: 'Strutturale — accorpamento necessario' },
+    { uo: 'GRUPPO', alert: 'ROSSO', testo: 'MOL-I BU €1,99M (18,1%) sopra benchmark 15%, ma Sede HQ €2,34M (21,3% dei ricavi BU) assorbe tutto il margine → MOL-G stimato -€140k. HQ: 20 dipendenti, consulenze €812k/anno. Il gruppo è operativamente sano ma la struttura HQ lo rende in perdita. Priorità: taglio costi sede e riallocazione personale HQ.', outlook: 'Critico — sede HQ insostenibile ai volumi attuali' },
   ],
 };
 
@@ -238,7 +242,7 @@ const KPI = autoKPI;
 const { waterfallRaw, cassaSett, scenari } = D.cashflow;
 let rt = 0;
 const waterfall = waterfallRaw.map(w => {
-  if (w.tipo === 'entrata') { rt = w.valore; return { ...w, base: 0, barra: w.valore, col: C.verde }; }
+  if (w.tipo === 'entrata') { const b = rt; rt += w.valore; return { ...w, base: b, barra: w.valore, col: C.verde }; }
   if (w.tipo === 'uscita') { const r = { ...w, base: Math.min(rt, rt + w.valore), barra: Math.abs(w.valore), col: C.rosso }; rt += w.valore; return r; }
   if (w.tipo === 'subtotale') { rt = w.valore; return { ...w, base: 0, barra: Math.abs(w.valore), col: w.valore >= 0 ? '#2563eb' : '#b91c1c' }; }
   rt = w.valore; return { ...w, base: 0, barra: Math.abs(w.valore), col: w.valore >= 0 ? '#047857' : '#b91c1c' };
@@ -253,6 +257,7 @@ const formatEuro = v => new Intl.NumberFormat('it-IT', { style: 'currency', curr
 const fmt = formatEuro;
 const fmtPct = v => (v * 100).toFixed(1) + '%';
 const mesi = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+const mesiDisp = mesi.slice(0, D.meta.mesi_chiusi); // Solo mesi con dati reali
 
 const Semaforo = ({ valore, testo, verdeMin, gialloMin, invertito }) => {
   let colore, sfondo;
@@ -542,7 +547,7 @@ const KarolDashboard = () => {
       // Foglio Trend Mensile
       const trendRows = [
         ['Mese', ...UO.map(u => u.cod + ' Ricavi'), ...UO.map(u => u.cod + ' Costi')],
-        ...mesi.map((m, i) => [m, ...UO.map(u => u.rM[i]), ...UO.map(u => u.cM[i])]),
+        ...mesiDisp.map((m, i) => [m, ...UO.map(u => u.rM[i]), ...UO.map(u => u.cM[i])]),
       ];
       const ws3 = XLSX.utils.aoa_to_sheet(trendRows);
       XLSX.utils.book_append_sheet(wb, ws3, 'Trend Mensile');
@@ -584,7 +589,7 @@ const KarolDashboard = () => {
   const scost = [...UO].map(u => ({ nome: u.cod, nomeC: u.nome, scost: u.molG, fill: u.molG >= 0 ? C.verde : C.rosso })).sort((a,b) => a.scost - b.scost);
 
   // Trend multi-UO
-  const trendUO = mesi.map((m, i) => { const d = { mese: m }; UO.forEach(u => { d[u.cod] = u.rM[i]; }); return d; });
+  const trendUO = mesiDisp.map((m, i) => { const d = { mese: m }; UO.forEach(u => { d[u.cod] = u.rM[i]; }); return d; });
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: '📊' },
@@ -1096,7 +1101,7 @@ const KarolDashboard = () => {
             </div>
             {(() => {
               const u = selUO || UO[0];
-              const data = mesi.map((m, i) => ({ mese: m, Ricavi: u.rM[i], Costi: u.cM[i], MOL: u.rM[i] - u.cM[i] }));
+              const data = mesiDisp.map((m, i) => ({ mese: m, Ricavi: u.rM[i], Costi: u.cM[i], MOL: u.rM[i] - u.cM[i] }));
               const uKpi = KPI.filter(k => k.uo === u.cod);
               const uNarr = narrative.find(n => n.uo === u.cod);
               return (
@@ -1202,7 +1207,7 @@ const KarolDashboard = () => {
             {/* Mini sparklines per UO */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 12 }}>
               {UO.map(u => {
-                const data = mesi.map((m, i) => ({ m, R: u.rM[i], C: u.cM[i] }));
+                const data = mesiDisp.map((m, i) => ({ m, R: u.rM[i], C: u.cM[i] }));
                 return (
                   <div key={u.cod} style={{ ...cardS, padding: 14 }}>
                     <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
