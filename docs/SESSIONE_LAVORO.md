@@ -137,6 +137,57 @@ Esplorazione completa del progetto (45 moduli Python, 23 fogli Master Excel, das
 
 ---
 
+## Dashboard v3.1 — 13/02/2026
+
+### Modifiche implementate
+
+**Export PDF/Excel**
+- CDN: jsPDF 2.5.1, html2canvas 1.4.1, SheetJS 0.18.5
+- Pulsante 📥 nell'header con modale configurazione
+- PDF: cattura screenshot tab attivo → multi-pagina A4
+- Excel: workbook 5 fogli (Riepilogo, CE Consolidato, Trend Mensile, KPI, Cash Flow)
+
+**Strutture — Donut chart**
+- PieChart (donut) per composizione costi per UO nel tab Strutture
+- 6 categorie: Personale, Materiali, Servizi, Utenze, Manutenzione, Altri
+- Affiancato al trend chart esistente in layout grid
+
+**DSO/DPO aggiornati**
+- DSO ASP: 135 → 45 gg
+- DPO Fornitori: 95 → 75 gg
+- BENCHMARK DSO: 120 → 60 gg
+- KPI cash flow ora dinamici da KAROL_DATA (non più hardcoded)
+
+**Specifiche import dati**
+- Documento `docs/SPECIFICHE_IMPORT_DATI_CDG.docx` con formato file per E-Solver, Zucchetti, Caremed, HT Sang
+- Workflow di caricamento e push automation (`push.bat`)
+
+---
+
+## Dashboard v3.2 — 13/02/2026
+
+### Modifiche implementate
+
+**Forecast — 3 metodi di proiezione**
+- Linearizzazione: media mensile × 12 (invariato, ora con selettore)
+- Budget Residuo: consuntivo YTD + budget pro-rata mesi residui
+- Trend Ponderato: YTD + media mobile 3M ponderata (pesi 3-2-1) × mesi residui
+- Selettore metodo con bottoni + descrizione
+- Grafico confronto metodi (4 barre per UO: Budget, Lin, BudRes, TrndPond)
+- Note esplicative metodo attivo
+
+**Cash Flow — CCC e Scadenziario**
+- Cash Conversion Cycle: DSO + DIO - DPO con visualizzazione formula step-by-step
+- Scadenziario crediti/debiti per fascia (0-30, 31-60, 61-90, >90 gg)
+- Tabella con crediti, debiti, saldo netto per fascia
+- Indicatori: % crediti entro 60gg, % debiti oltre 60gg
+- Dati simulati coerenti con DSO 45gg / DPO 75gg
+
+### File (1.447 righe)
+- `index.html` — SPA completa, deploy-ready
+
+---
+
 ## FASE 2 DA FARE — Automazione caricamento dati
 
 ### Domande da chiarire
@@ -147,16 +198,10 @@ Esplorazione completa del progetto (45 moduli Python, 23 fogli Master Excel, das
 
 ## PROSSIMI PASSI — Dashboard
 
-### Priorità alta
-- Export PDF/Excel (jsPDF + html2canvas / SheetJS) con modal configurazione
-- Treemap costi per visualizzazione gerarchica
-- Forecast: aggiungere metodo "budget residuo" e "trend ponderato" (ora solo linearizzazione)
-
 ### Priorità media
-- Strutture: donut chart per composizione costi UO
-- Cash Flow: CCC (Cash Conversion Cycle), scadenziario tabellare
 - Simulazioni: integrazione con forecast (proiezione multi-anno)
 - Cross-section coherence checks (CE ↔ Analisi Costi, Forecast ↔ Simulazioni)
+- Treemap costi per visualizzazione gerarchica
 
 ### Priorità bassa
 - Responsive mobile

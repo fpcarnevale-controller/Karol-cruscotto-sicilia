@@ -149,6 +149,23 @@ const KAROL_DATA = {
       { anno: '2029', ott: 2250, base: 1400, pess: -350 },
     ],
     kpi: { dso: 45, dpo: 75, dscr: 1.15, cop_cassa: 1.8, ccn: 145000, capex: 280000, debito_annuo: 520000 },
+    // Scadenziario crediti/debiti (simulato)
+    scadenziario: {
+      crediti: [
+        { fascia: '0-30 gg', importo: 380000, pct: 0.31 },
+        { fascia: '31-60 gg', importo: 420000, pct: 0.34 },
+        { fascia: '61-90 gg', importo: 285000, pct: 0.23 },
+        { fascia: '> 90 gg', importo: 145000, pct: 0.12 },
+      ],
+      debiti: [
+        { fascia: '0-30 gg', importo: 210000, pct: 0.27 },
+        { fascia: '31-60 gg', importo: 290000, pct: 0.37 },
+        { fascia: '61-90 gg', importo: 185000, pct: 0.24 },
+        { fascia: '> 90 gg', importo: 95000, pct: 0.12 },
+      ],
+      totCrediti: 1230000,
+      totDebiti: 780000,
+    },
   },
 
   narrative: [
@@ -277,6 +294,7 @@ const KarolDashboard = () => {
   const [simSede, setSimSede] = useState(0);
   const [showExport, setShowExport] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [fcMethod, setFcMethod] = useState('lin');
 
   // ---- Export PDF ----
   const exportPDF = async () => {
@@ -647,13 +665,35 @@ const KarolDashboard = () => {
             { voce: 'Risultato Operativo', val: u.ebit, bud: (u.budget_ricavi - budgetCostiTot(u)) - u.sede * 0.95 - u.ammortamenti * 0.95 - u.oneri_fin * 0.95, cls: 'totale' },
           ];
 
-          // Forecast — linearizzazione a 12 mesi
-          const forecastLin = UO.map(u => {
-            const mesiChiusi = D.meta.mesi_chiusi;
-            const ricMese = u.ricavi / mesiChiusi;
-            const costMese = u.costiDir / mesiChiusi;
-            return { cod: u.cod, nome: u.nome, colore: u.colore, ric12: ricMese * 12, cost12: costMese * 12, molI12: (ricMese - costMese) * 12 };
+          // Forecast — 3 metodi
+          const mC = D.meta.mesi_chiusi;
+          const mR = 12 - mC; // mesi residui
+          const forecastCalc = UO.map(u => {
+            const ricMese = u.ricavi / mC;
+            const costMese = u.costiDir / mC;
+            // Linearizzazione: media mensile × 12
+            const lin_ric = ricMese * 12;
+            const lin_cost = costMese * 12;
+            // Budget residuo: consuntivo YTD + budget residuo proporzionale
+            const budRicMese = u.budget_ricavi / 12;
+            const budCostMese = budgetCostiTot(u) / 12;
+            const bud_ric = u.ricavi + budRicMese * mR;
+            const bud_cost = u.costiDir + budCostMese * mR;
+            // Trend ponderato: media mobile ponderata ultimi 3 mesi × residui + YTD
+            const rM = u.rM || [];
+            const cM = u.cM || [];
+            const w3ric = rM.length >= 3 ? (rM[rM.length-1]*3 + rM[rM.length-2]*2 + rM[rM.length-3]*1) / 6 : ricMese;
+            const w3cost = cM.length >= 3 ? (cM[cM.length-1]*3 + cM[cM.length-2]*2 + cM[cM.length-3]*1) / 6 : costMese;
+            const trnd_ric = u.ricavi + w3ric * mR;
+            const trnd_cost = u.costiDir + w3cost * mR;
+            return {
+              cod: u.cod, nome: u.nome, colore: u.colore,
+              lin: { ric: lin_ric, cost: lin_cost, molI: lin_ric - lin_cost },
+              bud: { ric: bud_ric, cost: bud_cost, molI: bud_ric - bud_cost },
+              trnd: { ric: trnd_ric, cost: trnd_cost, molI: trnd_ric - trnd_cost },
+            };
           });
+          const fcData = forecastCalc.map(f => ({ ...f, fc: f[fcMethod] }));
 
           const CETable = ({ righe }) => (
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
@@ -756,25 +796,53 @@ const KarolDashboard = () => {
               )}
 
               {/* Forecast */}
-              {ceView === 'forecast' && (
+              {ceView === 'forecast' && (() => {
+                const methods = [
+                  { id: 'lin', l: 'Linearizzazione', desc: 'Media mensile × 12' },
+                  { id: 'bud', l: 'Budget Residuo', desc: 'YTD + budget pro-rata residuo' },
+                  { id: 'trnd', l: 'Trend Ponderato', desc: 'YTD + media mobile 3M ponderata × residuo' },
+                ];
+                const totFcRic = fcData.reduce((s,f) => s + f.fc.ric, 0);
+                const totFcMolI = fcData.reduce((s,f) => s + f.fc.molI, 0);
+                const totFcVsBud = totFcRic - TOT.budget_ric;
+                // Barchart confronto metodi
+                const barFcData = UO.map((u, i) => ({
+                  cod: u.cod,
+                  Budget: u.budget_ricavi,
+                  Linearizzazione: forecastCalc[i].lin.ric,
+                  'Budget Residuo': forecastCalc[i].bud.ric,
+                  'Trend Ponderato': forecastCalc[i].trnd.ric,
+                }));
+                return (
                 <div style={cardS}>
-                  <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Forecast — Linearizzazione a 12 Mesi</h3>
-                  <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Proiezione lineare basata su {D.meta.mesi_chiusi} mesi consuntivati</p>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Forecast Anno — Confronto Metodi</h3>
+                  <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>Proiezione basata su {mC} mesi consuntivati, {mR} mesi residui</p>
+                  {/* Selettore metodo */}
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                    {methods.map(m => (
+                      <button key={m.id} onClick={() => setFcMethod(m.id)}
+                        style={{ padding: '6px 14px', border: '2px solid ' + (fcMethod === m.id ? C.primario : C.bordo), background: fcMethod === m.id ? C.primario + '10' : 'white', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: fcMethod === m.id ? 700 : 500, color: fcMethod === m.id ? C.primario : C.t2, fontFamily: 'inherit' }}>
+                        {m.l}
+                        <div style={{ fontSize: 9, color: C.t3, fontWeight: 400 }}>{m.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                  {/* Tabella forecast */}
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                     <thead>
                       <tr style={{ borderBottom: '2px solid ' + C.bordo, background: '#f8fafc' }}>
                         <th style={{ padding: '8px', textAlign: 'left', color: C.t2 }}>UO</th>
-                        <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Consuntivo</th>
+                        <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Consuntivo YTD</th>
                         <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Forecast 12M</th>
-                        <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Budget</th>
+                        <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Budget Anno</th>
                         <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Fc vs Budget</th>
                         <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>MOL-I Fc</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {forecastLin.map((f, i) => {
+                      {fcData.map((f, i) => {
                         const u = UO[i];
-                        const fcVsBud = f.ric12 - u.budget_ricavi;
+                        const fcVsBud = f.fc.ric - u.budget_ricavi;
                         return (
                           <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo }}>
                             <td style={{ padding: '8px', fontWeight: 600, color: C.t1 }}>
@@ -782,31 +850,56 @@ const KarolDashboard = () => {
                               {f.cod}
                             </td>
                             <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace' }}>{fmt(u.ricavi)}</td>
-                            <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 600 }}>{fmt(f.ric12)}</td>
+                            <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 600 }}>{fmt(f.fc.ric)}</td>
                             <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace', color: C.t2 }}>{fmt(u.budget_ricavi)}</td>
                             <td style={{ padding: '8px', textAlign: 'right' }}>
                               <span style={{ color: fcVsBud >= 0 ? C.verde : C.rosso, fontWeight: 600, fontFamily: 'monospace', fontSize: 11 }}>
                                 {fcVsBud >= 0 ? '+' : ''}{fmt(fcVsBud)}
                               </span>
                             </td>
-                            <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace', color: f.molI12 >= 0 ? C.verde : C.rosso, fontWeight: 600 }}>{fmt(f.molI12)}</td>
+                            <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace', color: f.fc.molI >= 0 ? C.verde : C.rosso, fontWeight: 600 }}>{fmt(f.fc.molI)}</td>
                           </tr>
                         );
                       })}
                       <tr style={{ borderTop: '2px solid ' + C.primario, background: '#f0f4f8' }}>
                         <td style={{ padding: '8px', fontWeight: 700 }}>TOTALE</td>
                         <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace' }}>{fmt(TOT.ric)}</td>
-                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace' }}>{fmt(forecastLin.reduce((s,f) => s + f.ric12, 0))}</td>
+                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace' }}>{fmt(totFcRic)}</td>
                         <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: C.t2 }}>{fmt(TOT.budget_ric)}</td>
                         <td style={{ padding: '8px', textAlign: 'right' }}>
-                          {(() => { const d = forecastLin.reduce((s,f) => s + f.ric12, 0) - TOT.budget_ric; return <span style={{ color: d >= 0 ? C.verde : C.rosso, fontWeight: 700, fontFamily: 'monospace' }}>{d >= 0 ? '+' : ''}{fmt(d)}</span>; })()}
+                          <span style={{ color: totFcVsBud >= 0 ? C.verde : C.rosso, fontWeight: 700, fontFamily: 'monospace' }}>{totFcVsBud >= 0 ? '+' : ''}{fmt(totFcVsBud)}</span>
                         </td>
-                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: forecastLin.reduce((s,f) => s + f.molI12, 0) >= 0 ? C.verde : C.rosso }}>{fmt(forecastLin.reduce((s,f) => s + f.molI12, 0))}</td>
+                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: totFcMolI >= 0 ? C.verde : C.rosso }}>{fmt(totFcMolI)}</td>
                       </tr>
                     </tbody>
                   </table>
+                  {/* Grafico confronto metodi */}
+                  <div style={{ marginTop: 16 }}>
+                    <h4 style={{ fontSize: 13, fontWeight: 600, color: C.t1, marginBottom: 8 }}>Confronto Metodi — Ricavi Forecast per UO</h4>
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart data={barFcData} margin={{ top: 10, right: 20, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis dataKey="cod" fontSize={12} stroke={C.t2} />
+                        <YAxis tickFormatter={v => fmt(v)} fontSize={9} stroke={C.t3} />
+                        <Tooltip formatter={v => [fmt(v)]} />
+                        <Legend />
+                        <Bar dataKey="Budget" fill="#94a3b8" barSize={16} />
+                        <Bar dataKey="Linearizzazione" fill="#3b82f6" barSize={16} />
+                        <Bar dataKey="Budget Residuo" fill="#8b5cf6" barSize={16} />
+                        <Bar dataKey="Trend Ponderato" fill="#06b6d4" barSize={16} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  {/* Note metodo */}
+                  <div style={{ marginTop: 12, padding: '10px 14px', background: '#f0f4f8', borderRadius: 8, fontSize: 11, color: C.t2 }}>
+                    <strong>Metodo attivo: {methods.find(m => m.id === fcMethod)?.l}</strong> — {methods.find(m => m.id === fcMethod)?.desc}.
+                    {fcMethod === 'lin' && ' Ipotesi: ritmo costante nei mesi residui uguale alla media YTD.'}
+                    {fcMethod === 'bud' && ' Ipotesi: mesi residui seguono il budget originale, consuntivo acquisito.'}
+                    {fcMethod === 'trnd' && ' Ipotesi: trend recente (pesi 3-2-1 su ultimi 3 mesi) proiettato sui mesi residui.'}
+                  </div>
                 </div>
-              )}
+                );
+              })()}
             </div>
           );
         })()}
@@ -1052,6 +1145,103 @@ const KarolDashboard = () => {
                   <div style={{ fontSize: 10, color: C.t3 }}>Target: {kpi.target}</div>
                 </div>
               ))}
+            </div>
+
+            {/* C5: CCC + Scadenziario */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              {/* Cash Conversion Cycle */}
+              <div style={cardS}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 12 }}>Cash Conversion Cycle</h3>
+                {(() => {
+                  const kp = D.cashflow.kpi;
+                  const dio = 15; // Days Inventory Outstanding (stimato per servizi)
+                  const ccc = kp.dso + dio - kp.dpo;
+                  const cccBench = BENCH.dso + 15 - BENCH.dpo;
+                  const items = [
+                    { label: 'DSO (incasso clienti ASP)', val: kp.dso, unit: 'gg', col: '#3b82f6', op: '+' },
+                    { label: 'DIO (ciclo scorte/servizi)', val: dio, unit: 'gg', col: '#8b5cf6', op: '+' },
+                    { label: 'DPO (pagamento fornitori)', val: kp.dpo, unit: 'gg', col: '#06b6d4', op: '-' },
+                    { label: 'CCC', val: ccc, unit: 'gg', col: ccc <= cccBench ? C.verde : ccc <= cccBench * 1.5 ? C.giallo : C.rosso, op: '=' },
+                  ];
+                  return (
+                    <div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {items.map((it, i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: i === 3 ? '#f0f4f8' : 'white', borderRadius: 6, border: '1px solid ' + (i === 3 ? it.col : C.bordo) }}>
+                            <span style={{ fontSize: 16, fontWeight: 700, color: C.t3, width: 16, textAlign: 'center' }}>{it.op}</span>
+                            <span style={{ flex: 1, fontSize: 12, color: C.t1, fontWeight: i === 3 ? 700 : 500 }}>{it.label}</span>
+                            <span style={{ fontSize: 18, fontWeight: 700, color: it.col, fontFamily: 'monospace' }}>{it.val} {it.unit}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ marginTop: 12, padding: '8px 12px', background: ccc <= 0 ? C.verdeBg : '#fffbeb', borderRadius: 6, fontSize: 11, color: ccc <= 0 ? C.verde : '#92400e' }}>
+                        {ccc <= 0
+                          ? 'CCC negativo: Karol incassa prima di pagare — posizione finanziaria favorevole.'
+                          : `CCC ${ccc} gg: ${ccc} giorni di finanziamento del ciclo operativo. Benchmark settore: ${cccBench} gg.`
+                        }
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Scadenziario crediti/debiti */}
+              <div style={cardS}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 12 }}>Scadenziario Crediti / Debiti</h3>
+                {(() => {
+                  const sc = D.cashflow.scadenziario;
+                  const thS = { padding: '6px 8px', textAlign: 'right', color: C.t2, fontSize: 11 };
+                  const tdS = { padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontSize: 12 };
+                  return (
+                    <div>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 }}>
+                        <thead>
+                          <tr style={{ borderBottom: '2px solid ' + C.bordo }}>
+                            <th style={{ ...thS, textAlign: 'left' }}>Fascia</th>
+                            <th style={thS}>Crediti</th>
+                            <th style={thS}>%</th>
+                            <th style={thS}>Debiti</th>
+                            <th style={thS}>%</th>
+                            <th style={thS}>Saldo</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sc.crediti.map((cr, i) => {
+                            const db = sc.debiti[i];
+                            const saldo = cr.importo - db.importo;
+                            return (
+                              <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo }}>
+                                <td style={{ padding: '6px 8px', fontSize: 12, fontWeight: 500 }}>{cr.fascia}</td>
+                                <td style={{ ...tdS, color: C.verde }}>{fmt(cr.importo)}</td>
+                                <td style={{ ...tdS, color: C.t3, fontSize: 10 }}>{fmtPct(cr.pct)}</td>
+                                <td style={{ ...tdS, color: C.rosso }}>{fmt(db.importo)}</td>
+                                <td style={{ ...tdS, color: C.t3, fontSize: 10 }}>{fmtPct(db.pct)}</td>
+                                <td style={{ ...tdS, fontWeight: 600, color: saldo >= 0 ? C.verde : C.rosso }}>{saldo >= 0 ? '+' : ''}{fmt(saldo)}</td>
+                              </tr>
+                            );
+                          })}
+                          <tr style={{ borderTop: '2px solid ' + C.primario, background: '#f0f4f8' }}>
+                            <td style={{ padding: '6px 8px', fontWeight: 700, fontSize: 12 }}>Totale</td>
+                            <td style={{ ...tdS, fontWeight: 700, color: C.verde }}>{fmt(sc.totCrediti)}</td>
+                            <td style={{ ...tdS, color: C.t3 }}>100%</td>
+                            <td style={{ ...tdS, fontWeight: 700, color: C.rosso }}>{fmt(sc.totDebiti)}</td>
+                            <td style={{ ...tdS, color: C.t3 }}>100%</td>
+                            <td style={{ ...tdS, fontWeight: 700, color: (sc.totCrediti - sc.totDebiti) >= 0 ? C.verde : C.rosso }}>{fmt(sc.totCrediti - sc.totDebiti)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <div style={{ flex: 1, padding: '8px 10px', background: C.verdeBg, borderRadius: 6, fontSize: 11, color: C.verde, textAlign: 'center' }}>
+                          Crediti entro 60gg: {fmtPct(sc.crediti[0].pct + sc.crediti[1].pct)}
+                        </div>
+                        <div style={{ flex: 1, padding: '8px 10px', background: C.rossoBg, borderRadius: 6, fontSize: 11, color: C.rosso, textAlign: 'center' }}>
+                          Debiti oltre 60gg: {fmtPct(sc.debiti[2].pct + sc.debiti[3].pct)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           </div>
         )}
