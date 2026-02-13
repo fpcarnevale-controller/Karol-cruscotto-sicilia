@@ -144,20 +144,22 @@ const KAROL_DATA = {
       { voce: 'EBIT', valore: -1369283, tipo: 'finale' },
     ],
     // ===== MODELLO TESORERIA ROLLING 13 SETTIMANE =====
-    // Basato su meccanica reale: factoring pro-soluto 90% con 2 finestre/mese (15 e 30)
-    // Incassi ASP: VLB ~€219k/m, CTA ~€235k/m, COS ~€324k/m ASP + €81k privato, KCP ~€55k/m
-    // Totale factoring ~€782k/mese (90% di ~€869k ASP), holdback 10% rientra a 45-60gg
-    // Uscite: stipendi+affitti+utenze+F24 metà mese (~€830k), residui fine mese (~€400k)
-    // Rate mutui/cartelle distribuite per scadenza
+    // NOTA CRITICA: CTA fattura €235k/mese ma ASP autorizza factoring solo su €182.800/mese (media 7M 2025)
+    // La differenza (~€53k/mese = adeguamento extra-tariffa €640k/anno) NON è cassa — accumula crediti, parte contenzioso €7M+
+    // Incassi ASP reali incassabili: VLB ~€219k/m, CTA ~€183k/m (non €235k!), COS ~€324k ASP + €81k privato, KCP ~€55k/m
+    // Totale ASP incassabile: €781k/mese → factoring 90% = €703k/mese, holdback 10% = €78k rientra a 45-60gg
+    // Uscite: stipendi+affitti+utenze+F24 metà mese (~€734k), materiali+servizi (~€268k), rate (~€126k)
+    // Delta mensile strutturale: €911k incassi - €1.128k uscite = -€217k/mese
     tesoreria: {
       saldo_iniziale: 7909, // Cassa reale inizio 2025 (da BP)
-      // Flussi medi mensili da Q1 2025 (€/mese)
+      // Flussi medi mensili — CORRETTI per CTA (solo quota incassabile €183k, non €235k)
       incassi_mese: {
-        factoring_1_tranche: 470000,  // ~60% del fatturato ASP entro il 15
-        factoring_2_tranche: 312000,  // ~40% restante entro fine mese
-        holdback_rientro: 87000,      // 10% holdback rientra con 45-60gg ritardo
-        privato_cash: 81000,          // Visite/esami/FKT incasso giornaliero (~€20k/sett)
-        intercompany_betania: 50000,  // Servizi direzione (~€600k/anno ÷ 12)
+        factoring_1_tranche: 421000,  // 60% di €703k ASP factoring entro il 15
+        factoring_2_tranche: 281000,  // 40% restante entro fine mese
+        holdback_rientro: 78000,      // 10% holdback rientra con 45-60gg ritardo
+        privato_cash: 81000,          // COS visite/esami/FKT incasso giornaliero (~€20k/sett)
+        intercompany_betania: 50000,  // Servizi direzione Betania (~€600k/anno ÷ 12)
+        cta_extra_non_cash: 53000,    // ⚠ MEMO: adeguamento CTA fatturato NON incassato — credito contenzioso
       },
       uscite_mese: {
         stipendi_bu: 522000,          // Personale BU (€6.259k/12)
@@ -171,57 +173,55 @@ const KAROL_DATA = {
         rate_cartelle: 49000,         // Cartelle+rottam+INPS (€583k/12 per 2025)
         fornitori_arretrati: 0,       // Piano rientro fornitori (parte dal 2026)
       },
-      // Calendario settimanale tipo (S1=prima sett mese, S4/S5=ultima)
-      // S1: holdback mese prec + privato | uscite leggere
-      // S2: factoring 1° tranche (~15 del mese) | F24 + stipendi + affitti + utenze
-      // S3: privato | materiali + servizi
-      // S4: factoring 2° tranche (~30) | rate mutui + cartelle + residui
-      // Ogni 4 settimane = 1 ciclo mensile
-      // EVENTI STRAORDINARI (timing previsto)
+      // Calendario settimanale tipo (4 settimane = 1 ciclo mensile)
+      // S1: holdback + privato €98k | nessuna uscita concentrata → unico respiro
+      // S2: factoring 1° €441k (~15 del mese) | stipendi+F24+affitti+utenze €734k → SETTIMANA CRITICA
+      // S3: privato + interco €70k | materiali+servizi €268k → deficit
+      // S4: factoring 2° €301k (~30 del mese) | mutui+cartelle €126k → recupero parziale
       eventi_straord: [
-        { sett: 'S9', desc: 'Erogazione Mutuo MCC €5M', importo: 5000000, tipo: 'entrata', data_stima: 'Giugno 2026' },
-        { sett: 'S9', desc: 'Pagamento arretrati personale', importo: -995974, tipo: 'uscita', data_stima: 'Post-erogazione mutuo' },
-        { sett: 'S10', desc: 'Incasso Regione 1° tranche €3M', importo: 3000000, tipo: 'entrata', data_stima: 'H2 2026' },
-        { sett: 'S13+', desc: 'CAPEX nuove BU', importo: -2286587, tipo: 'uscita', data_stima: '2026-2027' },
+        { sett: 'S9', desc: 'Erogazione Mutuo MCC €5M', importo: 5000000, tipo: 'entrata', data_stima: 'Apr-Giu 2026' },
+        { sett: 'S9', desc: 'Saldo arretrati personale', importo: -995974, tipo: 'uscita', data_stima: 'Post-erogazione' },
+        { sett: 'S10', desc: 'Incasso Regione CTA 1° tranche €3M', importo: 3000000, tipo: 'entrata', data_stima: 'H2 2026' },
+        { sett: 'S12+', desc: 'CAPEX nuove BU (BRT+KMC+ROM)', importo: -2286587, tipo: 'uscita', data_stima: '2026-2027' },
       ],
     },
-    // 13 settimane rolling — modello calcolato (scenario SENZA eventi straordinari = stress test puro)
+    // 13 settimane STRESS TEST (solo flussi operativi, zero eventi straordinari)
+    // Mostra la realtà nuda: deficit €217k/mese, cassa negativa da S2 e in costante peggioramento
     cassaSett_base: [
-      // Mese 1: Feb 2026 (saldo iniziale ~€8k — tensione estrema)
-      { s: 'S1',  saldo: 28, inc_det: 'Holdback €87k + privato €20k', usc_det: 'Leggeri €79k', incassi: 107, pag: 79 },
-      { s: 'S2',  saldo: -372, inc_det: 'Factoring 1° €470k', usc_det: 'Stipendi+F24+affitti €830k', incassi: 490, pag: 830, alert: true },
-      { s: 'S3',  saldo: -351, inc_det: 'Privato €20k + interco €50k', usc_det: 'Materiali+servizi €268k', incassi: 41, pag: 268 },
-      { s: 'S4',  saldo: -288, inc_det: 'Factoring 2° €312k', usc_det: 'Mutui+cartelle €126k + residui €123k', incassi: 312, pag: 249 },
-      // Mese 2: Mar 2026
-      { s: 'S5',  saldo: -181, inc_det: 'Holdback €87k + privato €20k', usc_det: '€79k', incassi: 107, pag: 0 },
-      { s: 'S6',  saldo: -521, inc_det: 'Factoring 1° €470k', usc_det: 'Stipendi+F24 €830k', incassi: 490, pag: 830, alert: true },
-      { s: 'S7',  saldo: -748, inc_det: 'Privato €20k + interco €50k', usc_det: 'Mat+serv €268k', incassi: 41, pag: 268 },
-      { s: 'S8',  saldo: -685, inc_det: 'Factoring 2° €312k', usc_det: 'Rate €126k + residui €123k', incassi: 312, pag: 249 },
-      // Mese 3: Apr 2026 (pre-mutuo — massima tensione)
-      { s: 'S9',  saldo: -578, inc_det: 'Holdback €87k + privato €20k', usc_det: '€79k', incassi: 107, pag: 0 },
-      { s: 'S10', saldo: -918, inc_det: 'Factoring 1° €470k', usc_det: 'Stipendi+F24 €830k', incassi: 490, pag: 830, alert: true },
-      { s: 'S11', saldo: -1145, inc_det: 'Privato €20k + interco €50k', usc_det: 'Mat+serv €268k', incassi: 41, pag: 268 },
-      { s: 'S12', saldo: -1082, inc_det: 'Factoring 2° €312k', usc_det: 'Rate €126k + residui €123k', incassi: 312, pag: 249 },
-      { s: 'S13', saldo: -975, inc_det: 'Holdback €87k + privato €20k', usc_det: '€79k', incassi: 107, pag: 0 },
+      // Mese 1 (saldo iniziale €8k)
+      { s: 'S1',  saldo: 106, inc_det: 'Holdback €78k + privato €20k', usc_det: '—', incassi: 98, pag: 0 },
+      { s: 'S2',  saldo: -187, inc_det: 'Factoring 1° €421k + privato €20k', usc_det: 'Stipendi €620k + F24 €80k + affitti+utenze €34k', incassi: 441, pag: 734, alert: true },
+      { s: 'S3',  saldo: -385, inc_det: 'Privato €20k + interco Betania €50k', usc_det: 'Materiali €108k + servizi €160k', incassi: 70, pag: 268 },
+      { s: 'S4',  saldo: -210, inc_det: 'Factoring 2° €281k + privato €20k', usc_det: 'Mutui €77k + cartelle €49k', incassi: 301, pag: 126 },
+      // Mese 2
+      { s: 'S5',  saldo: -112, inc_det: 'Holdback + privato', usc_det: '—', incassi: 98, pag: 0 },
+      { s: 'S6',  saldo: -405, inc_det: 'Factoring 1° + privato', usc_det: 'Stipendi+F24+affitti+utenze', incassi: 441, pag: 734, alert: true },
+      { s: 'S7',  saldo: -603, inc_det: 'Privato + interco', usc_det: 'Materiali+servizi', incassi: 70, pag: 268 },
+      { s: 'S8',  saldo: -428, inc_det: 'Factoring 2° + privato', usc_det: 'Mutui+cartelle', incassi: 301, pag: 126 },
+      // Mese 3 (massima tensione pre-mutuo)
+      { s: 'S9',  saldo: -330, inc_det: 'Holdback + privato', usc_det: '—', incassi: 98, pag: 0 },
+      { s: 'S10', saldo: -623, inc_det: 'Factoring 1° + privato', usc_det: 'Stipendi+F24+affitti+utenze', incassi: 441, pag: 734, alert: true },
+      { s: 'S11', saldo: -821, inc_det: 'Privato + interco', usc_det: 'Materiali+servizi', incassi: 70, pag: 268 },
+      { s: 'S12', saldo: -646, inc_det: 'Factoring 2° + privato', usc_det: 'Mutui+cartelle', incassi: 301, pag: 126 },
+      { s: 'S13', saldo: -548, inc_det: 'Holdback + privato', usc_det: '—', incassi: 98, pag: 0 },
     ],
-    // 13 settimane CON eventi straordinari (scenario piano = mutuo+regione)
+    // 13 settimane SCENARIO PIANO (con mutuo MCC + incasso Regione)
     cassaSett_piano: [
-      // Mese 1: Feb 2026
-      { s: 'S1',  saldo: 28, inc_det: 'Holdback + privato', usc_det: 'Leggeri', incassi: 107, pag: 79 },
-      { s: 'S2',  saldo: -372, inc_det: 'Factoring 1°', usc_det: 'Stipendi+F24+affitti', incassi: 490, pag: 830, alert: true },
-      { s: 'S3',  saldo: -351, inc_det: 'Privato + interco', usc_det: 'Materiali+servizi', incassi: 41, pag: 268 },
-      { s: 'S4',  saldo: -288, inc_det: 'Factoring 2°', usc_det: 'Mutui+cartelle+residui', incassi: 312, pag: 249 },
-      // Mese 2: Mar 2026 — con saldo arretrati dipendenti post-anticipo banca
-      { s: 'S5',  saldo: -181, inc_det: 'Holdback + privato', usc_det: '', incassi: 107, pag: 0 },
-      { s: 'S6',  saldo: -521, inc_det: 'Factoring 1°', usc_det: 'Stipendi+F24', incassi: 490, pag: 830, alert: true },
-      { s: 'S7',  saldo: -748, inc_det: 'Privato + interco', usc_det: 'Mat+serv', incassi: 41, pag: 268 },
-      { s: 'S8',  saldo: -685, inc_det: 'Factoring 2°', usc_det: 'Rate + residui', incassi: 312, pag: 249 },
-      // Mese 3: Apr-Mag 2026 — EROGAZIONE MUTUO MCC €5M
-      { s: 'S9',  saldo: 3426, inc_det: '★ MUTUO MCC €5M + holdback', usc_det: 'Arretrati personale €996k', incassi: 5107, pag: 996, evento: 'Erogazione Mutuo MCC €5M' },
-      { s: 'S10', saldo: 6096, inc_det: '★ REGIONE €3M + Factoring 1°', usc_det: 'Stipendi+F24', incassi: 3490, pag: 830, evento: 'Incasso Regione CTA €3M' },
-      { s: 'S11', saldo: 5869, inc_det: 'Privato + interco', usc_det: 'Mat+serv', incassi: 41, pag: 268 },
-      { s: 'S12', saldo: 5620, inc_det: 'Factoring 2°', usc_det: 'Rate+CAPEX avvio BU €400k', incassi: 312, pag: 561 },
-      { s: 'S13', saldo: 5648, inc_det: 'Holdback + privato', usc_det: '', incassi: 107, pag: 79 },
+      // Mese 1-2: identici a stress — nessun evento straordinario ancora
+      { s: 'S1',  saldo: 106, inc_det: 'Holdback + privato', usc_det: '—', incassi: 98, pag: 0 },
+      { s: 'S2',  saldo: -187, inc_det: 'Factoring 1°', usc_det: 'Stipendi+F24+affitti+utenze', incassi: 441, pag: 734, alert: true },
+      { s: 'S3',  saldo: -385, inc_det: 'Privato + interco', usc_det: 'Materiali+servizi', incassi: 70, pag: 268 },
+      { s: 'S4',  saldo: -210, inc_det: 'Factoring 2°', usc_det: 'Mutui+cartelle', incassi: 301, pag: 126 },
+      { s: 'S5',  saldo: -112, inc_det: 'Holdback + privato', usc_det: '—', incassi: 98, pag: 0 },
+      { s: 'S6',  saldo: -405, inc_det: 'Factoring 1°', usc_det: 'Stipendi+F24+affitti+utenze', incassi: 441, pag: 734, alert: true },
+      { s: 'S7',  saldo: -603, inc_det: 'Privato + interco', usc_det: 'Materiali+servizi', incassi: 70, pag: 268 },
+      { s: 'S8',  saldo: -428, inc_det: 'Factoring 2°', usc_det: 'Mutui+cartelle', incassi: 301, pag: 126 },
+      // Mese 3: ★ EROGAZIONE MUTUO MCC + INCASSO REGIONE
+      { s: 'S9',  saldo: 3674, inc_det: '★ MUTUO MCC €5M + holdback+privato', usc_det: '★ Saldo arretrati personale €996k', incassi: 5098, pag: 996, evento: 'Erogazione Mutuo MCC €5M' },
+      { s: 'S10', saldo: 6381, inc_det: '★ REGIONE CTA €3M + Factoring 1°', usc_det: 'Stipendi+F24+affitti+utenze', incassi: 3441, pag: 734, evento: 'Incasso Regione €3M (contenzioso CTA)' },
+      { s: 'S11', saldo: 6183, inc_det: 'Privato + interco', usc_det: 'Materiali+servizi', incassi: 70, pag: 268 },
+      { s: 'S12', saldo: 5958, inc_det: 'Factoring 2°', usc_det: 'Mutui+cartelle + CAPEX avvio BU €400k', incassi: 301, pag: 526 },
+      { s: 'S13', saldo: 6056, inc_det: 'Holdback + privato', usc_det: '—', incassi: 98, pag: 0 },
     ],
     scenari: [
       // Base = piano finanziario BP reale (cassa finale dal foglio PIANO_FINANZIARIO)
@@ -261,7 +261,7 @@ const KAROL_DATA = {
 
   narrative: [
     { uo: 'VLB', alert: 'ROSSO', testo: 'Personale 74,9% dei ricavi — include personale Centro Gottardo (FKT, ~€40k fatture attive), cucina centralizzata e trasporto disabili allocati impropriamente. Affitto €219k da proprietario rigido. Piano strategico: spostare i 40 PL convenzionati al Borgo Ritrovato (nuova BU giugno 2026) per risparmiare locazione e razionalizzare personale.', outlook: 'In ristrutturazione — migrazione a BRT prevista H2 2026' },
-    { uo: 'CTA', alert: 'GIALLO', testo: 'Miglior MOL-I % del gruppo (33%). Include adeguamento tariffario CTA €640k/anno. Contenzioso con Regione per €7M+ di crediti in bilancio — transazione imminente ("fra pochi giorni"). Se confermata: game-changer per liquidità gruppo. Rischio residuo: se adeguamento non rinnovato, MOL-I crolla al 10%.', outlook: 'In attesa transazione regionale — alto impatto' },
+    { uo: 'CTA', alert: 'GIALLO', testo: 'MOL-I contabile 33% ma ATTENZIONE: fattura €235k/mese, incassa solo €183k/mese (media 7M 2025). I €53k/mese di adeguamento extra-tariffa (€640k/anno) non sono cassa — si accumulano come crediti e fanno parte del contenzioso €7M+ con Regione. Transazione imminente. Se confermata: game-changer per liquidità. Rischio residuo: se adeguamento non rinnovato, ricavi reali -23% e MOL-I crolla.', outlook: 'In attesa transazione regionale — alto impatto su cassa e crediti' },
     { uo: 'COS', alert: 'VERDE', testo: 'Top performer per volumi: ricavi FY stimati €4,86M. MOL-I 16,5%. Estate non opera: calo fatturato privato Q2-Q3 spiega parte del deterioramento MOL 8M. Materiali elevati (€1,23M) per attività chirurgica/riabilitativa. Personale 43,1% — il migliore del gruppo.', outlook: 'Favorevole — attenzione stagionalità estiva' },
     { uo: 'KCP', alert: 'ROSSO', testo: 'Casa Protetta 20 PL brucia €300k+/anno. Personale 79,3% dei ricavi — insostenibile per diseconomie di scala. Piano: chiusura e spostamento PL al Borgo Ritrovato, con razionalizzazione personale e risparmio su costi fissi.', outlook: 'In chiusura — migrazione PL a BRT' },
     { uo: 'GRUPPO', alert: 'ROSSO', testo: 'MOL-I BU €1,99M (18,1%) sopra benchmark, ma Sede HQ €2,34M (21,3%) + D&A €893k + Oneri Fin. €268k portano l\'EBIT a -€1,37M. Crescita storica a debito + COVID + gestione paternalistica (eccesso personale). Normalizzando il bilancio 2024 (senza €1,26M interessi ASP straordinari): perdita operativa reale ~€800k. Target management: -10% costi per superare DSCR critico 2027-28. Strumento: mutuo bancario 10yr (non Bond) + crediti fiscali innovazione/patent box + transazione CTA €7M.', outlook: 'Critico — passaggio stretto 2027-28, piano di rientro in corso' },
@@ -1501,13 +1501,15 @@ const KarolDashboard = () => {
                 <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>Meccanica factoring pro-soluto 90% — 2 finestre/mese</p>
                 {(() => {
                   const t = tesoreria;
-                  const totInc = Object.values(t.incassi_mese).reduce((s,v) => s+v, 0);
+                  // Escludi cta_extra_non_cash dal totale incassi — non è cassa, è credito
+                  const totInc = Object.entries(t.incassi_mese).filter(([k]) => k !== 'cta_extra_non_cash').reduce((s,[,v]) => s+v, 0);
                   const totUsc = Object.values(t.uscite_mese).reduce((s,v) => s+v, 0);
                   const delta = totInc - totUsc;
                   const rows = [
                     { fase: '1-15 mese', label: 'Factoring 1° tranche (60% ASP)', incasso: t.incassi_mese.factoring_1_tranche, uscita: t.uscite_mese.stipendi_bu + t.uscite_mese.stipendi_hq + t.uscite_mese.f24_inps + t.uscite_mese.affitti + t.uscite_mese.utenze },
                     { fase: '15-30 mese', label: 'Factoring 2° tranche (40%)', incasso: t.incassi_mese.factoring_2_tranche, uscita: t.uscite_mese.rate_mutui + t.uscite_mese.rate_cartelle + t.uscite_mese.materiali_farmaci + t.uscite_mese.servizi_consulenze },
                     { fase: 'Continuo', label: 'Privato + Holdback + Interco', incasso: t.incassi_mese.holdback_rientro + t.incassi_mese.privato_cash + t.incassi_mese.intercompany_betania, uscita: 0 },
+                    { fase: '⚠ Memo', label: 'CTA extra-tariffa: fatturato NON incassato', incasso: 0, uscita: 0, memo: t.incassi_mese.cta_extra_non_cash },
                   ];
                   return <div>
                     <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 10 }}>
@@ -1518,12 +1520,19 @@ const KarolDashboard = () => {
                         <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: 10, color: C.t2 }}>Saldo</th>
                       </tr></thead>
                       <tbody>
-                        {rows.map((r, i) => <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo }}>
-                          <td style={{ padding: '6px 8px', fontSize: 11 }}><div style={{ fontWeight: 600 }}>{r.fase}</div><div style={{ fontSize: 10, color: C.t3 }}>{r.label}</div></td>
-                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontSize: 12, color: C.verde }}>{fmt(r.incasso)}</td>
-                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontSize: 12, color: C.rosso }}>{r.uscita > 0 ? fmt(r.uscita) : '—'}</td>
-                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontSize: 12, color: r.incasso - r.uscita >= 0 ? C.verde : C.rosso, fontWeight: 600 }}>{fmt(r.incasso - r.uscita)}</td>
-                        </tr>)}
+                        {rows.map((r, i) => r.memo ? (
+                          <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo, background: '#fef9c3' }}>
+                            <td colSpan={3} style={{ padding: '6px 8px', fontSize: 10, color: '#92400e', fontStyle: 'italic' }}>{r.fase} {r.label}</td>
+                            <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontSize: 11, color: '#92400e' }}>€{fmt(r.memo)}/mese → crediti</td>
+                          </tr>
+                        ) : (
+                          <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo }}>
+                            <td style={{ padding: '6px 8px', fontSize: 11 }}><div style={{ fontWeight: 600 }}>{r.fase}</div><div style={{ fontSize: 10, color: C.t3 }}>{r.label}</div></td>
+                            <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontSize: 12, color: C.verde }}>{fmt(r.incasso)}</td>
+                            <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontSize: 12, color: C.rosso }}>{r.uscita > 0 ? fmt(r.uscita) : '—'}</td>
+                            <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontSize: 12, color: r.incasso - r.uscita >= 0 ? C.verde : C.rosso, fontWeight: 600 }}>{fmt(r.incasso - r.uscita)}</td>
+                          </tr>
+                        ))}
                         <tr style={{ borderTop: '2px solid ' + C.primario, background: '#f0f4f8' }}>
                           <td style={{ padding: '6px 8px', fontWeight: 700, fontSize: 12 }}>Totale Mese</td>
                           <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: C.verde }}>{fmt(totInc)}</td>
