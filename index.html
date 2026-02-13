@@ -152,18 +152,22 @@ const KAROL_DATA = {
       { s: 'S11', saldo: 350, incassi: 320, pag: 150 }, { s: 'S12', saldo: 400, incassi: 200, pag: 150 },
     ],
     scenari: [
-      // Scenari cassa: base = mutuo 10yr 4,5% + ramp-up BRT giu26 + taglio costi 10%
-      // ottimistico = base + CTA contenzioso €7M + ZES €550k + ramp-up rapido Roma
-      // pessimistico = ritardo mutuo 6M + no CTA rinnovo + ramp-up Roma 18M
-      { anno: '2025', ott: 350, base: 230, pess: 80 },
-      { anno: '2026', ott: 1200, base: 650, pess: -100 }, // Mutuo H1 2026 + BRT apertura
-      { anno: '2027', ott: 1800, base: 900, pess: -350 }, // DSCR critico, ramp-up
-      { anno: '2028', ott: 2400, base: 1300, pess: -200 }, // BU a regime progressivo
-      { anno: '2029', ott: 3200, base: 1800, pess: 100 },  // Consolidamento
-      { anno: '2030', ott: 4100, base: 2500, pess: 500 },  // Target €30M+ ricavi gruppo
+      // Base = piano finanziario BP reale (cassa finale dal foglio PIANO_FINANZIARIO)
+      // Ottimistico = base + CTA €2M extra + ZES €550k + ramp-up rapido (-3M)
+      // Pessimistico = ritardo mutuo 6M + ramp-up Roma +6M + no incasso Regione extra
+      { anno: '2025', ott: 200, base: 8, pess: -200 },      // Cassa reale ~€8k
+      { anno: '2026', ott: 3200, base: 1914, pess: 400 },   // Post-mutuo €5M
+      { anno: '2027', ott: 3500, base: 2342, pess: 800 },   // Ramp-up BU
+      { anno: '2028', ott: 2800, base: 1557, pess: 200 },   // Picco debt service
+      { anno: '2029', ott: 2700, base: 1427, pess: 300 },   // Stabilizzazione
+      { anno: '2030', ott: 2800, base: 1359, pess: 500 },   // Inizio consolidamento
+      { anno: '2031', ott: 3000, base: 1598, pess: 700 },
+      { anno: '2032', ott: 3500, base: 2079, pess: 1000 },
+      { anno: '2033', ott: 4000, base: 2361, pess: 1200 },
+      { anno: '2034', ott: 4800, base: 3149, pess: 1800 },
+      { anno: '2035', ott: 6500, base: 5011, pess: 3000 },  // PFN → 0
     ],
-    kpi: { dso: 50, dpo: 75, dscr: 0.95, cop_cassa: 0.8, ccn: -2100000, capex: 2300000, debito_annuo: 890000 },
-    // NOTA: DSCR <1.0 nel 2027-28 è il "passaggio stretto" — mutuo 10yr con preammortamento + crediti fiscali + CTA settlement = mitigazione
+    kpi: { dso: 50, dpo: 75, dscr: 0.97, cop_cassa: 0.03, ccn: -2100000, capex: 2424245, debito_annuo: 1503802 },
     // Scadenziario crediti/debiti (simulato)
     scadenziario: {
       crediti: [
@@ -191,38 +195,92 @@ const KAROL_DATA = {
     { uo: 'GRUPPO', alert: 'ROSSO', testo: 'MOL-I BU €1,99M (18,1%) sopra benchmark, ma Sede HQ €2,34M (21,3%) + D&A €893k + Oneri Fin. €268k portano l\'EBIT a -€1,37M. Crescita storica a debito + COVID + gestione paternalistica (eccesso personale). Normalizzando il bilancio 2024 (senza €1,26M interessi ASP straordinari): perdita operativa reale ~€800k. Target management: -10% costi per superare DSCR critico 2027-28. Strumento: mutuo bancario 10yr (non Bond) + crediti fiscali innovazione/patent box + transazione CTA €7M.', outlook: 'Critico — passaggio stretto 2027-28, piano di rientro in corso' },
   ],
 
-  // ====== PIANO FINANZIARIO — Nuove BU e struttura debito ======
+  // ====== PIANO FINANZIARIO — Dati reali da BP Excel + Memorandum Mutuo ======
   piano: {
-    // Mutuo bancario (sostituisce Bond)
-    mutuo: { importo: 5000000, durata_anni: 10, tasso: 0.045, preammortamento_mesi: 12, rata_annua: 620000, data_stima_erogazione: 'H1 2026' },
-    // MCC Medio Credito Centrale
-    mcc: { importo: 5000000, durata_anni: 8, tasso: 0.035, garanzia_pubblica: true, rata_annua: 700000 },
-    // Debiti in rientro
-    debiti_rientro: {
-      tributari: { totale: 8780000, di_cui_rottamazione: 'da quantificare', rata_annua_stima: 1200000 },
-      previdenziali: { totale: 5750000, rata_annua_stima: 800000 },
-      // Scadenziario dettagliato: IN ATTESA dati dal management
+    // Mutuo bancario MCC (Fondo Garanzia PMI, garanzia 80%)
+    mutuo: { importo: 5000000, durata_anni: 10, tasso: 0.05, preammortamento_mesi: 12,
+      rata_annua: 632983, data_stima_erogazione: 'Giugno 2026', garanzia: 'MCC 80%',
+      commissione_mcc: 20000, tipo: 'Francese (rata costante)',
+      utilizzo: { capex: { pct: 0.457, importo: 2286587 }, arretrati_personale: { pct: 0.199, importo: 995974 }, buffer_liquidita: { pct: 0.344, importo: 1717439 } },
+      // Piano ammortamento annuale dal foglio Excel
+      piano_amm: [
+        { anno: 2026, deb_iniz: 5000000, capitale: 0, interessi: 250000, rata: 250000, deb_fin: 5000000 },
+        { anno: 2027, deb_iniz: 5000000, capitale: 382983, interessi: 250000, rata: 632983, deb_fin: 4617017 },
+        { anno: 2028, deb_iniz: 4617017, capitale: 402132, interessi: 230851, rata: 632983, deb_fin: 4214885 },
+        { anno: 2029, deb_iniz: 4214885, capitale: 422239, interessi: 210744, rata: 632983, deb_fin: 3792646 },
+        { anno: 2030, deb_iniz: 3792646, capitale: 443351, interessi: 189632, rata: 632983, deb_fin: 3349295 },
+        { anno: 2031, deb_iniz: 3349295, capitale: 465518, interessi: 167465, rata: 632983, deb_fin: 2883777 },
+        { anno: 2032, deb_iniz: 2883777, capitale: 488794, interessi: 144189, rata: 632983, deb_fin: 2394983 },
+        { anno: 2033, deb_iniz: 2394983, capitale: 513234, interessi: 119749, rata: 632983, deb_fin: 1881749 },
+        { anno: 2034, deb_iniz: 1881749, capitale: 538896, interessi: 94087, rata: 632983, deb_fin: 1342853 },
+        { anno: 2035, deb_iniz: 1342853, capitale: 565840, interessi: 67143, rata: 632983, deb_fin: 777013 },
+      ],
     },
+    // PIANO FINANZIARIO COMPLETO (dal foglio PIANO_FINANZIARIO del BP)
+    anni: [2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035],
+    fcf: {
+      ebitda:   [1450172, 2339958, 2665528, 2821163, 2984002, 3154378, 3332639, 3519151, 3714295, 3918474, 4132107],
+      imposte:  [-94953, -202609, -304504, -387625, -466765, -533479, -593731, -658074, -724525, -796129, -868076],
+      capex:    [0, -2424245, -137658, -137658, -137658, -137658, -137658, -137658, -137658, -137658, -137658],
+      delta_ccn:[113223, 2339918, 1951136, 102057, 88413, 88190, 87962, 87729, 87729, -12507, -12748],
+      fcf_op:   [1465707, 2053023, 4174502, 2397936, 2467992, 2571430, 2689212, 2811148, 2839605, 2971939, 3113379],
+    },
+    // Servizio debito — dettaglio per categoria
+    servizio: {
+      mutui_esistenti_cap: [612286, 1516034, 1108075, 799345, 449336, 316705, 252304, 257512, 262891, 198446, 180850],
+      mutui_nuovi_cap:     [0, 0, 382983, 402132, 422239, 443351, 465518, 488794, 513234, 538896, 565840],
+      mutui_interessi:     [308266, 778779, 643085, 501858, 382054, 314166, 277242, 233958, 191777, 140227, 96906],
+      cartelle_ratezz:     [333011, 455330, 853223, 783999, 684747, 469820, 469499, 458825, 452358, 452358, 339269],
+      cartelle_rottam:     [0, 68689, 137379, 137379, 137379, 137379, 137379, 137379, 137379, 137379, 68689],
+      cartelle_inps:       [181943, 412112, 521783, 458382, 321580, 208368, 98224, 3911, 0, 0, 0],
+      cartelle_interessi:  [68296, 72010, 72010, 72010, 72010, 72010, 72010, 72010, 72010, 72010, 72010],
+      fornitori:           [0, 300000, 100000, 100000, 200000, 750000, 750000, 750000, 1000000, 716003, 0],
+      personale:           [0, 995974, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      rottamazione5_nc:    [0, 620089, 0, 0, 0, 0, 0, 0, 0, 0, 0], // non-cash, riduce stock
+      totale:              [1503802, 5147008, 3746529, 3183095, 2597334, 2639789, 2450165, 2330378, 2557639, 2183309, 1251554],
+    },
+    // Risorse straordinarie
+    risorse_straord: [0, 5000000, 0, 0, 0, 0, 0, 0, 0, 0, 0], // erogazione mutuo 2026
+    incasso_regione: [0, 3000000, 2000000, 100000, 100000, 100000, 100000, 100000, 0, 0, 0],
+    // Dinamica cassa
+    cassa: [7909, 1913924, 2341897, 1556738, 1427395, 1359036, 1598083, 2078853, 2360819, 3149448, 5011274],
+    // Stock debiti residui
+    stock: {
+      bancari:       [6434757, 9918723, 8427665, 7226187, 6354612, 5594556, 4876734, 4130428, 3354303, 2616961, 1870271],
+      tributari:     [12362737, 10806517, 9294132, 7914372, 6770666, 5955099, 5249997, 4649883, 4060146, 3470409, 3062451],
+      fornitori:     [4516003, 4216003, 4116003, 4016003, 3816003, 3066003, 2316003, 1566003, 566003, 0, 0],
+      personale:     [995974, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      totale:        [24309471, 24941242, 21837799, 19156562, 16941281, 14615658, 12442734, 10346314, 7980452, 6087370, 4932723],
+    },
+    pfn: {
+      standard:   [6426848, 8004799, 6085767, 5669449, 4927217, 4235519, 3278651, 2051575, 993484, -532487, -3141002],
+      gestionale: [18801562, 20527319, 18995902, 17199824, 15213886, 13056621, 10744651, 8267461, 5619633, 2937922, -78551],
+    },
+    // CE proiezioni
+    ricavi: [13174227, 17021878, 18636684, 19080019, 19536250, 20005838, 20489260, 20987017, 21499627, 22027632, 22571598],
     // Nuove BU
     nuove_bu: [
-      { cod: 'BRT', nome: 'Borgo Ritrovato', tipo: 'RSA Alzheimer', pl: 60, regione: 'Sicilia (Palermo)',
-        capex_residuo: 800000, ricavi_regime: 3500000, apertura_stima: 'Giugno 2026', ramp_up_mesi: 4,
-        nota: 'Rischio basso — domanda altissima, liste attesa. Assorbirà 40 PL da VLB.' },
-      { cod: 'KMC', nome: 'Karol Medical Center', tipo: 'Day Surgery/Ambulatorio', pl: 20, regione: 'Sicilia (Palermo)',
-        capex_residuo: 500000, ricavi_regime: 2000000, apertura_stima: 'Q4 2026', ramp_up_mesi: 9,
-        nota: 'Rischio medio-alto — primo approccio mercato privato, serve referral network.' },
-      { cod: 'ROM', nome: 'RSA Roma Santa Margherita', tipo: 'RSA', pl: 77, regione: 'Lazio',
-        capex_residuo: 1000000, ricavi_regime: 4500000, apertura_stima: 'Q1 2027', ramp_up_mesi: 12,
-        nota: 'Pre-accreditamento solido, 2-3 mesi post-lavori. Prima presenza fuori Sicilia.' },
+      { cod: 'BRT', nome: 'Borgo Ritrovato', tipo: 'RSA 40PL + Casa Protetta 20PL + FKT', pl: 60, regione: 'Sicilia (Palermo)',
+        capex_residuo: 0, ricavi_regime: 2918060, apertura_stima: 'Giugno 2026', ramp_up_mesi: 4,
+        ricavi_bu: { r2025: 0, r2026: 3178890, r2027: 3377516 }, // Include VLB spostata
+        nota: 'Assorbe 40 PL convenzionati da VLB + FKT €250k. Elimina affitto VLB €219k.' },
+      { cod: 'KMC', nome: 'Karol Medical Center', tipo: 'Day Surgery + Ambulatorio Privato', pl: 0, regione: 'Sicilia (Palermo)',
+        capex_residuo: 710000, ricavi_regime: 1428800, apertura_stima: 'Aprile 2026', ramp_up_mesi: 9,
+        ricavi_bu: { r2025: 0, r2026: 857280, r2027: 1428800 }, // 9M primo anno, a regime 2027
+        nota: 'CAPEX: edili €71k + arredi/tech €639k. Sale operatorie + ambulatori privati.' },
+      { cod: 'ROM', nome: 'RSA Roma Santa Margherita', tipo: 'RSA 77PL (RI + Estensiva + Semi-res)', pl: 77, regione: 'Lazio',
+        capex_residuo: 1200000, ricavi_regime: 4190901, apertura_stima: 'Aprile 2026', ramp_up_mesi: 12,
+        ricavi_bu: { r2025: 0, r2026: 2514541, r2027: 4190901 }, // 9M primo anno, a regime 2027
+        nota: 'Pre-accreditamento solido. Tariffe Lazio: RI €227/gg, Est. €154/gg, Semi-res €79/gg.' },
     ],
     // Crediti attesi (non nel CE operativo)
     crediti_attesi: {
-      cta_contenzioso: { importo: 7000000, probabilita: 'alta', tempistica: 'imminente' },
+      cta_contenzioso: { importo: 5500000, probabilita: 'alta', tempistica: 'imminente', incasso_piano: '3M 2026 + 2M 2027 + 100k/anno' },
       crediti_fiscali: { importo: 1500000, tipo: 'innovazione + patent box', stato: 'in certificazione (studio Roma)' },
       zes_unica: { importo: 550000, finestra: 'marzo-maggio 2026', nel_bp: false },
     },
     // Obiettivi
-    target: { riduzione_costi_pct: 0.10, ricavi_2027: 18600000, ebitda_target_pct: 0.14 },
+    target: { riduzione_costi_pct: 0.10, ricavi_2027: 18636684, ebitda_target_pct: 0.143, pfn_zero: 2035 },
   },
 };
 
@@ -1479,64 +1537,192 @@ const KarolDashboard = () => {
         {tab === 'piano' && (() => {
           const P = D.piano;
           const nuoveBU = P.nuove_bu;
-          const riskCol = r => r === 'basso' ? C.verde : r === 'medio-alto' ? C.giallo : C.rosso;
+          const fmtK = v => '€ ' + Math.round(v/1000).toLocaleString('it-IT') + 'k';
+          const fmtM = v => '€ ' + (v/1000000).toFixed(1).replace('.', ',') + 'M';
 
-          // Timeline dati per grafico
-          const timeline = [
-            { anno: '2025', ricavi_attuali: 10975, ricavi_nuove: 0, ebitda: -140, debt_service: 890, cassa: 230 },
-            { anno: '2026', ricavi_attuali: 11200, ricavi_nuove: 1200, ebitda: 450, debt_service: 2000, cassa: 650 },
-            { anno: '2027', ricavi_attuali: 11500, ricavi_nuove: 5500, ebitda: 2400, debt_service: 2800, cassa: 900 },
-            { anno: '2028', ricavi_attuali: 11800, ricavi_nuove: 7200, ebitda: 3200, debt_service: 2800, cassa: 1300 },
-            { anno: '2029', ricavi_attuali: 12000, ricavi_nuove: 8500, ebitda: 3800, debt_service: 2600, cassa: 1800 },
-            { anno: '2030', ricavi_attuali: 12200, ricavi_nuove: 9800, ebitda: 4500, debt_service: 2400, cassa: 2500 },
-          ];
-          const dscr_data = [
-            { anno: '2025', dscr: 0.85, soglia: 1.0 },
-            { anno: '2026', dscr: 0.92, soglia: 1.0 },
-            { anno: '2027', dscr: 0.86, soglia: 1.0 },
-            { anno: '2028', dscr: 1.05, soglia: 1.0 },
-            { anno: '2029', dscr: 1.35, soglia: 1.0 },
-            { anno: '2030', dscr: 1.65, soglia: 1.0 },
-          ];
+          // Costruisci dati per grafici dai dati reali BP
+          const pianoData = P.anni.map((a, i) => ({
+            anno: String(a), fcf: Math.round(P.fcf.fcf_op[i]/1000),
+            debt: Math.round(P.servizio.totale[i]/1000),
+            cassa: Math.round(P.cassa[i]/1000),
+            ebitda: Math.round(P.fcf.ebitda[i]/1000),
+            ricavi: Math.round(P.ricavi[i]/1000),
+            pfn_gest: Math.round(P.pfn.gestionale[i]/1000),
+            dscr: P.servizio.totale[i] > 0 ? P.fcf.fcf_op[i] / P.servizio.totale[i] : 0,
+          }));
+
+          // Debt service breakdown per anno (primi 6 anni)
+          const debtBreak = P.anni.slice(0, 8).map((a, i) => ({
+            anno: String(a),
+            'Mutui esistenti': Math.round((P.servizio.mutui_esistenti_cap[i] + P.servizio.mutui_interessi[i])/1000),
+            'Nuovo Mutuo MCC': Math.round(P.servizio.mutui_nuovi_cap[i]/1000),
+            'Cartelle/Rottam.': Math.round((P.servizio.cartelle_ratezz[i] + P.servizio.cartelle_rottam[i] + P.servizio.cartelle_inps[i] + P.servizio.cartelle_interessi[i])/1000),
+            'Fornitori/Personale': Math.round((P.servizio.fornitori[i] + P.servizio.personale[i])/1000),
+          }));
+
+          // Stock debiti nel tempo
+          const stockData = P.anni.map((a, i) => ({
+            anno: String(a),
+            Bancari: Math.round(P.stock.bancari[i]/1000),
+            Tributari: Math.round(P.stock.tributari[i]/1000),
+            Fornitori: Math.round(P.stock.fornitori[i]/1000),
+            Personale: Math.round(P.stock.personale[i]/1000),
+          }));
 
           return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
             {/* Header Piano */}
             <div style={{...cardS, background: 'linear-gradient(135deg, #1F4E79 0%, #2E75B6 100%)', color: 'white'}}>
-              <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>Piano Finanziario 2025-2030</h3>
-              <p style={{ fontSize: 13, opacity: 0.9 }}>Mutuo bancario {fmt(P.mutuo.importo)} (10yr, {(P.mutuo.tasso*100).toFixed(1)}%) + MCC {fmt(P.mcc.importo)} | Target: riduzione costi {(P.target.riduzione_costi_pct*100)}% | Ricavi 2027: {fmt(P.target.ricavi_2027)}</p>
-              <div style={{ display: 'flex', gap: 16, marginTop: 12, flexWrap: 'wrap' }}>
+              <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>Piano Finanziario 2025-2035 — Dati da BP</h3>
+              <p style={{ fontSize: 13, opacity: 0.9 }}>Mutuo MCC {fmt(P.mutuo.importo)} (10yr, {(P.mutuo.tasso*100)}%, garanzia {P.mutuo.garanzia}) | Erogazione: {P.mutuo.data_stima_erogazione} | Target: ricavi 2027 {fmt(P.target.ricavi_2027)}</p>
+              <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
                 {[
-                  { l: 'Mutuo (stima)', v: P.mutuo.data_stima_erogazione, c: '#10b981' },
-                  { l: 'DSCR 2027', v: '0,86x', c: '#dc2626' },
-                  { l: 'CTA Contenzioso', v: fmt(P.crediti_attesi.cta_contenzioso.importo), c: '#f59e0b' },
-                  { l: 'ZES Unica', v: fmt(P.crediti_attesi.zes_unica.importo), c: '#8b5cf6' },
+                  { l: 'Rata mutuo/anno', v: fmt(P.mutuo.rata_annua), c: '#10b981' },
+                  { l: 'PFN Gest. 2025', v: fmtM(P.pfn.gestionale[0]), c: '#dc2626' },
+                  { l: 'Cassa 2026', v: fmtM(P.cassa[1]), c: '#10b981' },
+                  { l: 'PFN → 0', v: String(P.target.pfn_zero), c: '#8b5cf6' },
+                  { l: 'Crediti Regione', v: fmtM(5500000), c: '#f59e0b' },
+                  { l: 'Debt Service 2026', v: fmtM(P.servizio.totale[1]), c: '#ef4444' },
                 ].map((k, i) => (
-                  <div key={i} style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: '8px 14px', minWidth: 140 }}>
-                    <div style={{ fontSize: 10, opacity: 0.8 }}>{k.l}</div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: k.c }}>{k.v}</div>
+                  <div key={i} style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: '6px 12px', minWidth: 120 }}>
+                    <div style={{ fontSize: 9, opacity: 0.7 }}>{k.l}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: k.c }}>{k.v}</div>
                   </div>
                 ))}
               </div>
             </div>
 
+            {/* Utilizzo fondi mutuo */}
+            <div style={cardS}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Utilizzo Fondi Mutuo MCC — {fmt(P.mutuo.importo)}</h3>
+              <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>Destinazione deliberata nel memorandum di richiesta</p>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                {[
+                  { l: 'CAPEX (BRT + KMC + Roma)', v: P.mutuo.utilizzo.capex.importo, pct: P.mutuo.utilizzo.capex.pct, c: C.primario, icon: '🏗️' },
+                  { l: 'Arretrati Personale (accordo sindacale)', v: P.mutuo.utilizzo.arretrati_personale.importo, pct: P.mutuo.utilizzo.arretrati_personale.pct, c: '#d97706', icon: '👥' },
+                  { l: 'Buffer Liquidità Operativa', v: P.mutuo.utilizzo.buffer_liquidita.importo, pct: P.mutuo.utilizzo.buffer_liquidita.pct, c: C.verde, icon: '💰' },
+                ].map((u, i) => (
+                  <div key={i} style={{ flex: '1 1 200px', border: '1px solid ' + C.bordo, borderRadius: 8, padding: 14, borderTop: '3px solid ' + u.c }}>
+                    <div style={{ fontSize: 20, marginBottom: 4 }}>{u.icon}</div>
+                    <div style={{ fontSize: 12, color: C.t2, marginBottom: 4 }}>{u.l}</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: u.c }}>{fmt(u.v)}</div>
+                    <div style={{ fontSize: 11, color: C.t3 }}>{(u.pct*100).toFixed(1)}% del mutuo</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* FCF vs Debt Service + DSCR */}
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+              <div style={cardS}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>FCF Operativo vs Servizio Debito (€k)</h3>
+                <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>2026: mutuo €5M copre gap. 2027-28: "passaggio stretto". Dal 2029: FCF {'>'} Debito</p>
+                <ResponsiveContainer width="100%" height={260}>
+                  <ComposedChart data={pianoData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="anno" fontSize={11} />
+                    <YAxis fontSize={10} tickFormatter={v => v.toLocaleString('it-IT')} />
+                    <Tooltip formatter={(v, n) => ['€ ' + v.toLocaleString('it-IT') + 'k', n]} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey="fcf" name="FCF Operativo" fill={C.verde} radius={[4,4,0,0]} barSize={28} />
+                    <Bar dataKey="debt" name="Servizio Debito" fill={C.rosso} radius={[4,4,0,0]} barSize={28} />
+                    <Line dataKey="cassa" name="Cassa Finale" type="monotone" stroke={C.primario} strokeWidth={2} dot={{ r: 3 }} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div style={cardS}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>DSCR</h3>
+                <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>FCF / Debt Service — soglia 1,0x</p>
+                <ResponsiveContainer width="100%" height={260}>
+                  <ComposedChart data={pianoData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="anno" fontSize={10} />
+                    <YAxis fontSize={10} domain={[0, 3]} tickFormatter={v => v.toFixed(1) + 'x'} />
+                    <Tooltip formatter={(v) => [v.toFixed(2) + 'x', 'DSCR']} />
+                    <ReferenceLine y={1.0} stroke={C.rosso} strokeDasharray="5 5" label={{ value: '1,0x', fill: C.rosso, fontSize: 10, position: 'right' }} />
+                    <Bar dataKey="dscr" radius={[4,4,0,0]} barSize={30}>
+                      {pianoData.map((d, i) => <Cell key={i} fill={d.dscr >= 1.2 ? C.verde : d.dscr >= 1.0 ? C.giallo : C.rosso} />)}
+                    </Bar>
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Debt Service Breakdown Stacked */}
+            <div style={cardS}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Composizione Servizio Debito (€k)</h3>
+              <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>Dettaglio per categoria: mutui, cartelle, arretrati — 2026 picco €5,1M (include CAPEX + personale)</p>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={debtBreak}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="anno" fontSize={11} />
+                  <YAxis fontSize={10} tickFormatter={v => v.toLocaleString('it-IT')} />
+                  <Tooltip formatter={(v, n) => ['€ ' + v.toLocaleString('it-IT') + 'k', n]} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="Mutui esistenti" stackId="a" fill="#64748b" />
+                  <Bar dataKey="Nuovo Mutuo MCC" stackId="a" fill={C.primario} />
+                  <Bar dataKey="Cartelle/Rottam." stackId="a" fill="#d97706" />
+                  <Bar dataKey="Fornitori/Personale" stackId="a" fill="#ef4444" radius={[4,4,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Stock debiti + PFN Gestionale */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={cardS}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Stock Debiti Residui (€k)</h3>
+                <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>Da €24,3M (2025) a €4,9M (2035) — rientro progressivo</p>
+                <ResponsiveContainer width="100%" height={260}>
+                  <AreaChart data={stockData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="anno" fontSize={10} />
+                    <YAxis fontSize={10} tickFormatter={v => v.toLocaleString('it-IT')} />
+                    <Tooltip formatter={(v, n) => ['€ ' + v.toLocaleString('it-IT') + 'k', n]} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Area dataKey="Bancari" stackId="1" fill="#64748b" stroke="#475569" fillOpacity={0.7} />
+                    <Area dataKey="Tributari" stackId="1" fill="#d97706" stroke="#b45309" fillOpacity={0.7} />
+                    <Area dataKey="Fornitori" stackId="1" fill="#ef4444" stroke="#dc2626" fillOpacity={0.7} />
+                    <Area dataKey="Personale" stackId="1" fill="#8b5cf6" stroke="#7c3aed" fillOpacity={0.7} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div style={cardS}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>PFN Gestionale (€k)</h3>
+                <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>Target: PFN → 0 entro {P.target.pfn_zero}. Include debiti tributari e fornitori.</p>
+                <ResponsiveContainer width="100%" height={260}>
+                  <ComposedChart data={pianoData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="anno" fontSize={10} />
+                    <YAxis fontSize={10} tickFormatter={v => v.toLocaleString('it-IT')} />
+                    <Tooltip formatter={(v, n) => ['€ ' + v.toLocaleString('it-IT') + 'k', 'PFN Gestionale']} />
+                    <ReferenceLine y={0} stroke={C.verde} strokeDasharray="5 5" />
+                    <Area dataKey="pfn_gest" fill={C.rossoBg} stroke={C.rosso} strokeWidth={2} fillOpacity={0.3} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
             {/* Nuove BU — Card grid */}
             <div style={cardS}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 12 }}>Nuove Business Unit — Pipeline</h3>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 12 }}>Nuove Business Unit — Pipeline Aperture</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
                 {nuoveBU.map((bu, i) => (
-                  <div key={i} style={{ border: '1px solid ' + C.bordo, borderRadius: 8, padding: 14, borderLeft: '4px solid ' + (bu.cod === 'BRT' ? C.verde : bu.cod === 'KMC' ? C.giallo : C.rosso) }}>
+                  <div key={i} style={{ border: '1px solid ' + C.bordo, borderRadius: 8, padding: 14, borderLeft: '4px solid ' + (bu.cod === 'BRT' ? C.verde : bu.cod === 'KMC' ? C.giallo : '#3b82f6') }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                       <span style={{ fontWeight: 700, fontSize: 14 }}>{bu.cod} — {bu.nome}</span>
-                      <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 10, background: bu.cod === 'BRT' ? C.verdeBg : bu.cod === 'KMC' ? C.gialloBg : C.rossoBg, color: bu.cod === 'BRT' ? C.verde : bu.cod === 'KMC' ? C.giallo : C.rosso, fontWeight: 600 }}>{bu.tipo}</span>
+                      <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 10, background: bu.cod === 'BRT' ? C.verdeBg : bu.cod === 'KMC' ? C.gialloBg : '#dbeafe', color: bu.cod === 'BRT' ? C.verde : bu.cod === 'KMC' ? C.giallo : '#2563eb', fontWeight: 600 }}>{bu.tipo}</span>
                     </div>
-                    <div style={{ fontSize: 12, color: C.t2, marginBottom: 8 }}>{bu.regione} | {bu.pl} PL</div>
+                    <div style={{ fontSize: 12, color: C.t2, marginBottom: 8 }}>{bu.regione} {bu.pl > 0 ? '| ' + bu.pl + ' PL' : ''}</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, fontSize: 12 }}>
                       <div><span style={{ color: C.t3 }}>CAPEX residuo:</span> <strong>{fmt(bu.capex_residuo)}</strong></div>
                       <div><span style={{ color: C.t3 }}>Ricavi a regime:</span> <strong>{fmt(bu.ricavi_regime)}</strong></div>
                       <div><span style={{ color: C.t3 }}>Apertura:</span> <strong>{bu.apertura_stima}</strong></div>
                       <div><span style={{ color: C.t3 }}>Ramp-up:</span> <strong>{bu.ramp_up_mesi} mesi</strong></div>
+                      <div><span style={{ color: C.t3 }}>Ricavi 2026:</span> <strong>{fmt(bu.ricavi_bu.r2026)}</strong></div>
+                      <div><span style={{ color: C.t3 }}>Ricavi 2027:</span> <strong>{fmt(bu.ricavi_bu.r2027)}</strong></div>
                     </div>
                     <p style={{ fontSize: 11, color: C.t2, marginTop: 8, fontStyle: 'italic' }}>{bu.nota}</p>
                   </div>
@@ -1544,88 +1730,51 @@ const KarolDashboard = () => {
               </div>
             </div>
 
-            {/* DSCR Chart */}
+            {/* Crediti attesi + Piano ammortamento mutuo */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div style={cardS}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>DSCR — Debt Service Coverage Ratio</h3>
-                <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>Soglia minima 1,0x — "passaggio stretto" 2025-2027</p>
-                <ResponsiveContainer width="100%" height={250}>
-                  <ComposedChart data={dscr_data}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="anno" fontSize={12} />
-                    <YAxis fontSize={11} domain={[0, 2]} tickFormatter={v => v.toFixed(1) + 'x'} />
-                    <Tooltip formatter={(v, n) => [v.toFixed(2) + 'x', n === 'dscr' ? 'DSCR' : 'Soglia']} />
-                    <ReferenceLine y={1.0} stroke={C.rosso} strokeDasharray="5 5" label={{ value: 'Min 1,0x', fill: C.rosso, fontSize: 10 }} />
-                    <Bar dataKey="dscr" radius={[4,4,0,0]} barSize={40}>
-                      {dscr_data.map((d, i) => <Cell key={i} fill={d.dscr >= 1.0 ? C.verde : d.dscr >= 0.9 ? C.giallo : C.rosso} />)}
-                    </Bar>
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-
-              {/* Struttura debito */}
-              <div style={cardS}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Struttura Debito e Rientro</h3>
-                <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>PFN consolidata €19,1M (FY2024) — target rientro 5 anni</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {[
-                    { l: 'Debiti tributari', v: P.debiti_rientro.tributari.totale, rata: P.debiti_rientro.tributari.rata_annua_stima, c: C.rosso },
-                    { l: 'Debiti previdenziali', v: P.debiti_rientro.previdenziali.totale, rata: P.debiti_rientro.previdenziali.rata_annua_stima, c: '#d97706' },
-                    { l: 'Mutuo bancario (nuovo)', v: P.mutuo.importo, rata: P.mutuo.rata_annua, c: C.primario },
-                    { l: 'MCC (nuovo)', v: P.mcc.importo, rata: P.mcc.rata_annua, c: '#7c3aed' },
-                  ].map((d, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#f8fafc', borderRadius: 6, borderLeft: '3px solid ' + d.c }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600 }}>{d.l}</div>
-                        <div style={{ fontSize: 11, color: C.t3 }}>Rata annua stima: {fmt(d.rata)}</div>
-                      </div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: d.c }}>{fmt(d.v)}</div>
-                    </div>
-                  ))}
-                  <div style={{ padding: '10px 12px', background: C.rossoBg, borderRadius: 6, borderLeft: '3px solid ' + C.rosso, marginTop: 4 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: C.rosso }}>Debt Service Annuo Totale</span>
-                      <span style={{ fontSize: 16, fontWeight: 800, color: C.rosso }}>{fmt(P.debiti_rientro.tributari.rata_annua_stima + P.debiti_rientro.previdenziali.rata_annua_stima + P.mutuo.rata_annua + P.mcc.rata_annua)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Ricavi proiezione */}
-            <div style={cardS}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Proiezione Ricavi — Attuali + Nuove BU (€k)</h3>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={timeline}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="anno" fontSize={12} />
-                  <YAxis fontSize={11} tickFormatter={v => v.toLocaleString('it-IT') + 'k'} />
-                  <Tooltip formatter={(v, n) => ['€ ' + v.toLocaleString('it-IT') + 'k', n === 'ricavi_attuali' ? 'BU Attuali' : 'Nuove BU']} />
-                  <Legend />
-                  <Bar dataKey="ricavi_attuali" name="BU Attuali" stackId="a" fill={C.primario} radius={[0,0,0,0]} />
-                  <Bar dataKey="ricavi_nuove" name="Nuove BU" stackId="a" fill={C.verde} radius={[4,4,0,0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Crediti attesi */}
-            <div style={cardS}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 12 }}>Crediti Attesi — Non nel CE Operativo</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 12 }}>Crediti Attesi — Risorse Straordinarie</h3>
                 {[
-                  { titolo: 'Contenzioso CTA/Regione', importo: P.crediti_attesi.cta_contenzioso.importo, stato: 'Transazione imminente', prob: 'Alta', c: C.verde },
+                  { titolo: 'Crediti v/Regione (contenzioso CTA)', importo: P.crediti_attesi.cta_contenzioso.importo, stato: P.crediti_attesi.cta_contenzioso.incasso_piano, prob: 'Alta', c: C.verde },
                   { titolo: 'Crediti Fiscali (Innovazione + Patent Box)', importo: P.crediti_attesi.crediti_fiscali.importo, stato: P.crediti_attesi.crediti_fiscali.stato, prob: 'Media-Alta', c: C.giallo },
                   { titolo: 'ZES Unica', importo: P.crediti_attesi.zes_unica.importo, stato: 'Finestra ' + P.crediti_attesi.zes_unica.finestra, prob: 'Media', c: '#7c3aed' },
                 ].map((cr, i) => (
-                  <div key={i} style={{ border: '1px solid ' + C.bordo, borderRadius: 8, padding: 14, borderTop: '3px solid ' + cr.c }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{cr.titolo}</div>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: cr.c, marginBottom: 6 }}>{fmt(cr.importo)}</div>
-                    <div style={{ fontSize: 11, color: C.t2 }}>{cr.stato}</div>
-                    <div style={{ fontSize: 11, marginTop: 4 }}><span style={{ color: C.t3 }}>Probabilit\u00E0:</span> <strong>{cr.prob}</strong></div>
+                  <div key={i} style={{ border: '1px solid ' + C.bordo, borderRadius: 8, padding: 12, marginBottom: 8, borderLeft: '3px solid ' + cr.c }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700 }}>{cr.titolo}</div>
+                        <div style={{ fontSize: 11, color: C.t2, marginTop: 2 }}>{cr.stato}</div>
+                      </div>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: cr.c }}>{fmt(cr.importo)}</div>
+                    </div>
                   </div>
                 ))}
+                <p style={{ fontSize: 11, color: C.t3, fontStyle: 'italic' }}>Totale potenziale: {fmt(5500000 + 1500000 + 550000)}</p>
               </div>
-              <p style={{ fontSize: 11, color: C.t3, marginTop: 8, fontStyle: 'italic' }}>Totale potenziale: {fmt(7000000 + 1500000 + 550000)} — se realizzati, migliorano DSCR di ~0,8x e riducono PFN del 47%</p>
+
+              <div style={cardS}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 12 }}>Piano Ammortamento Mutuo MCC</h3>
+                <div style={{ fontSize: 11, overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+                    <thead>
+                      <tr style={{ background: C.primario, color: 'white' }}>
+                        {['Anno', 'Capitale', 'Interessi', 'Rata', 'Residuo'].map(h => <th key={h} style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600 }}>{h}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {P.mutuo.piano_amm.map((r, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo, background: i % 2 ? '#f8fafc' : 'white' }}>
+                          <td style={{ padding: '5px 8px', fontWeight: 600 }}>{r.anno}</td>
+                          <td style={{ padding: '5px 8px', textAlign: 'right' }}>{fmt(r.capitale)}</td>
+                          <td style={{ padding: '5px 8px', textAlign: 'right' }}>{fmt(r.interessi)}</td>
+                          <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 600 }}>{fmt(r.rata)}</td>
+                          <td style={{ padding: '5px 8px', textAlign: 'right', color: C.rosso }}>{fmt(r.deb_fin)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
 
           </div>
