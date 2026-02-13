@@ -296,28 +296,207 @@ const KarolDashboard = () => {
   const [exporting, setExporting] = useState(false);
   const [fcMethod, setFcMethod] = useState('lin');
 
-  // ---- Export PDF ----
+  // ---- Export PDF — Report strutturato multi-pagina ----
   const exportPDF = async () => {
     setExporting(true);
+    setShowExport(false);
     try {
       const { jsPDF } = window.jspdf;
-      const content = document.getElementById('dashboard-content');
-      const canvas = await html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#F0F4F8' });
-      const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfW = pdf.internal.pageSize.getWidth();
-      const pdfH = (canvas.height * pdfW) / canvas.width;
-      let pos = 0;
-      const pageH = pdf.internal.pageSize.getHeight();
-      while (pos < pdfH) {
-        if (pos > 0) pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, -pos, pdfW, pdfH);
-        pos += pageH;
-      }
-      pdf.save('Karol_CdG_' + tab + '_' + new Date().toISOString().slice(0,10) + '.pdf');
-    } catch(e) { alert('Errore export PDF: ' + e.message); }
+      const W = pdf.internal.pageSize.getWidth();
+      const H = pdf.internal.pageSize.getHeight();
+      const M = 15; // margine
+      const CW = W - 2 * M; // content width
+      let Y = M;
+
+      const fmtN = v => { const abs = Math.abs(Math.round(v)); const s = abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'); return (v < 0 ? '-' : '') + '€ ' + s; };
+      const fmtP = v => (v * 100).toFixed(1).replace('.', ',') + '%';
+
+      const checkPage = (need) => { if (Y + need > H - 15) { pdf.addPage(); Y = M; addFooter(); } };
+      const addFooter = () => {
+        const pg = pdf.internal.getNumberOfPages();
+        pdf.setFontSize(8); pdf.setTextColor(150);
+        pdf.text('Karol S.p.A. — Controllo di Gestione — ' + D.meta.ultimo_aggiornamento, M, H - 8);
+        pdf.text('Pag. ' + pg, W - M, H - 8, { align: 'right' });
+      };
+
+      // Helper tabella
+      const drawTable = (headers, rows, colWidths, opts = {}) => {
+        const rH = 7; // row height
+        const fSize = opts.fontSize || 8;
+        checkPage(rH * (rows.length + 2));
+        // Header
+        pdf.setFillColor(240, 244, 248);
+        pdf.rect(M, Y, CW, rH, 'F');
+        pdf.setFontSize(fSize); pdf.setTextColor(80);
+        pdf.setFont(undefined, 'bold');
+        let x = M;
+        headers.forEach((h, i) => {
+          const align = i === 0 ? 'left' : 'right';
+          const tx = i === 0 ? x + 2 : x + colWidths[i] - 2;
+          pdf.text(h, tx, Y + 5, { align });
+          x += colWidths[i];
+        });
+        Y += rH;
+        // Rows
+        pdf.setFont(undefined, 'normal');
+        rows.forEach((row, ri) => {
+          checkPage(rH);
+          if (row._bold) pdf.setFont(undefined, 'bold');
+          if (row._bg) { pdf.setFillColor(...(row._bg)); pdf.rect(M, Y, CW, rH, 'F'); }
+          x = M;
+          row.cells.forEach((cell, i) => {
+            const align = i === 0 ? 'left' : 'right';
+            const tx = i === 0 ? x + 2 : x + colWidths[i] - 2;
+            if (row._colors && row._colors[i]) { const c = row._colors[i]; pdf.setTextColor(c[0], c[1], c[2]); }
+            else { pdf.setTextColor(row._bold ? 30 : 60); }
+            pdf.text(String(cell), tx, Y + 5, { align });
+            x += colWidths[i];
+          });
+          pdf.setFont(undefined, 'normal');
+          Y += rH;
+          pdf.setDrawColor(230); pdf.line(M, Y, W - M, Y);
+        });
+        Y += 4;
+      };
+
+      // === PAGINA 1: COPERTINA + RIEPILOGO ===
+      pdf.setFontSize(22); pdf.setTextColor(30, 41, 59);
+      pdf.text('KAROL S.p.A.', W / 2, 40, { align: 'center' });
+      pdf.setFontSize(14); pdf.setTextColor(100);
+      pdf.text('Controllo di Gestione — Gruppo Sicilia', W / 2, 50, { align: 'center' });
+      pdf.setFontSize(11); pdf.setTextColor(60);
+      pdf.text('Anno ' + D.meta.anno + ' — ' + D.meta.mesi_chiusi + ' mesi consuntivati', W / 2, 60, { align: 'center' });
+      pdf.text('Report generato il ' + new Date().toLocaleDateString('it-IT'), W / 2, 67, { align: 'center' });
+
+      // KPI sintesi
+      Y = 82;
+      const kpiSintesi = [
+        ['Ricavi Totali', fmtN(TOT.ric)], ['MOL Industriale', fmtN(TOT.molI) + ' (' + fmtP(TOT.molIPct) + ')'],
+        ['Costi Sede', fmtN(TOT.sede)], ['MOL Gestionale', fmtN(TOT.molG) + ' (' + fmtP(TOT.molGPct) + ')'],
+        ['EBIT', fmtN(TOT.ebit)], ['Personale %', fmtP(TOT.persPct)],
+      ];
+      pdf.setFontSize(10); pdf.setTextColor(30);
+      pdf.setFont(undefined, 'bold'); pdf.text('Indicatori Chiave', M, Y); Y += 6;
+      kpiSintesi.forEach(([l, v]) => {
+        pdf.setFont(undefined, 'normal'); pdf.setTextColor(80); pdf.text(l + ':', M + 2, Y);
+        pdf.setFont(undefined, 'bold'); pdf.setTextColor(30); pdf.text(v, M + 70, Y);
+        Y += 6;
+      });
+
+      // Tabella riepilogo UO
+      Y += 6;
+      pdf.setFont(undefined, 'bold'); pdf.setTextColor(30); pdf.setFontSize(10);
+      pdf.text('Riepilogo per Unità Operativa', M, Y); Y += 6;
+      const rH = ['UO', 'Ricavi', 'Costi Dir.', 'MOL-I', 'MOL-I %', 'Sede', 'MOL-G', 'Pers %'];
+      const rW = [32, 22, 22, 22, 16, 20, 22, 16];
+      const rRows = UO.map(u => ({
+        cells: [u.cod, fmtN(u.ricavi), fmtN(u.costiDir), fmtN(u.molI), fmtP(u.molIPct), fmtN(u.sede), fmtN(u.molG), fmtP(u.persPct)],
+        _colors: { 3: u.molI >= 0 ? [5,150,105] : [220,38,38], 6: u.molG >= 0 ? [5,150,105] : [220,38,38] },
+      }));
+      rRows.push({ cells: ['TOTALE', fmtN(TOT.ric), fmtN(TOT.cDir), fmtN(TOT.molI), fmtP(TOT.molIPct), fmtN(TOT.sede), fmtN(TOT.molG), fmtP(TOT.persPct)], _bold: true, _bg: [240,244,248] });
+      drawTable(rH, rRows, rW);
+      addFooter();
+
+      // === PAGINA 2: CE CONSOLIDATO ===
+      pdf.addPage(); Y = M; addFooter();
+      pdf.setFontSize(14); pdf.setTextColor(30); pdf.setFont(undefined, 'bold');
+      pdf.text('Conto Economico Consolidato', M, Y + 5); Y += 12;
+
+      const budCosti = { pers: UO.reduce((s,u) => s + u.budget_costi.personale, 0), mat: UO.reduce((s,u) => s + u.budget_costi.materiali, 0), serv: UO.reduce((s,u) => s + u.budget_costi.servizi, 0), ut: UO.reduce((s,u) => s + u.budget_costi.utenze, 0), man: UO.reduce((s,u) => s + u.budget_costi.manutenzione, 0), altri: UO.reduce((s,u) => s + u.budget_costi.altri, 0) };
+      const budCDir = Object.values(budCosti).reduce((s,v) => s + v, 0);
+      const ceH = ['Voce', 'Consuntivo', 'Budget', 'Delta', '% Ricavi'];
+      const ceW = [46, 30, 30, 30, 26];
+      const mRic = (v, base) => base !== 0 ? fmtP(Math.abs(v) / Math.abs(base)) : '-';
+      const ceRows2 = [
+        { cells: ['Ricavi', fmtN(TOT.ric), fmtN(TOT.budget_ric), fmtN(TOT.ric - TOT.budget_ric), '100,0%'], _bold: true },
+        { cells: ['  Personale', fmtN(-TOT.pers), fmtN(-budCosti.pers), fmtN(budCosti.pers - TOT.pers), mRic(TOT.pers, TOT.ric)] },
+        { cells: ['  Materiali', fmtN(-UO.reduce((s,u) => s + u.costi.materiali, 0)), fmtN(-budCosti.mat), '', mRic(UO.reduce((s,u) => s + u.costi.materiali, 0), TOT.ric)] },
+        { cells: ['  Servizi', fmtN(-UO.reduce((s,u) => s + u.costi.servizi, 0)), fmtN(-budCosti.serv), '', ''] },
+        { cells: ['  Utenze', fmtN(-UO.reduce((s,u) => s + u.costi.utenze, 0)), fmtN(-budCosti.ut), '', ''] },
+        { cells: ['  Manutenzione', fmtN(-UO.reduce((s,u) => s + u.costi.manutenzione, 0)), fmtN(-budCosti.man), '', ''] },
+        { cells: ['MOL Industriale', fmtN(TOT.molI), fmtN(TOT.budget_ric - budCDir), fmtN(TOT.molI - (TOT.budget_ric - budCDir)), fmtP(TOT.molIPct)], _bold: true, _bg: [240,244,248] },
+        { cells: ['  Costi Sede', fmtN(-TOT.sede), fmtN(-1550000), fmtN(1550000 - TOT.sede), mRic(TOT.sede, TOT.ric)] },
+        { cells: ['MOL Gestionale', fmtN(TOT.molG), '', '', fmtP(TOT.molGPct)], _bold: true, _bg: [240,244,248] },
+        { cells: ['  Ammortamenti', fmtN(-TOT.ammort), fmtN(-350000), '', ''] },
+        { cells: ['  Oneri Finanziari', fmtN(-TOT.oneri_fin), fmtN(-125000), '', ''] },
+        { cells: ['Risultato Operativo', fmtN(TOT.ebit), '', '', fmtP(TOT.ebit / TOT.ric)], _bold: true, _bg: [230,240,255],
+          _colors: { 1: TOT.ebit >= 0 ? [5,150,105] : [220,38,38] } },
+      ];
+      drawTable(ceH, ceRows2, ceW, { fontSize: 9 });
+
+      // === PAGINA 3: CASH FLOW ===
+      pdf.addPage(); Y = M; addFooter();
+      pdf.setFontSize(14); pdf.setTextColor(30); pdf.setFont(undefined, 'bold');
+      pdf.text('Cash Flow', M, Y + 5); Y += 12;
+
+      const cfH = ['Voce', 'Importo', 'Tipo'];
+      const cfW = [60, 50, 50];
+      const cfRows2 = waterfallRaw.map(w => ({
+        cells: [w.voce, fmtN(w.valore), w.tipo],
+        _bold: w.tipo === 'subtotale' || w.tipo === 'finale',
+        _bg: (w.tipo === 'subtotale' || w.tipo === 'finale') ? [240,244,248] : null,
+        _colors: { 1: w.valore >= 0 ? [5,150,105] : [220,38,38] },
+      }));
+      drawTable(cfH, cfRows2, cfW, { fontSize: 9 });
+
+      // KPI Cash Flow
+      Y += 4;
+      pdf.setFontSize(10); pdf.setFont(undefined, 'bold'); pdf.setTextColor(30);
+      pdf.text('KPI Cash Flow', M, Y); Y += 7;
+      const kpCF = D.cashflow.kpi;
+      const ccc = kpCF.dso + 15 - kpCF.dpo;
+      [['DSO ASP', kpCF.dso + ' gg', '< ' + BENCH.dso + ' gg'], ['DPO Fornitori', kpCF.dpo + ' gg', '< ' + BENCH.dpo + ' gg'],
+       ['DSCR', kpCF.dscr + 'x', '> 1.2x'], ['Copertura Cassa', kpCF.cop_cassa + ' mesi', '> 2.0 mesi'],
+       ['CCC', ccc + ' gg', '< ' + (BENCH.dso + 15 - BENCH.dpo) + ' gg']].forEach(([l, v, t]) => {
+        pdf.setFont(undefined, 'normal'); pdf.setTextColor(80); pdf.text(l + ':', M + 2, Y);
+        pdf.setFont(undefined, 'bold'); pdf.setTextColor(30); pdf.text(v, M + 55, Y);
+        pdf.setFont(undefined, 'normal'); pdf.setTextColor(140); pdf.text('(target: ' + t + ')', M + 85, Y);
+        Y += 6;
+      });
+
+      // Scadenziario
+      Y += 6;
+      pdf.setFontSize(10); pdf.setFont(undefined, 'bold'); pdf.setTextColor(30);
+      pdf.text('Scadenziario Crediti / Debiti', M, Y); Y += 7;
+      const scH = ['Fascia', 'Crediti', '%', 'Debiti', '%', 'Saldo'];
+      const scW = [28, 28, 18, 28, 18, 28];
+      const sc = D.cashflow.scadenziario;
+      const scRows = sc.crediti.map((cr, i) => {
+        const db = sc.debiti[i]; const saldo = cr.importo - db.importo;
+        return { cells: [cr.fascia, fmtN(cr.importo), fmtP(cr.pct), fmtN(db.importo), fmtP(db.pct), fmtN(saldo)],
+          _colors: { 1: [5,150,105], 3: [220,38,38], 5: saldo >= 0 ? [5,150,105] : [220,38,38] } };
+      });
+      scRows.push({ cells: ['Totale', fmtN(sc.totCrediti), '100%', fmtN(sc.totDebiti), '100%', fmtN(sc.totCrediti - sc.totDebiti)], _bold: true, _bg: [240,244,248] });
+      drawTable(scH, scRows, scW);
+
+      // === PAGINA 4: NARRATIVE ===
+      pdf.addPage(); Y = M; addFooter();
+      pdf.setFontSize(14); pdf.setTextColor(30); pdf.setFont(undefined, 'bold');
+      pdf.text('Variance Analysis — Narrative', M, Y + 5); Y += 14;
+
+      D.narrative.forEach(n => {
+        checkPage(30);
+        const alertBg = n.alert === 'VERDE' ? [220,252,231] : n.alert === 'GIALLO' ? [254,249,195] : [254,226,226];
+        const alertTx = n.alert === 'VERDE' ? [5,150,105] : n.alert === 'GIALLO' ? [146,64,14] : [220,38,38];
+        pdf.setFillColor(...alertBg);
+        pdf.roundedRect(M, Y, CW, 22, 2, 2, 'F');
+        pdf.setFontSize(10); pdf.setFont(undefined, 'bold'); pdf.setTextColor(30);
+        const u = UO.find(x => x.cod === n.uo);
+        pdf.text(n.uo === 'GRUPPO' ? 'GRUPPO KAROL' : n.uo + ' — ' + (u ? u.nome : ''), M + 4, Y + 6);
+        pdf.setFontSize(8); pdf.setTextColor(...alertTx);
+        pdf.text('[' + n.alert + ']', M + 80, Y + 6);
+        pdf.setFont(undefined, 'normal'); pdf.setTextColor(60); pdf.setFontSize(8);
+        const lines = pdf.splitTextToSize(n.testo, CW - 8);
+        pdf.text(lines, M + 4, Y + 12);
+        pdf.setFontSize(7); pdf.setTextColor(120); pdf.setFont(undefined, 'italic');
+        pdf.text('Outlook: ' + n.outlook, M + 4, Y + 19);
+        Y += 26;
+      });
+
+      pdf.save('Karol_CdG_Report_' + new Date().toISOString().slice(0,10) + '.pdf');
+    } catch(e) { console.error(e); alert('Errore export PDF: ' + e.message); }
     setExporting(false);
-    setShowExport(false);
   };
 
   // ---- Export Excel ----
