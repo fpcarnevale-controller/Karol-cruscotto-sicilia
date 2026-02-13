@@ -51,8 +51,8 @@ const C = {
 // KAROL_DATA — Struttura centralizzata dati CdG
 // ============================================================================
 const KAROL_DATA = {
-  meta: { anno: 2025, mesi_chiusi: 3, dati_reali: true, ultimo_aggiornamento: '13/02/2026',
-    fonte: 'CE Q1 31/03/2025 + HR Zucchetti Q1 + Produzione Q1', metodo_ann: 'Q1×4 lineare' },
+  meta: { anno: 2025, mesi_chiusi: 3, dati_reali: true, ultimo_aggiornamento: '14/02/2026',
+    fonte: 'CE Q1 31/03/2025 + HR Zucchetti Q1 + Bilancio SPA/Consolidato 2024 + Provvisorio 8M 31/08/2025', metodo_ann: 'Q1×4 con rettifiche da FY2024' },
 
   // Benchmark settore RSA/Healthcare
   BENCHMARK: {
@@ -70,7 +70,8 @@ const KAROL_DATA = {
       ricavi: 2632599, budget_ricavi: 2632599, // Q1 658.150 × 4
       costi: { personale: 1971012, materiali: 22552, servizi: 224063, utenze: 219307, manutenzione: 0, altri: 3315 },
       budget_costi: { personale: 1971012, materiali: 22552, servizi: 224063, utenze: 219307, manutenzione: 0, altri: 3315 },
-      sede: 0, ammortamenti: 0, oneri_fin: 514,
+      sede: 0, ammortamenti: 214000, oneri_fin: 514, // D&A allocata pro-rata ricavi (24% di €893k)
+      // NOTA: VLB include personale Centro Gottardo (FKT ~€40k fatture), cucina, trasporto disabili
       occ: 0.900, gg_degenza: 14454,
       rM: [227327, 204228, 226594],
       cM: [155958, 173522, 163273],
@@ -79,7 +80,8 @@ const KAROL_DATA = {
       ricavi: 2817347, budget_ricavi: 2817347, // Q1 704.337 × 4
       costi: { personale: 1668136, materiali: 20355, servizi: 194451, utenze: 4820, manutenzione: 0, altri: 302 },
       budget_costi: { personale: 1668136, materiali: 20355, servizi: 194451, utenze: 4820, manutenzione: 0, altri: 302 },
-      sede: 0, ammortamenti: 0, oneri_fin: 465,
+      sede: 0, ammortamenti: 229000, oneri_fin: 465, // D&A allocata pro-rata ricavi (26% di €893k)
+      // NOTA: include adeguamento CTA €640k/anno — contenzioso Regione €7M+ in risoluzione
       occ: 0.920, gg_degenza: 13432,
       rM: [244596, 222658, 237082],
       cM: [134740, 141514, 140780],
@@ -88,7 +90,8 @@ const KAROL_DATA = {
       ricavi: 4860598, budget_ricavi: 4860598, // Q1 1.215.149 × 4
       costi: { personale: 2092806, materiali: 1231668, servizi: 626943, utenze: 88474, manutenzione: 0, altri: 14598 },
       budget_costi: { personale: 2092806, materiali: 1231668, servizi: 626943, utenze: 88474, manutenzione: 0, altri: 14598 },
-      sede: 0, ammortamenti: 0, oneri_fin: 5461,
+      sede: 0, ammortamenti: 395000, oneri_fin: 5461, // D&A allocata pro-rata ricavi (44% di €893k)
+      // NOTA: estate non opera — calo fatturato privato Q2-Q3
       occ: 0.860, gg_degenza: 15695,
       rM: [348508, 423023, 443618],
       cM: [176692, 168717, 177792],
@@ -97,7 +100,8 @@ const KAROL_DATA = {
       ricavi: 664941, budget_ricavi: 664941, // Q1 166.235 × 4
       costi: { personale: 527070, materiali: 16484, servizi: 62787, utenze: 0, manutenzione: 0, altri: 32 },
       budget_costi: { personale: 527070, materiali: 16484, servizi: 62787, utenze: 0, manutenzione: 0, altri: 32 },
-      sede: 0, ammortamenti: 0, oneri_fin: 4,
+      sede: 0, ammortamenti: 55000, oneri_fin: 4, // D&A allocata pro-rata ricavi (6% di €893k)
+      // NOTA: brucia €300k+/anno — piano chiusura e spostamento 40 PL a BRT
       occ: null, gg_degenza: 7300,
       rM: [57768, 54536, 53932],
       cM: [42490, 45721, 43557],
@@ -134,9 +138,10 @@ const KAROL_DATA = {
       { voce: 'Proventi HQ', valore: 208790, tipo: 'entrata' },
       { voce: 'Costi Sede', valore: -2335144, tipo: 'uscita' },
       { voce: 'MOL-G', valore: -140044, tipo: 'subtotale' },
-      { voce: 'Oneri Fin.', valore: -97453, tipo: 'uscita' },
+      { voce: 'D&A (FY24)', valore: -893000, tipo: 'uscita' },
+      { voce: 'Oneri Fin.', valore: -268000, tipo: 'uscita' },
       { voce: 'Imposte', valore: -68239, tipo: 'uscita' },
-      { voce: 'Risultato', valore: -305736, tipo: 'finale' },
+      { voce: 'EBIT', valore: -1369283, tipo: 'finale' },
     ],
     cassaSett: [
       { s: 'S1', saldo: 420, incassi: 180, pag: 150 }, { s: 'S2', saldo: 390, incassi: 120, pag: 150 },
@@ -147,13 +152,18 @@ const KAROL_DATA = {
       { s: 'S11', saldo: 350, incassi: 320, pag: 150 }, { s: 'S12', saldo: 400, incassi: 200, pag: 150 },
     ],
     scenari: [
-      { anno: '2025', ott: 350, base: 250, pess: 80 },
-      { anno: '2026', ott: 720, base: 480, pess: 120 },
-      { anno: '2027', ott: 1150, base: 750, pess: -50 },
-      { anno: '2028', ott: 1650, base: 1050, pess: -180 },
-      { anno: '2029', ott: 2250, base: 1400, pess: -350 },
+      // Scenari cassa: base = mutuo 10yr 4,5% + ramp-up BRT giu26 + taglio costi 10%
+      // ottimistico = base + CTA contenzioso €7M + ZES €550k + ramp-up rapido Roma
+      // pessimistico = ritardo mutuo 6M + no CTA rinnovo + ramp-up Roma 18M
+      { anno: '2025', ott: 350, base: 230, pess: 80 },
+      { anno: '2026', ott: 1200, base: 650, pess: -100 }, // Mutuo H1 2026 + BRT apertura
+      { anno: '2027', ott: 1800, base: 900, pess: -350 }, // DSCR critico, ramp-up
+      { anno: '2028', ott: 2400, base: 1300, pess: -200 }, // BU a regime progressivo
+      { anno: '2029', ott: 3200, base: 1800, pess: 100 },  // Consolidamento
+      { anno: '2030', ott: 4100, base: 2500, pess: 500 },  // Target €30M+ ricavi gruppo
     ],
-    kpi: { dso: 45, dpo: 75, dscr: 1.15, cop_cassa: 1.8, ccn: 145000, capex: 280000, debito_annuo: 520000 },
+    kpi: { dso: 50, dpo: 75, dscr: 0.95, cop_cassa: 0.8, ccn: -2100000, capex: 2300000, debito_annuo: 890000 },
+    // NOTA: DSCR <1.0 nel 2027-28 è il "passaggio stretto" — mutuo 10yr con preammortamento + crediti fiscali + CTA settlement = mitigazione
     // Scadenziario crediti/debiti (simulato)
     scadenziario: {
       crediti: [
@@ -174,12 +184,46 @@ const KAROL_DATA = {
   },
 
   narrative: [
-    { uo: 'VLB', alert: 'ROSSO', testo: 'Personale 74,9% dei ricavi — il più critico del gruppo. MOL-I 7,3% (Q1 €48k annualizzato €192k). Utenze/affitti €219k pesano. 67 dipendenti per 44 PL. Azione urgente: revisione organico e mix contrattuale OSS/infermieri.', outlook: 'Critico — necessario intervento immediato' },
-    { uo: 'CTA', alert: 'VERDE', testo: 'Miglior MOL-I % del gruppo (33%). Ricavi Q1 €704k includono adeguamento CTA €160k. Personale 59,2% comunque elevato (49 dipendenti, 40 PL). Costi servizi €194k contenuti. Ricavo/giornata tra i più alti.', outlook: 'Favorevole — monitorare sostenibilità adeguamento' },
-    { uo: 'COS', alert: 'VERDE', testo: 'Top performer per volumi: ricavi FY stimati €4,86M. MOL-I 16,5%. Materiali elevati (€1,23M) per attività chirurgica/riabilitativa. Personale 43,1% — il migliore. Mix ricavi diversificato (degenza + ambulatori + radiologia).', outlook: 'Favorevole' },
-    { uo: 'KCP', alert: 'ROSSO', testo: 'Personale 79,3% dei ricavi — situazione insostenibile. MOL-I appena €59k su €665k ricavi (8,8%). 24 dipendenti su 20 PL = diseconomie di scala. Valutare accorpamento operativo con VLB o esternalizzazione servizi.', outlook: 'Strutturale — accorpamento necessario' },
-    { uo: 'GRUPPO', alert: 'ROSSO', testo: 'MOL-I BU €1,99M (18,1%) sopra benchmark 15%, ma Sede HQ €2,34M (21,3% dei ricavi BU) assorbe tutto il margine → MOL-G stimato -€140k. HQ: 20 dipendenti, consulenze €812k/anno. Il gruppo è operativamente sano ma la struttura HQ lo rende in perdita. Priorità: taglio costi sede e riallocazione personale HQ.', outlook: 'Critico — sede HQ insostenibile ai volumi attuali' },
+    { uo: 'VLB', alert: 'ROSSO', testo: 'Personale 74,9% dei ricavi — include personale Centro Gottardo (FKT, ~€40k fatture attive), cucina centralizzata e trasporto disabili allocati impropriamente. Affitto €219k da proprietario rigido. Piano strategico: spostare i 40 PL convenzionati al Borgo Ritrovato (nuova BU giugno 2026) per risparmiare locazione e razionalizzare personale.', outlook: 'In ristrutturazione — migrazione a BRT prevista H2 2026' },
+    { uo: 'CTA', alert: 'GIALLO', testo: 'Miglior MOL-I % del gruppo (33%). Include adeguamento tariffario CTA €640k/anno. Contenzioso con Regione per €7M+ di crediti in bilancio — transazione imminente ("fra pochi giorni"). Se confermata: game-changer per liquidità gruppo. Rischio residuo: se adeguamento non rinnovato, MOL-I crolla al 10%.', outlook: 'In attesa transazione regionale — alto impatto' },
+    { uo: 'COS', alert: 'VERDE', testo: 'Top performer per volumi: ricavi FY stimati €4,86M. MOL-I 16,5%. Estate non opera: calo fatturato privato Q2-Q3 spiega parte del deterioramento MOL 8M. Materiali elevati (€1,23M) per attività chirurgica/riabilitativa. Personale 43,1% — il migliore del gruppo.', outlook: 'Favorevole — attenzione stagionalità estiva' },
+    { uo: 'KCP', alert: 'ROSSO', testo: 'Casa Protetta 20 PL brucia €300k+/anno. Personale 79,3% dei ricavi — insostenibile per diseconomie di scala. Piano: chiusura e spostamento PL al Borgo Ritrovato, con razionalizzazione personale e risparmio su costi fissi.', outlook: 'In chiusura — migrazione PL a BRT' },
+    { uo: 'GRUPPO', alert: 'ROSSO', testo: 'MOL-I BU €1,99M (18,1%) sopra benchmark, ma Sede HQ €2,34M (21,3%) + D&A €893k + Oneri Fin. €268k portano l\'EBIT a -€1,37M. Crescita storica a debito + COVID + gestione paternalistica (eccesso personale). Normalizzando il bilancio 2024 (senza €1,26M interessi ASP straordinari): perdita operativa reale ~€800k. Target management: -10% costi per superare DSCR critico 2027-28. Strumento: mutuo bancario 10yr (non Bond) + crediti fiscali innovazione/patent box + transazione CTA €7M.', outlook: 'Critico — passaggio stretto 2027-28, piano di rientro in corso' },
   ],
+
+  // ====== PIANO FINANZIARIO — Nuove BU e struttura debito ======
+  piano: {
+    // Mutuo bancario (sostituisce Bond)
+    mutuo: { importo: 5000000, durata_anni: 10, tasso: 0.045, preammortamento_mesi: 12, rata_annua: 620000, data_stima_erogazione: 'H1 2026' },
+    // MCC Medio Credito Centrale
+    mcc: { importo: 5000000, durata_anni: 8, tasso: 0.035, garanzia_pubblica: true, rata_annua: 700000 },
+    // Debiti in rientro
+    debiti_rientro: {
+      tributari: { totale: 8780000, di_cui_rottamazione: 'da quantificare', rata_annua_stima: 1200000 },
+      previdenziali: { totale: 5750000, rata_annua_stima: 800000 },
+      // Scadenziario dettagliato: IN ATTESA dati dal management
+    },
+    // Nuove BU
+    nuove_bu: [
+      { cod: 'BRT', nome: 'Borgo Ritrovato', tipo: 'RSA Alzheimer', pl: 60, regione: 'Sicilia (Palermo)',
+        capex_residuo: 800000, ricavi_regime: 3500000, apertura_stima: 'Giugno 2026', ramp_up_mesi: 4,
+        nota: 'Rischio basso — domanda altissima, liste attesa. Assorbirà 40 PL da VLB.' },
+      { cod: 'KMC', nome: 'Karol Medical Center', tipo: 'Day Surgery/Ambulatorio', pl: 20, regione: 'Sicilia (Palermo)',
+        capex_residuo: 500000, ricavi_regime: 2000000, apertura_stima: 'Q4 2026', ramp_up_mesi: 9,
+        nota: 'Rischio medio-alto — primo approccio mercato privato, serve referral network.' },
+      { cod: 'ROM', nome: 'RSA Roma Santa Margherita', tipo: 'RSA', pl: 77, regione: 'Lazio',
+        capex_residuo: 1000000, ricavi_regime: 4500000, apertura_stima: 'Q1 2027', ramp_up_mesi: 12,
+        nota: 'Pre-accreditamento solido, 2-3 mesi post-lavori. Prima presenza fuori Sicilia.' },
+    ],
+    // Crediti attesi (non nel CE operativo)
+    crediti_attesi: {
+      cta_contenzioso: { importo: 7000000, probabilita: 'alta', tempistica: 'imminente' },
+      crediti_fiscali: { importo: 1500000, tipo: 'innovazione + patent box', stato: 'in certificazione (studio Roma)' },
+      zes_unica: { importo: 550000, finestra: 'marzo-maggio 2026', nel_bp: false },
+    },
+    // Obiettivi
+    target: { riduzione_costi_pct: 0.10, ricavi_2027: 18600000, ebitda_target_pct: 0.14 },
+  },
 };
 
 // ============================================================================
@@ -597,6 +641,7 @@ const KarolDashboard = () => {
     { id: 'strutture', label: 'Strutture', icon: '🏥' },
     { id: 'trend', label: 'Trend', icon: '📈' },
     { id: 'cashflow', label: 'Cash Flow', icon: '💰' },
+    { id: 'piano', label: 'Piano Finanziario', icon: '🏗️' },
     { id: 'analisi', label: 'Analisi', icon: '🔍' },
     { id: 'simulazioni', label: 'Simulazioni', icon: '🎛️' },
   ];
@@ -1430,6 +1475,163 @@ const KarolDashboard = () => {
           </div>
         )}
 
+        {/* ======================== PIANO FINANZIARIO ======================== */}
+        {tab === 'piano' && (() => {
+          const P = D.piano;
+          const nuoveBU = P.nuove_bu;
+          const riskCol = r => r === 'basso' ? C.verde : r === 'medio-alto' ? C.giallo : C.rosso;
+
+          // Timeline dati per grafico
+          const timeline = [
+            { anno: '2025', ricavi_attuali: 10975, ricavi_nuove: 0, ebitda: -140, debt_service: 890, cassa: 230 },
+            { anno: '2026', ricavi_attuali: 11200, ricavi_nuove: 1200, ebitda: 450, debt_service: 2000, cassa: 650 },
+            { anno: '2027', ricavi_attuali: 11500, ricavi_nuove: 5500, ebitda: 2400, debt_service: 2800, cassa: 900 },
+            { anno: '2028', ricavi_attuali: 11800, ricavi_nuove: 7200, ebitda: 3200, debt_service: 2800, cassa: 1300 },
+            { anno: '2029', ricavi_attuali: 12000, ricavi_nuove: 8500, ebitda: 3800, debt_service: 2600, cassa: 1800 },
+            { anno: '2030', ricavi_attuali: 12200, ricavi_nuove: 9800, ebitda: 4500, debt_service: 2400, cassa: 2500 },
+          ];
+          const dscr_data = [
+            { anno: '2025', dscr: 0.85, soglia: 1.0 },
+            { anno: '2026', dscr: 0.92, soglia: 1.0 },
+            { anno: '2027', dscr: 0.86, soglia: 1.0 },
+            { anno: '2028', dscr: 1.05, soglia: 1.0 },
+            { anno: '2029', dscr: 1.35, soglia: 1.0 },
+            { anno: '2030', dscr: 1.65, soglia: 1.0 },
+          ];
+
+          return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            {/* Header Piano */}
+            <div style={{...cardS, background: 'linear-gradient(135deg, #1F4E79 0%, #2E75B6 100%)', color: 'white'}}>
+              <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>Piano Finanziario 2025-2030</h3>
+              <p style={{ fontSize: 13, opacity: 0.9 }}>Mutuo bancario {fmt(P.mutuo.importo)} (10yr, {(P.mutuo.tasso*100).toFixed(1)}%) + MCC {fmt(P.mcc.importo)} | Target: riduzione costi {(P.target.riduzione_costi_pct*100)}% | Ricavi 2027: {fmt(P.target.ricavi_2027)}</p>
+              <div style={{ display: 'flex', gap: 16, marginTop: 12, flexWrap: 'wrap' }}>
+                {[
+                  { l: 'Mutuo (stima)', v: P.mutuo.data_stima_erogazione, c: '#10b981' },
+                  { l: 'DSCR 2027', v: '0,86x', c: '#dc2626' },
+                  { l: 'CTA Contenzioso', v: fmt(P.crediti_attesi.cta_contenzioso.importo), c: '#f59e0b' },
+                  { l: 'ZES Unica', v: fmt(P.crediti_attesi.zes_unica.importo), c: '#8b5cf6' },
+                ].map((k, i) => (
+                  <div key={i} style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: '8px 14px', minWidth: 140 }}>
+                    <div style={{ fontSize: 10, opacity: 0.8 }}>{k.l}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: k.c }}>{k.v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Nuove BU — Card grid */}
+            <div style={cardS}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 12 }}>Nuove Business Unit — Pipeline</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
+                {nuoveBU.map((bu, i) => (
+                  <div key={i} style={{ border: '1px solid ' + C.bordo, borderRadius: 8, padding: 14, borderLeft: '4px solid ' + (bu.cod === 'BRT' ? C.verde : bu.cod === 'KMC' ? C.giallo : C.rosso) }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <span style={{ fontWeight: 700, fontSize: 14 }}>{bu.cod} — {bu.nome}</span>
+                      <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 10, background: bu.cod === 'BRT' ? C.verdeBg : bu.cod === 'KMC' ? C.gialloBg : C.rossoBg, color: bu.cod === 'BRT' ? C.verde : bu.cod === 'KMC' ? C.giallo : C.rosso, fontWeight: 600 }}>{bu.tipo}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: C.t2, marginBottom: 8 }}>{bu.regione} | {bu.pl} PL</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, fontSize: 12 }}>
+                      <div><span style={{ color: C.t3 }}>CAPEX residuo:</span> <strong>{fmt(bu.capex_residuo)}</strong></div>
+                      <div><span style={{ color: C.t3 }}>Ricavi a regime:</span> <strong>{fmt(bu.ricavi_regime)}</strong></div>
+                      <div><span style={{ color: C.t3 }}>Apertura:</span> <strong>{bu.apertura_stima}</strong></div>
+                      <div><span style={{ color: C.t3 }}>Ramp-up:</span> <strong>{bu.ramp_up_mesi} mesi</strong></div>
+                    </div>
+                    <p style={{ fontSize: 11, color: C.t2, marginTop: 8, fontStyle: 'italic' }}>{bu.nota}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* DSCR Chart */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={cardS}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>DSCR — Debt Service Coverage Ratio</h3>
+                <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>Soglia minima 1,0x — "passaggio stretto" 2025-2027</p>
+                <ResponsiveContainer width="100%" height={250}>
+                  <ComposedChart data={dscr_data}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="anno" fontSize={12} />
+                    <YAxis fontSize={11} domain={[0, 2]} tickFormatter={v => v.toFixed(1) + 'x'} />
+                    <Tooltip formatter={(v, n) => [v.toFixed(2) + 'x', n === 'dscr' ? 'DSCR' : 'Soglia']} />
+                    <ReferenceLine y={1.0} stroke={C.rosso} strokeDasharray="5 5" label={{ value: 'Min 1,0x', fill: C.rosso, fontSize: 10 }} />
+                    <Bar dataKey="dscr" radius={[4,4,0,0]} barSize={40}>
+                      {dscr_data.map((d, i) => <Cell key={i} fill={d.dscr >= 1.0 ? C.verde : d.dscr >= 0.9 ? C.giallo : C.rosso} />)}
+                    </Bar>
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Struttura debito */}
+              <div style={cardS}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Struttura Debito e Rientro</h3>
+                <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>PFN consolidata €19,1M (FY2024) — target rientro 5 anni</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {[
+                    { l: 'Debiti tributari', v: P.debiti_rientro.tributari.totale, rata: P.debiti_rientro.tributari.rata_annua_stima, c: C.rosso },
+                    { l: 'Debiti previdenziali', v: P.debiti_rientro.previdenziali.totale, rata: P.debiti_rientro.previdenziali.rata_annua_stima, c: '#d97706' },
+                    { l: 'Mutuo bancario (nuovo)', v: P.mutuo.importo, rata: P.mutuo.rata_annua, c: C.primario },
+                    { l: 'MCC (nuovo)', v: P.mcc.importo, rata: P.mcc.rata_annua, c: '#7c3aed' },
+                  ].map((d, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#f8fafc', borderRadius: 6, borderLeft: '3px solid ' + d.c }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{d.l}</div>
+                        <div style={{ fontSize: 11, color: C.t3 }}>Rata annua stima: {fmt(d.rata)}</div>
+                      </div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: d.c }}>{fmt(d.v)}</div>
+                    </div>
+                  ))}
+                  <div style={{ padding: '10px 12px', background: C.rossoBg, borderRadius: 6, borderLeft: '3px solid ' + C.rosso, marginTop: 4 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: C.rosso }}>Debt Service Annuo Totale</span>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: C.rosso }}>{fmt(P.debiti_rientro.tributari.rata_annua_stima + P.debiti_rientro.previdenziali.rata_annua_stima + P.mutuo.rata_annua + P.mcc.rata_annua)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Ricavi proiezione */}
+            <div style={cardS}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Proiezione Ricavi — Attuali + Nuove BU (€k)</h3>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={timeline}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="anno" fontSize={12} />
+                  <YAxis fontSize={11} tickFormatter={v => v.toLocaleString('it-IT') + 'k'} />
+                  <Tooltip formatter={(v, n) => ['€ ' + v.toLocaleString('it-IT') + 'k', n === 'ricavi_attuali' ? 'BU Attuali' : 'Nuove BU']} />
+                  <Legend />
+                  <Bar dataKey="ricavi_attuali" name="BU Attuali" stackId="a" fill={C.primario} radius={[0,0,0,0]} />
+                  <Bar dataKey="ricavi_nuove" name="Nuove BU" stackId="a" fill={C.verde} radius={[4,4,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Crediti attesi */}
+            <div style={cardS}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 12 }}>Crediti Attesi — Non nel CE Operativo</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
+                {[
+                  { titolo: 'Contenzioso CTA/Regione', importo: P.crediti_attesi.cta_contenzioso.importo, stato: 'Transazione imminente', prob: 'Alta', c: C.verde },
+                  { titolo: 'Crediti Fiscali (Innovazione + Patent Box)', importo: P.crediti_attesi.crediti_fiscali.importo, stato: P.crediti_attesi.crediti_fiscali.stato, prob: 'Media-Alta', c: C.giallo },
+                  { titolo: 'ZES Unica', importo: P.crediti_attesi.zes_unica.importo, stato: 'Finestra ' + P.crediti_attesi.zes_unica.finestra, prob: 'Media', c: '#7c3aed' },
+                ].map((cr, i) => (
+                  <div key={i} style={{ border: '1px solid ' + C.bordo, borderRadius: 8, padding: 14, borderTop: '3px solid ' + cr.c }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{cr.titolo}</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: cr.c, marginBottom: 6 }}>{fmt(cr.importo)}</div>
+                    <div style={{ fontSize: 11, color: C.t2 }}>{cr.stato}</div>
+                    <div style={{ fontSize: 11, marginTop: 4 }}><span style={{ color: C.t3 }}>Probabilit\u00E0:</span> <strong>{cr.prob}</strong></div>
+                  </div>
+                ))}
+              </div>
+              <p style={{ fontSize: 11, color: C.t3, marginTop: 8, fontStyle: 'italic' }}>Totale potenziale: {fmt(7000000 + 1500000 + 550000)} — se realizzati, migliorano DSCR di ~0,8x e riducono PFN del 47%</p>
+            </div>
+
+          </div>
+          );
+        })()}
+
         {/* ======================== ANALISI COSTI ======================== */}
         {tab === 'analisi' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1750,7 +1952,7 @@ const KarolDashboard = () => {
 
       {/* FOOTER */}
       <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 11, color: C.t3, borderTop: '1px solid ' + C.bordo }}>
-        Karol CdG v3.0 — Gruppo Karol S.p.A. — Cruscotto Controllo di Gestione Sicilia | Aggiornamento: {D.meta.ultimo_aggiornamento}
+        Karol CdG v4.0 — Gruppo Karol S.p.A. — Cruscotto Controllo di Gestione | Aggiornamento: {D.meta.ultimo_aggiornamento}
       </div>
     </div>
   );

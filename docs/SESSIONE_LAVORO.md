@@ -224,15 +224,109 @@ Esplorazione completa del progetto (45 moduli Python, 23 fogli Master Excel, das
 - VLB personale 75%, KCP 79% — insostenibili
 - CTA e COS performanti (MOL-I 33% e 16,6%)
 
-## PROSSIMI PASSI
+## Materiale strategico acquisito — 13/02/2026 sera
 
-### Priorità alta
-- Budget 2025 separato da consuntivo (quando disponibile)
-- Dati Q2-Q4 per trend reale mensile
-- Drill-down consulenze HQ (€812k) per tipo e contratto
-- Allocazione sede a UO con driver (personale, PL, ricavi)
+### File analizzati
+1. **BP_KarolBase - PlanB - BBS.xlsx** — Business Plan 2025-2035 con Bond €5M + MCC €5M
+2. **Karol_Information_Memorandum_2026_Bond.docx** — IM per Basket Bond Sicilia (IRFIS/ExtraMOT PRO3)
+3. **Karol_strutture-sanitarie.svg** — Logo ufficiale
+4. **Sito web**: karolstrutturesanitarie.it — 30 strutture, 4 regioni, +1000 dipendenti
+
+### Quadro strategico compreso
+- **PFN 2025:** €24,3M (leverage 16,8x) — crisi di liquidità, non operativa
+- **Composizione debito:** banche €6,4M + erario €12,4M (rateizzato) + fornitori €4,5M + personale €996k
+- **3 nuove BU bloccate** per €2,3M CAPEX residuo:
+  - Borgo Ritrovato (40+20 PL RSA Alzheimer Palermo)
+  - KMC Day Surgery (privato, via Sciuti Palermo)
+  - Roma Santa Margherita (77 PL, prima presenza Lazio)
+- **Bond Basket Sicilia:** €5M, 7 anni, 5%, amortizing, non segnalato in Centrale Rischi
+- **Proiezioni ricavi:** €12,9M(2025) → €18,6M(2027) → €22M(2035)
+- **EBITDA:** 8,9%(2025) → 14,3%(2027) → 18,3%(2035)
+- **Ammortamenti:** €918k/anno dal 2027 (erano zero nella dashboard Q1)
+- **DSCR critico 2027-28** (<1,0x) mitigato da €3M crediti ASP certi + buffer cassa
+- **Rottamazione quinquies** attiva + rateizzazioni AdE/INPS front-loaded 2026-28
+- **ZES Unica:** potenziale credito €550k (non nel BP), finestra marzo-maggio 2026
+
+### Insight chiave dalla combinazione Q1 reale + BP
+- MOL-I BU 18,1% (Q1 reale) conferma BP assumption (EBITDA 8,9% → sale con nuove BU)
+- Sede HQ 21,3% dei ricavi vs benchmark 8-12% → consulenze €812k da scomporre
+- Modello di business validato: domanda >> offerta, tariffe SSR certe, liste d'attesa
+- Il problema non sono i ricavi ma i costi nascosti che distruggono valore
+- Crisi = espansione aggressiva autofinanziata senza equity → debito fiscale accumulato
+
+### Costo HR Q1 — verifica dettaglio righi Zucchetti
+Costo pieno confermato: righi 180 (retribuzioni 67,8%) + 190 (rettifiche) + 280 (contributi 16%) + 330 (13ma/14ma 10,1%) + 390 (INAIL 0,9%) + 430 (TFR 5,6%). Totale Q1: €1.897.150. Delta +14% vs CE per ratei non ancora contabilizzati.
+
+### GitHub Pages
+Branch corretto: **main** (era su feature branch, corretto via Settings → Pages → Source)
+
+## Bilancio 2024 approvato — Analisi 14/02/2026
+
+### SPA 2024
+- Ricavi: €11.818k (+8,5% YoY), Valore Produzione: €14.066k
+- Personale: €7.250k (51,5% VP)
+- Ammortamenti: €893k (erano €82k nel 2023 → +1.157% per capitalizzazione lavori nuove BU)
+- EBIT: -€121k (negativo!)
+- Proventi finanziari: €1.260k (interessi di mora su crediti ASP scaduti)
+- Utile netto: +€461k — **ma normalizzato (senza proventi straordinari): -€800k**
+- PFN SPA: -€9.040k
+- Debiti vs controllate: €8.180k (+€3.200k vs 2023)
+- Debiti tributari: €5.660k
+
+### Consolidato 2024
+- Ricavi: €25.800k (+5,7%), VP: €27.948k
+- Personale: €15.494k (57,9% VP)
+- D&A: €1.030k (impennata da €82k per capitalizzazioni)
+- EBITDA: €41k (marginale)
+- Utile netto: +€592k
+- PFN: -€19.150k, Equity: €3.790k, Leverage: 5,1x
+- Debiti tributari consolidati: €8.780k (+56%)
+- Debiti previdenziali: €5.750k (+50%)
+- Target gruppo: €30M ricavi 2025, €38M 2026+ con margine operativo €5M+
+
+### Provvisorio SPA 31/08/2025
+- Ricavi 8M: €7.620k (annualizzato €11.430k — convergente con 2024)
+- MOL 8M: €319k (annualizzato €479k — molto peggiore del Q1×4 €1.020k)
+- Oneri finanziari 8M: €197k (annualizzato €296k — il triplo del Q1)
+- Cassa: €231k (critica)
+- Crediti commerciali: €13.200k (DSO ~140 giorni)
+
+### Q&A documento preparato
+- File: `docs/QA_ANALISI_CRITICA_KAROL_2026.docx`
+- 7 sezioni: riconciliazione fonti, criticità strutturali, stato patrimoniale, stress test Bond/DSCR, domande operative (12), tavola sinottica, raccomandazioni CdG
+
+## Risposte Management — 14/02/2026
+
+### Cambiamenti strategici
+1. **MUTUO BANCARIO al posto del BOND** — Bond troppo lento (6-9 mesi). Mutuo 10 anni, possibile preammortamento. Ricalcolare tutto il piano finanziario.
+2. **VLB scorporo necessario** — Include: Centro Gottardo (FKT, ~€40k fatture attive), cucina centralizzata, trasporto disabili, Casa Protetta 20 PL (brucia €300k+/anno). Piano: spostare 40 PL convenzionati a BRT e chiudere Casa Protetta.
+3. **CTA contenzioso €7M** — Crediti in bilancio per €7M+. Transazione imminente ("fra pochi giorni"). Game-changer per liquidità se confermata.
+4. **Crediti fiscali innovazione/patent box** — Studio Roma sta certificando. Spiega gap ricavi BP (€12,9M) vs consuntivo (~€11,4M): ~€1,5M di "altri ricavi" non operativi.
+5. **Timeline nuove BU: giugno 2026 best case** — BRT prima (3-4 mesi ramp-up), KMC dopo, Roma 2-3 mesi post-lavori per preaccreditamento (solido).
+6. **Target costi: -10%** — Condizione necessaria per superare DSCR critico 2027-28.
+7. **DSO reale ASP: 45-60 giorni** — I €13,2M di crediti sono cumulo storico posizioni CTA + differenze rette regionali, non DSO corrente.
+8. **Affitto VLB €219k** — Proprietario rigido, piano è chiudere e spostare a BRT.
+9. **Cassa €231k gestita** — Spostando costi, ritardando pagamenti professionisti/dipendenti.
+10. **Crescita a debito + COVID + gestione paternalistica** — Eccesso personale, poca attenzione ai costi, fatturato cresceva illusoriamente.
+
+### Dati in arrivo (promessi dal management)
+- Piano di rientro debiti tributari (scadenziario mensile)
+- Piano di rientro debiti previdenziali
+- Dettaglio consulenze HQ per fornitore/contratto
+- CE mensile aprile-agosto 2025
+
+## PROSSIMI PASSI — Sessione successiva
+
+### Priorità alta (concordati con Francesco)
+1. **Dashboard v4:** integrare PFN, ammortamenti, debt service, proiezioni 2025-2030, DSCR, 3 nuove BU
+2. **Tab Piano Finanziario:** waterfall pre/post Bond, scenario base vs stress test ramp-up Roma
+3. **Benchmark esterno:** bilanci KOS, Korian Italia, Sereni Orizzonti — confronto voce per voce
+4. **Scenario analysis:** impatto ritardo ramp-up (3/6/12 mesi) su DSCR e cassa
 
 ### Priorità media
-- Responsive mobile
-- Dark mode
-- Export PDF: aggiungere pagina dettaglio per BU
+- Budget 2025 separato da consuntivo (quando disponibile)
+- Dati Q2-Q4 per trend reale mensile
+- Drill-down consulenze HQ per tipo/contratto
+- Allocazione sede a UO con driver (personale, PL, ricavi)
+- Export PDF: pagina dettaglio per BU + piano finanziario
+- Responsive mobile / Dark mode
