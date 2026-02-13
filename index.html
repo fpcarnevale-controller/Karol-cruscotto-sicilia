@@ -8,6 +8,9 @@
 {"imports":{"react":"https://esm.sh/react@18.2.0","react-dom":"https://esm.sh/react-dom@18.2.0","react/jsx-runtime":"https://esm.sh/react@18.2.0/jsx-runtime","recharts":"https://esm.sh/recharts@2.12.7?external=react,react-dom"}}
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script type="module">
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
@@ -272,6 +275,108 @@ const KarolDashboard = () => {
   const [simPers, setSimPers] = useState(0);
   const [simOcc, setSimOcc] = useState(0);
   const [simSede, setSimSede] = useState(0);
+  const [showExport, setShowExport] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  // ---- Export PDF ----
+  const exportPDF = async () => {
+    setExporting(true);
+    try {
+      const { jsPDF } = window.jspdf;
+      const content = document.getElementById('dashboard-content');
+      const canvas = await html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#F0F4F8' });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfW = pdf.internal.pageSize.getWidth();
+      const pdfH = (canvas.height * pdfW) / canvas.width;
+      let pos = 0;
+      const pageH = pdf.internal.pageSize.getHeight();
+      while (pos < pdfH) {
+        if (pos > 0) pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, -pos, pdfW, pdfH);
+        pos += pageH;
+      }
+      pdf.save('Karol_CdG_' + tab + '_' + new Date().toISOString().slice(0,10) + '.pdf');
+    } catch(e) { alert('Errore export PDF: ' + e.message); }
+    setExporting(false);
+    setShowExport(false);
+  };
+
+  // ---- Export Excel ----
+  const exportExcel = () => {
+    setExporting(true);
+    try {
+      const wb = XLSX.utils.book_new();
+
+      // Foglio Riepilogo
+      const riepilogo = [
+        ['KAROL S.p.A. — Controllo di Gestione Sicilia'],
+        ['Anno ' + D.meta.anno + ' — ' + D.meta.mesi_chiusi + ' mesi'],
+        [],
+        ['UO', 'Ricavi', 'Costi Dir.', 'MOL-I', 'MOL-I %', 'Sede', 'MOL-G', 'MOL-G %', 'Pers %', 'Occ %'],
+        ...UO.map(u => [u.cod + ' — ' + u.nome, u.ricavi, u.costiDir, u.molI, u.molIPct, u.sede, u.molG, u.molGPct, u.persPct, u.occ]),
+        [],
+        ['TOTALE', TOT.ric, TOT.cDir, TOT.molI, TOT.molIPct, TOT.sede, TOT.molG, TOT.molGPct, TOT.persPct, ''],
+      ];
+      const ws1 = XLSX.utils.aoa_to_sheet(riepilogo);
+      ws1['!cols'] = [{ wch: 28 }, ...Array(9).fill({ wch: 16 })];
+      XLSX.utils.book_append_sheet(wb, ws1, 'Riepilogo');
+
+      // Foglio CE Consolidato
+      const ceRows = [
+        ['Voce', 'Consuntivo', 'Budget', 'Delta', '% Ricavi'],
+        ['Ricavi', TOT.ric, TOT.budget_ric, TOT.ric - TOT.budget_ric, 1],
+        ['Personale', -TOT.pers, -UO.reduce((s,u) => s + u.budget_costi.personale, 0), '', ''],
+        ['Materiali', -UO.reduce((s,u) => s + u.costi.materiali, 0), -UO.reduce((s,u) => s + u.budget_costi.materiali, 0), '', ''],
+        ['Servizi', -UO.reduce((s,u) => s + u.costi.servizi, 0), -UO.reduce((s,u) => s + u.budget_costi.servizi, 0), '', ''],
+        ['Utenze', -UO.reduce((s,u) => s + u.costi.utenze, 0), -UO.reduce((s,u) => s + u.budget_costi.utenze, 0), '', ''],
+        ['Manutenzione', -UO.reduce((s,u) => s + u.costi.manutenzione, 0), -UO.reduce((s,u) => s + u.budget_costi.manutenzione, 0), '', ''],
+        ['MOL Industriale', TOT.molI, TOT.budget_ric - TOT.budget_cDir, '', TOT.molIPct],
+        ['Costi Sede', -TOT.sede, -1550000, '', ''],
+        ['MOL Gestionale', TOT.molG, '', '', TOT.molGPct],
+        ['Ammortamenti', -TOT.ammort, -350000, '', ''],
+        ['Oneri Finanziari', -TOT.oneri_fin, -125000, '', ''],
+        ['Risultato Operativo', TOT.ebit, '', '', ''],
+      ];
+      const ws2 = XLSX.utils.aoa_to_sheet(ceRows);
+      ws2['!cols'] = [{ wch: 22 }, ...Array(4).fill({ wch: 18 })];
+      XLSX.utils.book_append_sheet(wb, ws2, 'CE Consolidato');
+
+      // Foglio Trend Mensile
+      const trendRows = [
+        ['Mese', ...UO.map(u => u.cod + ' Ricavi'), ...UO.map(u => u.cod + ' Costi')],
+        ...mesi.map((m, i) => [m, ...UO.map(u => u.rM[i]), ...UO.map(u => u.cM[i])]),
+      ];
+      const ws3 = XLSX.utils.aoa_to_sheet(trendRows);
+      XLSX.utils.book_append_sheet(wb, ws3, 'Trend Mensile');
+
+      // Foglio KPI
+      const kpiRows = [
+        ['UO', 'KPI', 'Valore', 'Target', 'Semaforo'],
+        ...KPI.map(k => [k.uo, k.kpi, k.v, k.tgt, k.a]),
+      ];
+      const ws4 = XLSX.utils.aoa_to_sheet(kpiRows);
+      XLSX.utils.book_append_sheet(wb, ws4, 'KPI');
+
+      // Foglio Cash Flow
+      const cfRows = [
+        ['Voce', 'Importo', 'Tipo'],
+        ...waterfallRaw.map(w => [w.voce, w.valore, w.tipo]),
+        [],
+        ['KPI Cash Flow'],
+        ['DSO ASP', D.cashflow.kpi.dso],
+        ['DPO Fornitori', D.cashflow.kpi.dpo],
+        ['DSCR', D.cashflow.kpi.dscr],
+        ['Copertura Cassa (mesi)', D.cashflow.kpi.cop_cassa],
+      ];
+      const ws5 = XLSX.utils.aoa_to_sheet(cfRows);
+      XLSX.utils.book_append_sheet(wb, ws5, 'Cash Flow');
+
+      XLSX.writeFile(wb, 'Karol_CdG_Report_' + new Date().toISOString().slice(0,10) + '.xlsx');
+    } catch(e) { alert('Errore export Excel: ' + e.message); }
+    setExporting(false);
+    setShowExport(false);
+  };
 
   const nR = KPI.filter(k => k.a === 'ROSSO').length;
   const nG = KPI.filter(k => k.a === 'GIALLO').length;
@@ -297,7 +402,7 @@ const KarolDashboard = () => {
   const cardS = { background: C.card, borderRadius: 10, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', border: '1px solid ' + C.bordo };
 
   return (
-    <div style={{ background: C.sfondo, minHeight: '100vh', fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
+    <div id="dashboard-content" style={{ background: C.sfondo, minHeight: '100vh', fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
       {/* HEADER */}
       <div style={{ background: 'linear-gradient(135deg, ' + C.primario + ' 0%, ' + C.primarioChiaro + ' 100%)', padding: '20px 32px', color: 'white' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -305,8 +410,14 @@ const KarolDashboard = () => {
             <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: 2 }}>KAROL</div>
             <div style={{ fontSize: 12, opacity: 0.7, letterSpacing: 3, marginTop: 2 }}>CONTROLLO DI GESTIONE</div>
           </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <button onClick={() => setShowExport(true)}
+              style={{ padding: '8px 18px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8, color: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', backdropFilter: 'blur(4px)' }}>
+              📥 Export
+            </button>
+          </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 15, fontWeight: 600 }}>Sicilia — Anno 2025 (12 Mesi)</div>
+            <div style={{ fontSize: 15, fontWeight: 600 }}>Sicilia — Anno {D.meta.anno} ({D.meta.mesi_chiusi} Mesi)</div>
             <div style={{ fontSize: 11, opacity: 0.7, marginTop: 4 }}>
               Completezza dati: {uoReali}/{UO.length} UO reali
               <span style={{ display: 'inline-block', width: 60, height: 5, borderRadius: 3, background: 'rgba(255,255,255,.2)', marginLeft: 8, verticalAlign: 'middle', overflow: 'hidden' }}>
@@ -316,6 +427,41 @@ const KarolDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* EXPORT MODAL */}
+      {showExport && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setShowExport(false)}>
+          <div style={{ background: C.card, borderRadius: 16, padding: '28px 32px', width: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}
+            onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Export Report</h3>
+            <p style={{ fontSize: 12, color: C.t3, marginBottom: 20 }}>Karol CdG — Anno {D.meta.anno}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <button onClick={exportPDF} disabled={exporting}
+                style={{ padding: '14px 20px', background: C.rosso + '10', border: '2px solid ' + C.rosso + '30', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, fontFamily: 'inherit' }}>
+                <span style={{ fontSize: 24 }}>📄</span>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>Export PDF</div>
+                  <div style={{ fontSize: 11, color: C.t3 }}>Snapshot del tab attivo ({tab})</div>
+                </div>
+              </button>
+              <button onClick={exportExcel} disabled={exporting}
+                style={{ padding: '14px 20px', background: C.verde + '10', border: '2px solid ' + C.verde + '30', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, fontFamily: 'inherit' }}>
+                <span style={{ fontSize: 24 }}>📊</span>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>Export Excel</div>
+                  <div style={{ fontSize: 11, color: C.t3 }}>Report completo: Riepilogo, CE, Trend, KPI, Cash Flow</div>
+                </div>
+              </button>
+            </div>
+            {exporting && <div style={{ textAlign: 'center', marginTop: 16, fontSize: 13, color: C.primario, fontWeight: 600 }}>Generazione in corso...</div>}
+            <button onClick={() => setShowExport(false)}
+              style={{ marginTop: 16, width: '100%', padding: '10px', background: 'transparent', border: '1px solid ' + C.bordo, borderRadius: 8, cursor: 'pointer', fontSize: 13, color: C.t2, fontFamily: 'inherit' }}>
+              Chiudi
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* KPI CARDS */}
       <div style={{ maxWidth: 1280, margin: '-20px auto 0', padding: '0 24px', position: 'relative', zIndex: 1 }}>
@@ -712,19 +858,49 @@ const KarolDashboard = () => {
                       <p style={{ fontSize: 12, color: C.t1, lineHeight: 1.5 }}>{uNarr.testo}</p>
                     </div>
                   )}
-                  {/* Chart */}
-                  <ResponsiveContainer width="100%" height={300}>
-                    <ComposedChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                      <XAxis dataKey="mese" fontSize={12} stroke={C.t3} />
-                      <YAxis tickFormatter={v => fmt(v)} fontSize={11} stroke={C.t3} />
-                      <Tooltip formatter={v => [fmt(v)]} />
-                      <Legend />
-                      <Bar dataKey="Ricavi" fill={u.colore} radius={[4,4,0,0]} barSize={20} />
-                      <Bar dataKey="Costi" fill={C.budget} radius={[4,4,0,0]} barSize={20} />
-                      <Line type="monotone" dataKey="MOL" name="MOL-I" stroke={C.verde} strokeWidth={2} dot={{ r: 3 }} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
+                  {/* Donut composizione costi + Chart trend */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16 }}>
+                    <div>
+                      <h4 style={{ fontSize: 12, fontWeight: 600, color: C.t2, marginBottom: 8 }}>Composizione Costi</h4>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <PieChart>
+                          <Pie data={[
+                            { name: 'Personale', value: u.costi.personale, fill: '#3b82f6' },
+                            { name: 'Materiali', value: u.costi.materiali, fill: '#8b5cf6' },
+                            { name: 'Servizi', value: u.costi.servizi, fill: '#06b6d4' },
+                            { name: 'Utenze', value: u.costi.utenze, fill: '#f59e0b' },
+                            { name: 'Manut.', value: u.costi.manutenzione, fill: '#ef4444' },
+                            { name: 'Altri', value: u.costi.altri, fill: '#94a3b8' },
+                          ].filter(d => d.value > 0)} dataKey="value" innerRadius={50} outerRadius={80} paddingAngle={2}>
+                          </Pie>
+                          <Tooltip formatter={v => [fmt(v)]} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
+                        {[
+                          { c: '#3b82f6', l: 'Pers.' }, { c: '#8b5cf6', l: 'Mat.' }, { c: '#06b6d4', l: 'Serv.' },
+                          { c: '#f59e0b', l: 'Uten.' }, { c: '#ef4444', l: 'Man.' }, { c: '#94a3b8', l: 'Altri' },
+                        ].map(leg => <span key={leg.l} style={{ fontSize: 9, display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: 2, background: leg.c }}></span>{leg.l}
+                        </span>)}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: 12, fontWeight: 600, color: C.t2, marginBottom: 8 }}>Trend Mensile Ricavi vs Costi</h4>
+                      <ResponsiveContainer width="100%" height={250}>
+                        <ComposedChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                          <XAxis dataKey="mese" fontSize={12} stroke={C.t3} />
+                          <YAxis tickFormatter={v => fmt(v)} fontSize={9} stroke={C.t3} />
+                          <Tooltip formatter={v => [fmt(v)]} />
+                          <Legend />
+                          <Bar dataKey="Ricavi" fill={u.colore} radius={[4,4,0,0]} barSize={18} />
+                          <Bar dataKey="Costi" fill={C.budget} radius={[4,4,0,0]} barSize={18} />
+                          <Line type="monotone" dataKey="MOL" name="MOL-I" stroke={C.verde} strokeWidth={2} dot={{ r: 3 }} />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
                 </div>
               );
             })()}
