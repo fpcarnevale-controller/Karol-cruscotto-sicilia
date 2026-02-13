@@ -53,7 +53,7 @@ const KAROL_DATA = {
   // Benchmark settore RSA/Healthcare
   BENCHMARK: {
     pers_pct: 0.55, mol_i_pct: 0.15, mol_g_pct: 0.08,
-    occ_pct: 0.90, costo_pl_gg: 130, dso: 120, dpo: 90, dscr: 1.2, cop_cassa_mesi: 2.0,
+    occ_pct: 0.90, costo_pl_gg: 130, dso: 60, dpo: 90, dscr: 1.2, cop_cassa_mesi: 2.0,
   },
 
   // Unità Operative con breakdown costi completo
@@ -145,7 +145,7 @@ const KAROL_DATA = {
       { anno: '2028', ott: 1650, base: 1050, pess: -180 },
       { anno: '2029', ott: 2250, base: 1400, pess: -350 },
     ],
-    kpi: { dso: 135, dpo: 95, dscr: 1.15, cop_cassa: 1.8, ccn: 145000, capex: 280000, debito_annuo: 520000 },
+    kpi: { dso: 45, dpo: 75, dscr: 1.15, cop_cassa: 1.8, ccn: 145000, capex: 280000, debito_annuo: 520000 },
   },
 
   narrative: [
@@ -864,8 +864,8 @@ const KarolDashboard = () => {
             {/* C4: KPI Cash Flow */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
               {[
-                { label: 'DSO ASP', valore: '135 gg', target: '< 120 gg', sem: React.createElement(Semaforo, { valore: 135, verdeMin: 120, gialloMin: 150, invertito: true }) },
-                { label: 'DPO Fornitori', valore: '95 gg', target: '< 120 gg', sem: React.createElement(Semaforo, { valore: 95, verdeMin: 90, gialloMin: 120, invertito: true }) },
+                { label: 'DSO ASP', valore: D.cashflow.kpi.dso + ' gg', target: '< ' + BENCH.dso + ' gg', sem: React.createElement(Semaforo, { valore: D.cashflow.kpi.dso, verdeMin: BENCH.dso, gialloMin: BENCH.dso * 1.5, invertito: true }) },
+                { label: 'DPO Fornitori', valore: D.cashflow.kpi.dpo + ' gg', target: '< ' + BENCH.dpo + ' gg', sem: React.createElement(Semaforo, { valore: D.cashflow.kpi.dpo, verdeMin: BENCH.dpo, gialloMin: BENCH.dpo * 1.3, invertito: true }) },
                 { label: 'DSCR', valore: '1.15x', target: '> 1.2x', sem: React.createElement(Semaforo, { valore: 1.15, verdeMin: 1.2, gialloMin: 1.0 }) },
                 { label: 'Copertura Cassa', valore: '1.8 mesi', target: '> 2.0 mesi', sem: React.createElement(Semaforo, { valore: 1.8, verdeMin: 2.0, gialloMin: 1.0 }) },
               ].map((kpi, i) => (
