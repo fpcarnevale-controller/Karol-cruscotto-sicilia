@@ -4,11 +4,20 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Karol CdG — Controllo di Gestione</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script type="importmap">
+{"imports":{"react":"https://esm.sh/react@18.2.0","react-dom":"https://esm.sh/react-dom@18.2.0","react/jsx-runtime":"https://esm.sh/react@18.2.0/jsx-runtime","recharts":"https://esm.sh/recharts@2.12.7?external=react,react-dom"}}
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.10.3/Recharts.min.js"></script>
-<script>window.Recharts = window._Recharts || window.Recharts || {BarChart:window.BarChart,Bar:window.Bar,XAxis:window.XAxis,YAxis:window.YAxis,CartesianGrid:window.CartesianGrid,Tooltip:window.Tooltip,ResponsiveContainer:window.ResponsiveContainer,LineChart:window.LineChart,Line:window.Line,Legend:window.Legend,AreaChart:window.AreaChart,Area:window.Area,Cell:window.Cell,ReferenceLine:window.ReferenceLine,ComposedChart:window.ComposedChart};</script>
+<script type="module">
+import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
+import * as Recharts from 'recharts';
+window.React = React;
+window.ReactDOM = ReactDOM;
+window.Recharts = Recharts;
+const s = document.querySelector('script[data-type="babel-source"]');
+if (s) { const c = Babel.transform(s.textContent, {presets:['react']}).code; new Function(c)(); }
+</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -17,7 +26,7 @@ body { font-family: 'DM Sans', 'Segoe UI', sans-serif; background: #F0F4F8; }
 </head>
 <body>
 <div id="root"></div>
-<script type="text/babel">
+<script type="text/template" data-type="babel-source">
 const { useState } = React;
 const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, AreaChart, Area, Cell, ReferenceLine, ComposedChart } = Recharts;
 
