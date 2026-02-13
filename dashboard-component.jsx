@@ -1,0 +1,995 @@
+import React, { useState, useMemo } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, PieChart, Pie, Cell, AreaChart, Area, ReferenceLine, ComposedChart } from 'recharts';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PALETTE COLORI UNIFICATA — D1
+// ═══════════════════════════════════════════════════════════════════════════════
+const C = {
+  primario: '#1F4E79', primarioChiaro: '#2E75B6', primarioScuro: '#163A5C',
+  sfondo: '#F8FAFC', cardBg: '#FFFFFF',
+  verde: '#059669', verdeBg: '#dcfce7', verdeChiaro: '#10b981',
+  giallo: '#d97706', gialloBg: '#fef9c3', gialloChiaro: '#f59e0b',
+  rosso: '#dc2626', rossoBg: '#fee2e2', rossoChiaro: '#ef4444',
+  viola: '#7c3aed', violaBg: '#ede9fe',
+  // UO
+  VLB: '#0ea5e9', CTA: '#3b82f6', COS: '#8b5cf6', LAB: '#f59e0b', KCP: '#ec4899',
+  // Grafici
+  budget: '#cbd5e1', fatturato: '#3b82f6', soglia: '#94a3b8',
+  entrata: '#059669', uscita: '#ef4444', subtotale: '#2E75B6', finale: '#1F4E79',
+  // Testo
+  t1: '#1e293b', t2: '#475569', t3: '#94a3b8',
+};
+
+const alertStyle = (a) => ({
+  color: a === 'ROSSO' ? C.rosso : a === 'GIALLO' ? C.giallo : C.verde,
+  bg: a === 'ROSSO' ? C.rossoBg : a === 'GIALLO' ? C.gialloBg : C.verdeBg,
+  icon: a === 'ROSSO' ? '🔴' : a === 'GIALLO' ? '🟡' : '🟢'
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
+const fmt = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
+const fmtK = (v) => `€${(v/1000).toFixed(0)}k`;
+const fmtM = (v) => `€${(v/1000000).toFixed(2)}M`;
+const fmtPct = (v) => `${(v * 100).toFixed(1)}%`;
+
+// Custom tooltip
+const CustomTooltip = ({ active, payload, label }) => {
+  if (!active || !payload) return null;
+  return (
+    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,.1)' }}>
+      <p style={{ fontWeight: 600, fontSize: 12, color: C.t1, marginBottom: 4 }}>{label}</p>
+      {payload.map((p, i) => p.value !== 0 && (
+        <p key={i} style={{ fontSize: 11, color: p.color || C.t2 }}>
+          {p.name}: <strong>{typeof p.value === 'number' && Math.abs(p.value) > 100 ? fmt(p.value) : p.value}</strong>
+        </p>
+      ))}
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DATI CE — dal Master Excel (elabora.py output 13/02/2026)
+// ═══════════════════════════════════════════════════════════════════════════════
+// Flag qualità dati per E1 (true = consuntivo reale, false = simulato/placeholder)
+const UO = [
+  {
+    cod: 'VLB', nome: 'RSA Villabate', tipo: 'RSA Alzheimer', pl: 44, colore: C.VLB, datiReali: false,
+    ricavi: 2004045, costiDir: 1675033, molI: 329012, molIPct: .1642,
+    sede: 353127, molG: -24115, molGPct: -.0120,
+    pers: 1147329, persPct: .5725, occ: .900, ricGg: 138.66,
+    detR: { R01: 1845916, R04: 91939, R05: 35551, R07: 30638 },
+    detC: { medici: 281811, infermieri: 311213, oss: 484900, amm: 69405, farmaci: 123037, diagn: 49558, vitto: 80764, altriM: 30720, servizi: 152097, cons: 20071, ammort: 71458 },
+    rM: [169640,149876,173154,168672,174978,166476,164006,154880,163696,174683,170602,173382],
+    cM: [140731,139023,141794,142431,139408,138816,138345,135571,138366,140063,138567,141919],
+  },
+  {
+    cod: 'CTA', nome: 'CTA Ex Stagno', tipo: 'Psichiatrico', pl: 40, colore: C.CTA, datiReali: false,
+    ricavi: 1895648, costiDir: 1670541, molI: 225107, molIPct: .1187,
+    sede: 326072, molG: -100965, molGPct: -.0533,
+    pers: 1125426, persPct: .5937, occ: .920, ricGg: 141.19,
+    detR: { R01: 1811515, R04: 54502, R07: 29630 },
+    detC: { medici: 361861, infermieri: 348194, oss: 348096, amm: 67274, farmaci: 135550, diagn: 45258, vitto: 66842, altriM: 29090, servizi: 172405, cons: 28568, ammort: 67402 },
+    rM: [159954,144470,163122,157669,165770,157080,153507,148029,153462,166605,161823,164157],
+    cM: [139727,138994,137273,138930,139301,139815,137848,136411,139877,142422,140868,139074],
+  },
+  {
+    cod: 'COS', nome: 'CdC Cosentino', tipo: 'Riabilitazione', pl: 50, colore: C.COS, datiReali: false,
+    ricavi: 3799179, costiDir: 2924314, molI: 874865, molIPct: .2303,
+    sede: 541917, molG: 332949, molGPct: .0876,
+    pers: 1790988, persPct: .4714, occ: .860, ricGg: 241.99,
+    detR: { R01: 2901765, R02: 366230, R04: 232898, R05: 88105, R06: 180302, R07: 29879 },
+    detC: { medici: 688628, infermieri: 531454, oss: 259305, tecnici: 204100, amm: 107502, farmaci: 292406, diagn: 144209, vitto: 109600, altriM: 70921, servizi: 309792, cons: 57869, ammort: 148530 },
+    rM: [320319,290930,321212,318851,328869,319828,309744,294979,308393,333165,321909,330982],
+    cM: [244695,241092,240802,247326,245338,242449,243186,234286,242532,244702,251201,246704],
+  },
+  {
+    cod: 'LAB', nome: 'Karol Lab', tipo: 'Laboratorio', pl: 0, colore: C.LAB, datiReali: false,
+    ricavi: 1450153, costiDir: 891341, molI: 558813, molIPct: .3853,
+    sede: 212873, molG: 345940, molGPct: .2386,
+    pers: 438075, persPct: .3021, occ: null, ricGg: null,
+    detR: { R03: 1140319, R06: 291900, R07: 17934 },
+    detC: { medici: 89746, tecnici: 279030, amm: 69298, farmaci: 173633, diagn: 92392, altriM: 35100, servizi: 69781, cons: 23709, ammort: 58650 },
+    rM: [123238,120564,123838,126162,120026,116683,116136,111219,116108,127791,130075,118316],
+    cM: [74958,73556,74432,75376,76159,75846,73710,69849,73075,74976,74564,74839],
+  },
+  {
+    cod: 'KCP', nome: 'Karol Casa Protetta', tipo: 'Casa Protetta', pl: 20, colore: C.KCP, datiReali: false,
+    ricavi: 700261, costiDir: 603299, molI: 96961, molIPct: .1385,
+    sede: 158011, molG: -61050, molGPct: -.0872,
+    pers: 391420, persPct: .5590, occ: null, ricGg: null,
+    detR: { R01: 582468, R04: 87988, R07: 29804 },
+    detC: { medici: 77686, infermieri: 108839, oss: 173820, amm: 31075, farmaci: 34676, diagn: 13350, vitto: 41082, altriM: 13507, servizi: 74599, cons: 7007, ammort: 27658 },
+    rM: [59361,53405,61086,58202,60141,57339,57604,54021,57324,61888,58959,60931],
+    cM: [49419,50019,50686,50607,50544,50694,49326,48620,50241,51418,51571,50155],
+  }
+];
+
+// KPI
+const KPI = [
+  { kpi: 'MOL % Ind.', uo: 'VLB', v: .1642, tgt: .15, a: 'VERDE' },
+  { kpi: 'MOL % Gest.', uo: 'VLB', v: -.0120, tgt: .08, a: 'ROSSO' },
+  { kpi: 'Pers. %', uo: 'VLB', v: .5725, tgt: .55, a: 'GIALLO' },
+  { kpi: 'Occupancy', uo: 'VLB', v: .900, tgt: .90, a: 'GIALLO' },
+  { kpi: 'MOL % Ind.', uo: 'CTA', v: .1187, tgt: .15, a: 'GIALLO' },
+  { kpi: 'MOL % Gest.', uo: 'CTA', v: -.0533, tgt: .08, a: 'ROSSO' },
+  { kpi: 'Pers. %', uo: 'CTA', v: .5937, tgt: .55, a: 'GIALLO' },
+  { kpi: 'Occupancy', uo: 'CTA', v: .920, tgt: .90, a: 'VERDE' },
+  { kpi: 'MOL % Ind.', uo: 'COS', v: .2303, tgt: .15, a: 'VERDE' },
+  { kpi: 'MOL % Gest.', uo: 'COS', v: .0876, tgt: .08, a: 'GIALLO' },
+  { kpi: 'Pers. %', uo: 'COS', v: .4714, tgt: .55, a: 'VERDE' },
+  { kpi: 'Occupancy', uo: 'COS', v: .860, tgt: .90, a: 'GIALLO' },
+  { kpi: 'MOL % Ind.', uo: 'LAB', v: .3853, tgt: .15, a: 'VERDE' },
+  { kpi: 'MOL % Gest.', uo: 'LAB', v: .2386, tgt: .08, a: 'VERDE' },
+  { kpi: 'Pers. %', uo: 'LAB', v: .3021, tgt: .55, a: 'VERDE' },
+  { kpi: 'MOL % Ind.', uo: 'KCP', v: .1385, tgt: .15, a: 'GIALLO' },
+  { kpi: 'MOL % Gest.', uo: 'KCP', v: -.0872, tgt: .08, a: 'ROSSO' },
+  { kpi: 'Pers. %', uo: 'KCP', v: .5590, tgt: .55, a: 'GIALLO' },
+  { kpi: 'MOL % Cons.', uo: 'GRUPPO', v: .0500, tgt: .12, a: 'ROSSO' },
+  { kpi: 'Sede %', uo: 'GRUPPO', v: .1616, tgt: .15, a: 'VERDE' },
+  { kpi: 'Pers. % Cons.', uo: 'GRUPPO', v: .4968, tgt: .55, a: 'VERDE' },
+];
+
+// Aggregati
+const TOT = { ric: 9849287, cDir: 7764528, molI: 2084759, molIPct: .2117, sede: 1592000, sedeNA: 403000, molG: 492759, molGPct: .0500, pers: 4893238, persPct: .4968 };
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DATI CASH FLOW — C1-C4 (simulati realistici su base €9,85M ricavi)
+// ═══════════════════════════════════════════════════════════════════════════════
+const waterfallRaw = [
+  { voce: 'Ricavi', val: 9849287, tipo: 'entrata' },
+  { voce: 'Personale', val: -4893238, tipo: 'uscita' },
+  { voce: 'Acquisti diretti', val: -1581693, tipo: 'uscita' },
+  { voce: 'Servizi e utenze', val: -915897, tipo: 'uscita' },
+  { voce: 'Ammortamenti', val: -373698, tipo: 'uscita' },
+  { voce: 'MOL-I', val: 2084759, tipo: 'subtotale' },
+  { voce: 'Costi Sede', val: -1592000, tipo: 'uscita' },
+  { voce: 'MOL-G', val: 492759, tipo: 'subtotale' },
+  { voce: 'Var. CCN', val: -145000, tipo: 'uscita' },
+  { voce: 'CF Operativo', val: 347759, tipo: 'subtotale' },
+  { voce: 'CAPEX', val: -280000, tipo: 'uscita' },
+  { voce: 'Free CF', val: 67759, tipo: 'subtotale' },
+  { voce: 'Servizio debito', val: -520000, tipo: 'uscita' },
+  { voce: 'Imposte', val: -148000, tipo: 'uscita' },
+  { voce: 'CF Netto', val: -600241, tipo: 'finale' },
+];
+
+// Calcola basi waterfall
+const waterfall = (() => {
+  let running = 0;
+  return waterfallRaw.map(w => {
+    if (w.tipo === 'entrata' || w.tipo === 'subtotale' || w.tipo === 'finale') {
+      const r = { ...w, base: 0, bar: w.val };
+      running = w.val;
+      return r;
+    }
+    const base = running + w.val;
+    const r = { ...w, base: Math.min(running, running + w.val), bar: Math.abs(w.val) };
+    running += w.val;
+    return r;
+  });
+})();
+
+const cassaSett = [
+  { s: 'S1', saldo: 420000, incassi: 180000, pag: 150000 },
+  { s: 'S2', saldo: 390000, incassi: 120000, pag: 150000 },
+  { s: 'S3', saldo: 340000, incassi: 100000, pag: 150000 },
+  { s: 'S4', saldo: 510000, incassi: 320000, pag: 150000 },
+  { s: 'S5', saldo: 460000, incassi: 100000, pag: 150000 },
+  { s: 'S6', saldo: 380000, incassi: 70000, pag: 150000 },
+  { s: 'S7', saldo: 290000, incassi: 60000, pag: 150000 },
+  { s: 'S8', saldo: 240000, incassi: 100000, pag: 150000 },
+  { s: 'S9', saldo: 210000, incassi: 120000, pag: 150000 },
+  { s: 'S10', saldo: 180000, incassi: 120000, pag: 150000 },
+  { s: 'S11', saldo: 350000, incassi: 320000, pag: 150000 },
+  { s: 'S12', saldo: 400000, incassi: 200000, pag: 150000 },
+];
+
+const scenari = [
+  { anno: '2025', ott: 350000, base: 250000, pess: 80000 },
+  { anno: '2026', ott: 720000, base: 480000, pess: 120000 },
+  { anno: '2027', ott: 1150000, base: 750000, pess: -50000 },
+  { anno: '2028', ott: 1650000, base: 1050000, pess: -180000 },
+  { anno: '2029', ott: 2250000, base: 1400000, pess: -350000 },
+];
+
+const cfKPI = [
+  { nome: 'DSO ASP', val: '135 gg', alert: 'GIALLO', tgt: '<120 gg', desc: 'Tempi incasso ASP/SSN' },
+  { nome: 'DPO Fornitori', val: '95 gg', alert: 'VERDE', tgt: '<120 gg', desc: 'Tempi pagamento fornitori' },
+  { nome: 'DSCR', val: '1.15x', alert: 'GIALLO', tgt: '>1.2x', desc: 'Debt Service Coverage Ratio' },
+  { nome: 'Copertura Cassa', val: '1.8 mesi', alert: 'GIALLO', tgt: '>2.0 mesi', desc: 'Mesi operatività senza incassi' },
+];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NARRATIVE AUTOMATICHE — Finance Skill Variance Analysis
+// ═══════════════════════════════════════════════════════════════════════════════
+const narrative = [
+  { uo: 'VLB', alert: 'GIALLO', testo: 'MOL-I 16,4% in target, ma costi sede (€353k, 17,6% ricavi) assorbono interamente il margine industriale portando MOL-G a -€24k. Incidenza personale 57,3% leggermente sopra benchmark RSA (55%). Azione: rinegoziare allocazione sede o aumentare occupancy oltre 90%.', outlook: 'Strutturale — richiede intervento su allocazione' },
+  { uo: 'CTA', alert: 'ROSSO', testo: 'MOL-G negativo per €101k. Driver principale: personale al 59,4% dei ricavi (target 55%) con 40 PL e occupancy 92%. Il costo medici (€362k) è il più alto del gruppo in proporzione. Azione: ottimizzare mix medici/OSS e ridurre straordinari.', outlook: 'Persistente — il costo personale è rigido' },
+  { uo: 'COS', alert: 'VERDE', testo: 'Best performer tra le strutture con degenza. MOL-I 23% e MOL-G 8,8% sopra soglia. Mix ricavi diversificato (degenza 76%, ambulatoriale 10%, privati 13%). Ricavo/giornata €242 il più alto. Azione: mantenere il mix e incrementare ambulatoriale.', outlook: 'Favorevole — sostenibile nel medio termine' },
+  { uo: 'LAB', alert: 'VERDE', testo: 'Top performer assoluto con MOL-G 23,9%. Struttura asset-light senza degenza, personale solo 30,2%. Margine industriale 38,5% ben sopra benchmark laboratorio (25-30%). Potenziale per crescita volumi senza aumento proporzionale costi.', outlook: 'Molto favorevole — leva operativa positiva' },
+  { uo: 'KCP', alert: 'ROSSO', testo: 'MOL-G -€61k (-8,7%). Struttura piccola (20 PL) con diseconomie di scala: sede allocata €158k pesa 22,6% sui ricavi. Personale 55,9% al limite. Margine industriale 13,8% insufficiente a coprire la sede. Azione: valutare accorpamento servizi con VLB o ridimensionamento costi sede.', outlook: 'Strutturale — dimensione critica' },
+  { uo: 'GRUPPO', alert: 'ROSSO', testo: 'MOL-G consolidato 5,0% sotto soglia target 8%. Waterfall: €9,85M ricavi → €2,08M MOL-I (21,2%) → -€1,59M sede → €493k MOL-G. I costi sede pesano 16,2% (€2,28M totali incl. non allocabili). COS e LAB generano margine, VLB/CTA/KCP lo erodono. Il CF netto è negativo (-€600k) per effetto del servizio debito (€520k) e CAPEX (€280k).', outlook: 'Critico — necessario piano di efficientamento sede e rinegoziazione debito' },
+];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPONENTE PRINCIPALE
+// ═══════════════════════════════════════════════════════════════════════════════
+const KarolCdG = () => {
+  const [tab, setTab] = useState('overview');
+  const [selUO, setSelUO] = useState(null);
+  const mesi = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+
+  const nRosso = KPI.filter(k => k.a === 'ROSSO').length;
+  const nGiallo = KPI.filter(k => k.a === 'GIALLO').length;
+  const nVerde = KPI.filter(k => k.a === 'VERDE').length;
+
+  // E2: Completezza dati
+  const uoReali = UO.filter(u => u.datiReali).length;
+  const completezza = Math.round((uoReali / UO.length) * 100);
+  const ultimoAgg = '13/02/2026 08:45';
+
+  // E1: Badge component
+  const BadgeQualita = ({ u }) => {
+    if (u.datiReali) return <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, background: C.verdeBg, color: C.verde, marginLeft: 6, fontWeight: 600 }}>Consuntivo</span>;
+    return <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, background: '#fff7ed', color: '#c2410c', marginLeft: 6, fontWeight: 600 }}>Dati simulati</span>;
+  };
+
+  // Trend mensile aggregato
+  const trend = mesi.map((m, i) => ({
+    mese: m,
+    Ricavi: UO.reduce((s, u) => s + u.rM[i], 0),
+    Costi: UO.reduce((s, u) => s + u.cM[i], 0),
+    MOL: UO.reduce((s, u) => s + u.rM[i] - u.cM[i], 0),
+  }));
+
+  // Scostamento orizzontale (B1)
+  const scostamento = [...UO].map(u => ({
+    nome: u.cod,
+    scost: u.molG,
+    fill: u.molG >= 0 ? C.verde : C.rosso,
+  })).sort((a, b) => a.scost - b.scost);
+
+  // Card style
+  const card = "bg-white rounded-xl shadow-sm border border-gray-100 p-5";
+  const cardSm = "bg-white rounded-xl shadow-sm border border-gray-100 p-4";
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TAB BUTTONS
+  // ═══════════════════════════════════════════════════════════════════════════
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: '📊' },
+    { id: 'ce', label: 'CE Industriale', icon: '📋' },
+    { id: 'cashflow', label: 'Cash Flow', icon: '💰' },
+    { id: 'kpi', label: 'KPI Semafori', icon: '🚦' },
+    { id: 'trend', label: 'Trend', icon: '📈' },
+    { id: 'analisi', label: 'Analisi Scostamenti', icon: '🔍' },
+  ];
+
+  return (
+    <div style={{ background: C.sfondo, minHeight: '100vh' }}>
+      {/* ═══════ HEADER ═══════ */}
+      <div style={{ background: `linear-gradient(135deg, ${C.primario} 0%, ${C.primarioScuro} 100%)`, color: '#fff', padding: '16px 24px' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: '-.5px' }}>KAROL — Controllo di Gestione</h1>
+            <p style={{ fontSize: 12, opacity: .7, margin: '2px 0 0' }}>Gruppo Karol S.p.A. — Sicilia | 5 Unità Operative</p>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>Anno 2025 — 12 Mesi</div>
+            <div style={{ fontSize: 11, opacity: .6, marginBottom: 4 }}>Ultimo aggiornamento: {ultimoAgg}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
+              <span style={{ fontSize: 10, opacity: .7 }}>Completezza dati:</span>
+              <div style={{ width: 80, height: 6, borderRadius: 3, background: 'rgba(255,255,255,.2)', overflow: 'hidden' }}>
+                <div style={{ width: `${completezza}%`, height: '100%', borderRadius: 3, background: completezza >= 80 ? '#86efac' : completezza >= 40 ? '#fde68a' : '#fca5a5', transition: 'width .3s' }}></div>
+              </div>
+              <span style={{ fontSize: 10, fontWeight: 600 }}>{completezza}% ({uoReali}/{UO.length} UO reali)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ═══════ NAV TABS ═══════ */}
+      <div style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, zIndex: 40 }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', gap: 0, overflowX: 'auto' }}>
+          {tabs.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              style={{
+                padding: '10px 18px', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: tab === t.id ? 700 : 500,
+                color: tab === t.id ? C.primario : C.t2, background: 'transparent',
+                borderBottom: tab === t.id ? `3px solid ${C.primario}` : '3px solid transparent',
+                transition: 'all .2s', whiteSpace: 'nowrap',
+              }}>
+              <span style={{ marginRight: 6 }}>{t.icon}</span>{t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '20px 16px' }}>
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* OVERVIEW */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {tab === 'overview' && (<>
+          {/* KPI Cards — 7 metriche */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
+            {[
+              { lab: 'Ricavi Totali', val: fmtM(TOT.ric), col: C.primario },
+              { lab: 'MOL Industriale', val: fmtM(TOT.molI), sub: fmtPct(TOT.molIPct), col: C.verde },
+              { lab: 'Costi Sede', val: fmtM(TOT.sede), sub: '16,2% ricavi', col: C.viola },
+              { lab: 'MOL Gestionale', val: fmtM(TOT.molG), sub: fmtPct(TOT.molGPct), col: TOT.molG >= 0 ? C.verde : C.rosso },
+              { lab: 'DSO ASP', val: '135 gg', sub: 'Target <120', col: C.giallo },
+              { lab: 'Copertura Cassa', val: '1,8 mesi', sub: 'Target >2,0', col: C.giallo },
+              { lab: 'Alert Attivi', val: `${nRosso+nGiallo}`, sub: `${nRosso}🔴 ${nGiallo}🟡 ${nVerde}🟢`, col: C.rosso },
+            ].map((k, i) => (
+              <div key={i} className={cardSm} style={{ borderLeft: `4px solid ${k.col}` }}>
+                <p style={{ fontSize: 11, color: C.t3, margin: '0 0 4px' }}>{k.lab}</p>
+                <p style={{ fontSize: 20, fontWeight: 700, color: k.col, margin: 0 }}>{k.val}</p>
+                {k.sub && <p style={{ fontSize: 11, color: C.t3, margin: '2px 0 0' }}>{k.sub}</p>}
+              </div>
+            ))}
+          </div>
+
+          {/* B4: Occupancy Gauge per UO */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 20 }}>
+            {UO.filter(u => u.occ !== null).map((u, i) => {
+              const pct = u.occ * 100;
+              const target = 90;
+              const col = pct >= target ? C.verde : pct >= 80 ? C.giallo : C.rosso;
+              const bg = pct >= target ? C.verdeBg : pct >= 80 ? C.gialloBg : C.rossoBg;
+              const circumference = 2 * Math.PI * 40;
+              const strokeDash = (pct / 100) * circumference;
+              return (
+                <div key={i} className={cardSm} style={{ textAlign: 'center', padding: '12px 8px' }}>
+                  <p style={{ fontSize: 11, color: C.t2, margin: '0 0 8px', fontWeight: 600 }}>
+                    <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: u.colore, marginRight: 4 }}></span>
+                    {u.cod} — Occupancy
+                  </p>
+                  <svg width="100" height="60" viewBox="0 0 100 60" style={{ margin: '0 auto', display: 'block' }}>
+                    {/* Background arc */}
+                    <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke="#e2e8f0" strokeWidth="8" strokeLinecap="round" />
+                    {/* Value arc */}
+                    <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke={col} strokeWidth="8" strokeLinecap="round"
+                      strokeDasharray={`${(pct / 100) * 126} 126`} />
+                    {/* Target mark */}
+                    <line x1={50 + 40 * Math.cos(Math.PI * (1 - target/100))} y1={55 - 40 * Math.sin(Math.PI * (1 - target/100))}
+                      x2={50 + 34 * Math.cos(Math.PI * (1 - target/100))} y2={55 - 34 * Math.sin(Math.PI * (1 - target/100))}
+                      stroke={C.t3} strokeWidth="2" />
+                    <text x="50" y="50" textAnchor="middle" fontSize="16" fontWeight="700" fill={col}>{pct.toFixed(0)}%</text>
+                  </svg>
+                  <p style={{ fontSize: 10, color: C.t3, margin: '4px 0 0' }}>{u.pl} PL | Target {target}%</p>
+                </div>
+              );
+            })}
+            {/* Media gruppo */}
+            {(() => {
+              const uoOcc = UO.filter(u => u.occ !== null);
+              const avg = (uoOcc.reduce((s, u) => s + u.occ, 0) / uoOcc.length * 100);
+              const col = avg >= 90 ? C.verde : avg >= 80 ? C.giallo : C.rosso;
+              return (
+                <div className={cardSm} style={{ textAlign: 'center', padding: '12px 8px', background: '#f8fafc', borderLeft: `4px solid ${C.primario}` }}>
+                  <p style={{ fontSize: 11, color: C.primario, margin: '0 0 8px', fontWeight: 700 }}>MEDIA GRUPPO</p>
+                  <svg width="100" height="60" viewBox="0 0 100 60" style={{ margin: '0 auto', display: 'block' }}>
+                    <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke="#e2e8f0" strokeWidth="8" strokeLinecap="round" />
+                    <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke={col} strokeWidth="8" strokeLinecap="round"
+                      strokeDasharray={`${(avg / 100) * 126} 126`} />
+                    <text x="50" y="50" textAnchor="middle" fontSize="16" fontWeight="700" fill={col}>{avg.toFixed(1)}%</text>
+                  </svg>
+                  <p style={{ fontSize: 10, color: C.t3, margin: '4px 0 0' }}>{UO.filter(u => u.pl > 0).reduce((s, u) => s + u.pl, 0)} PL totali</p>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Row: Scostamento orizzontale + Tabella semaforo */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+            {/* B1: Bar orizzontale scostamento MOL-G */}
+            <div className={card}>
+              <h3 style={{ fontSize: 14, fontWeight: 600, color: C.primario, margin: '0 0 12px' }}>Scostamento MOL-G per UO</h3>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={scostamento} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" tickFormatter={v => fmtK(v)} fontSize={10} />
+                  <YAxis type="category" dataKey="nome" fontSize={12} width={40} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <ReferenceLine x={0} stroke={C.soglia} strokeWidth={2} />
+                  <Bar dataKey="scost" name="MOL-G" radius={[0, 4, 4, 0]}>
+                    {scostamento.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              <p style={{ fontSize: 11, color: C.t3, textAlign: 'center', margin: '4px 0 0' }}>
+                MOL-G Gruppo: <strong style={{ color: TOT.molG >= 0 ? C.verde : C.rosso }}>{fmt(TOT.molG)}</strong>
+              </p>
+            </div>
+
+            {/* B2: Tabella semaforo KPI */}
+            <div className={card}>
+              <h3 style={{ fontSize: 14, fontWeight: 600, color: C.primario, margin: '0 0 12px' }}>Matrice KPI per UO</h3>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ background: C.primario, color: '#fff' }}>
+                      <th style={{ padding: '6px 8px', textAlign: 'left' }}>UO</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'center' }}>MOL-I %</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'center' }}>MOL-G %</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'center' }}>Pers. %</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'center' }}>Occ. %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {UO.map((u, i) => {
+                      const kpis = KPI.filter(k => k.uo === u.cod);
+                      const cell = (kpiName) => {
+                        const k = kpis.find(x => x.kpi.startsWith(kpiName));
+                        if (!k) return <td style={{ padding: '6px 8px', textAlign: 'center', background: '#f1f5f9', color: C.t3 }}>n/d</td>;
+                        const s = alertStyle(k.a);
+                        return <td style={{ padding: '6px 8px', textAlign: 'center', background: s.bg, color: s.color, fontWeight: 600, fontFamily: 'monospace' }}>{fmtPct(k.v)}</td>;
+                      };
+                      return (
+                        <tr key={i} style={{ borderBottom: '1px solid #e2e8f0', cursor: 'pointer' }} onClick={() => setSelUO(u)}>
+                          <td style={{ padding: '6px 8px', fontWeight: 600 }}>
+                            <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: u.colore, marginRight: 6 }}></span>
+                            {u.cod}<BadgeQualita u={u} />
+                          </td>
+                          {cell('MOL % Ind')}{cell('MOL % Gest')}{cell('Pers')}{cell('Occupancy')}
+                        </tr>
+                      );
+                    })}
+                    {/* Gruppo */}
+                    <tr style={{ background: C.primario, color: '#fff', fontWeight: 700 }}>
+                      <td style={{ padding: '6px 8px' }}>GRUPPO</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'center' }}>{fmtPct(TOT.molIPct)}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'center', color: '#fca5a5' }}>{fmtPct(TOT.molGPct)}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'center' }}>{fmtPct(TOT.persPct)}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'center' }}>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p style={{ fontSize: 11, color: C.t3, margin: '8px 0 0' }}>Clicca su una riga per il dettaglio</p>
+            </div>
+          </div>
+
+          {/* Row: CE bar + Margini */}
+          <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 16, marginBottom: 20 }}>
+            <div className={card}>
+              <h3 style={{ fontSize: 14, fontWeight: 600, color: C.primario, margin: '0 0 12px' }}>CE Industriale per UO</h3>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={UO.map(u => ({ nome: u.cod, Ricavi: u.ricavi, 'Costi Diretti': u.costiDir, 'MOL-I': u.molI }))} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="nome" fontSize={12} />
+                  <YAxis tickFormatter={v => fmtK(v)} fontSize={10} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Bar dataKey="Ricavi" fill={C.primario} radius={[2,2,0,0]} />
+                  <Bar dataKey="Costi Diretti" fill={C.rossoChiaro} radius={[2,2,0,0]} />
+                  <Bar dataKey="MOL-I" fill={C.verdeChiaro} radius={[2,2,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className={card}>
+              <h3 style={{ fontSize: 14, fontWeight: 600, color: C.primario, margin: '0 0 12px' }}>Margini % per UO</h3>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={UO.map(u => ({ nome: u.cod, 'MOL-I %': +(u.molIPct*100).toFixed(1), 'MOL-G %': +(u.molGPct*100).toFixed(1) }))} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="nome" fontSize={12} />
+                  <YAxis unit="%" fontSize={10} />
+                  <Tooltip formatter={v => `${v}%`} />
+                  <Legend />
+                  <ReferenceLine y={0} stroke={C.soglia} />
+                  <ReferenceLine y={8} stroke={C.giallo} strokeDasharray="5 5" label={{ value: 'Target 8%', fontSize: 9, fill: C.giallo }} />
+                  <Bar dataKey="MOL-I %" fill={C.verdeChiaro} radius={[2,2,0,0]} />
+                  <Bar dataKey="MOL-G %" fill={C.primarioChiaro} radius={[2,2,0,0]}>
+                    {UO.map((u, i) => <Cell key={i} fill={u.molGPct >= 0 ? C.primarioChiaro : C.rossoChiaro} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Costi Sede pie + quick narrative */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16 }}>
+            <div className={card}>
+              <h3 style={{ fontSize: 14, fontWeight: 600, color: C.primario, margin: '0 0 12px' }}>Composizione Costi Sede</h3>
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie data={[
+                    { nome: 'Servizi UO', val: 1207000 },
+                    { nome: 'Governance', val: 665000 },
+                    { nome: 'Sviluppo', val: 270000 },
+                    { nome: 'Storico', val: 133000 },
+                  ]} cx="50%" cy="50%" outerRadius={70} innerRadius={35} dataKey="val"
+                    label={({ nome, val }) => `${nome}`} labelLine={false}>
+                    <Cell fill={C.primarioChiaro} /><Cell fill={C.viola} /><Cell fill={C.gialloChiaro} /><Cell fill={C.soglia} />
+                  </Pie>
+                  <Tooltip formatter={v => fmt(v)} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div style={{ textAlign: 'center', fontSize: 11, color: C.t3 }}>
+                Totale €2,28M | Allocati €1,59M | Non alloc. €403k
+              </div>
+            </div>
+
+            <div className={card}>
+              <h3 style={{ fontSize: 14, fontWeight: 600, color: C.primario, margin: '0 0 12px' }}>Sintesi Direzionale</h3>
+              {narrative.filter(n => n.uo === 'GRUPPO').map((n, i) => (
+                <div key={i} style={{ padding: '10px 12px', background: alertStyle(n.alert).bg, borderRadius: 8, borderLeft: `4px solid ${alertStyle(n.alert).color}`, marginBottom: 8 }}>
+                  <p style={{ fontSize: 12, color: C.t1, margin: 0, lineHeight: 1.5 }}>{n.testo}</p>
+                  <p style={{ fontSize: 11, color: C.t2, margin: '6px 0 0', fontStyle: 'italic' }}>Outlook: {n.outlook}</p>
+                </div>
+              ))}
+              <div style={{ marginTop: 8 }}>
+                {narrative.filter(n => n.uo !== 'GRUPPO').slice(0, 2).map((n, i) => (
+                  <div key={i} style={{ padding: '6px 10px', background: alertStyle(n.alert).bg, borderRadius: 6, marginBottom: 6, borderLeft: `3px solid ${alertStyle(n.alert).color}` }}>
+                    <p style={{ fontSize: 11, color: C.t1, margin: 0 }}><strong>{n.uo}:</strong> {n.testo.substring(0, 120)}...</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>)}
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* CE INDUSTRIALE */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {tab === 'ce' && (
+          <div className={card}>
+            <h3 style={{ fontSize: 14, fontWeight: 600, color: C.primario, margin: '0 0 16px' }}>Conto Economico Industriale e Gestionale — Anno 2025</h3>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, fontFamily: 'monospace' }}>
+                <thead>
+                  <tr style={{ background: C.primario, color: '#fff' }}>
+                    <th style={{ padding: '8px 10px', textAlign: 'left', minWidth: 200 }}>Voce</th>
+                    {UO.map(u => <th key={u.cod} style={{ padding: '8px', textAlign: 'right', minWidth: 85 }}>{u.cod}</th>)}
+                    <th style={{ padding: '8px 10px', textAlign: 'right', minWidth: 95, fontWeight: 800 }}>TOTALE</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Ricavi */}
+                  <tr style={{ background: '#eff6ff' }}><td colSpan={7} style={{ padding: '6px 10px', fontWeight: 700, color: C.primario }}>RICAVI</td></tr>
+                  {[
+                    ['R01','Conv. SSN/ASP Degenza',[1845916,1811515,2901765,0,582468]],
+                    ['R02','Conv. SSN/ASP Ambulat.',[0,0,366230,0,0]],
+                    ['R03','Conv. SSN/ASP Lab',[0,0,0,1140319,0]],
+                    ['R04','Privati Degenza',[91939,54502,232898,0,87988]],
+                    ['R05','Privati Comfort',[35551,0,88105,0,0]],
+                    ['R06','Privati Ambulat./Lab',[0,0,180302,291900,0]],
+                    ['R07','Altri ricavi',[30638,29630,29879,17934,29804]],
+                  ].map(([cod, voce, vals]) => (
+                    <tr key={cod} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '4px 10px', color: C.t2 }}>{cod} — {voce}</td>
+                      {vals.map((v, i) => <td key={i} style={{ padding: '4px 8px', textAlign: 'right' }}>{v > 0 ? fmtK(v) : '—'}</td>)}
+                      <td style={{ padding: '4px 10px', textAlign: 'right', fontWeight: 600 }}>{fmtK(vals.reduce((a,b) => a+b, 0))}</td>
+                    </tr>
+                  ))}
+                  <tr style={{ background: '#dbeafe', fontWeight: 700, borderBottom: '2px solid #93c5fd' }}>
+                    <td style={{ padding: '6px 10px' }}>TOTALE RICAVI</td>
+                    {UO.map(u => <td key={u.cod} style={{ padding: '6px 8px', textAlign: 'right' }}>{fmtK(u.ricavi)}</td>)}
+                    <td style={{ padding: '6px 10px', textAlign: 'right' }}>{fmtK(TOT.ric)}</td>
+                  </tr>
+                  {/* Costi */}
+                  <tr style={{ background: '#fef2f2' }}><td colSpan={7} style={{ padding: '6px 10px', fontWeight: 700, color: C.rosso }}>COSTI DIRETTI</td></tr>
+                  {[
+                    ['Personale', UO.map(u => u.pers)],
+                    ['Farmaci e presidi', UO.map(u => u.detC.farmaci||0)],
+                    ['Mat. diagnostico', UO.map(u => u.detC.diagn||0)],
+                    ['Vitto', UO.map(u => u.detC.vitto||0)],
+                    ['Servizi (lav+pul+man+ut)', UO.map(u => u.detC.servizi||0)],
+                    ['Consulenze', UO.map(u => u.detC.cons||0)],
+                    ['Ammortamenti', UO.map(u => u.detC.ammort||0)],
+                  ].map(([voce, vals], idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '4px 10px', color: C.t2 }}>{voce}</td>
+                      {vals.map((v, i) => <td key={i} style={{ padding: '4px 8px', textAlign: 'right', color: C.rosso }}>{v > 0 ? fmtK(v) : '—'}</td>)}
+                      <td style={{ padding: '4px 10px', textAlign: 'right', fontWeight: 600, color: C.rosso }}>{fmtK(vals.reduce((a,b) => a+b, 0))}</td>
+                    </tr>
+                  ))}
+                  <tr style={{ background: '#fecaca', fontWeight: 700, borderBottom: '2px solid #f87171' }}>
+                    <td style={{ padding: '6px 10px' }}>TOTALE COSTI DIRETTI</td>
+                    {UO.map(u => <td key={u.cod} style={{ padding: '6px 8px', textAlign: 'right', color: C.rosso }}>{fmtK(u.costiDir)}</td>)}
+                    <td style={{ padding: '6px 10px', textAlign: 'right', color: C.rosso }}>{fmtK(TOT.cDir)}</td>
+                  </tr>
+                  {/* MOL-I */}
+                  <tr style={{ background: C.verdeBg, fontWeight: 700, fontSize: 13 }}>
+                    <td style={{ padding: '8px 10px', color: C.verde }}>MOL INDUSTRIALE</td>
+                    {UO.map(u => <td key={u.cod} style={{ padding: '8px', textAlign: 'right', color: u.molI >= 0 ? C.verde : C.rosso }}>{fmtK(u.molI)}</td>)}
+                    <td style={{ padding: '8px 10px', textAlign: 'right', color: C.verde }}>{fmtK(TOT.molI)}</td>
+                  </tr>
+                  <tr style={{ background: '#f0fdf4' }}>
+                    <td style={{ padding: '4px 10px', color: C.t3 }}>Margine %</td>
+                    {UO.map(u => <td key={u.cod} style={{ padding: '4px 8px', textAlign: 'right', color: C.verde, fontWeight: 600 }}>{fmtPct(u.molIPct)}</td>)}
+                    <td style={{ padding: '4px 10px', textAlign: 'right', color: C.verde, fontWeight: 700 }}>{fmtPct(TOT.molIPct)}</td>
+                  </tr>
+                  {/* Sede */}
+                  <tr style={{ background: C.violaBg }}><td colSpan={7} style={{ padding: '6px 10px', fontWeight: 700, color: C.viola }}>COSTI SEDE ALLOCATI</td></tr>
+                  <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                    <td style={{ padding: '4px 10px', color: C.t2 }}>Allocazione sede</td>
+                    {UO.map(u => <td key={u.cod} style={{ padding: '4px 8px', textAlign: 'right', color: C.viola }}>{fmtK(u.sede)}</td>)}
+                    <td style={{ padding: '4px 10px', textAlign: 'right', fontWeight: 600, color: C.viola }}>{fmtK(TOT.sede)}</td>
+                  </tr>
+                  {/* MOL-G */}
+                  <tr style={{ background: C.primario, color: '#fff', fontWeight: 700, fontSize: 13 }}>
+                    <td style={{ padding: '8px 10px' }}>MOL GESTIONALE</td>
+                    {UO.map(u => <td key={u.cod} style={{ padding: '8px', textAlign: 'right', color: u.molG >= 0 ? '#86efac' : '#fca5a5' }}>{fmtK(u.molG)}</td>)}
+                    <td style={{ padding: '8px 10px', textAlign: 'right', color: TOT.molG >= 0 ? '#86efac' : '#fca5a5' }}>{fmtK(TOT.molG)}</td>
+                  </tr>
+                  <tr style={{ background: C.primarioScuro, color: '#fff' }}>
+                    <td style={{ padding: '4px 10px', opacity: .7 }}>Margine %</td>
+                    {UO.map(u => <td key={u.cod} style={{ padding: '4px 8px', textAlign: 'right', color: u.molGPct >= 0 ? '#86efac' : '#fca5a5' }}>{fmtPct(u.molGPct)}</td>)}
+                    <td style={{ padding: '4px 10px', textAlign: 'right', fontWeight: 700, color: TOT.molGPct >= 0 ? '#86efac' : '#fca5a5' }}>{fmtPct(TOT.molGPct)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* CASH FLOW — C1-C4 */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {tab === 'cashflow' && (<>
+          {/* C4: KPI Cards Cash Flow */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+            {cfKPI.map((k, i) => {
+              const s = alertStyle(k.alert);
+              return (
+                <div key={i} className={cardSm} style={{ borderLeft: `4px solid ${s.color}` }}>
+                  <p style={{ fontSize: 11, color: C.t3, margin: '0 0 4px' }}>{k.nome}</p>
+                  <p style={{ fontSize: 22, fontWeight: 700, color: s.color, margin: 0 }}>{k.val}</p>
+                  <p style={{ fontSize: 10, color: C.t3, margin: '2px 0 0' }}>Target: {k.tgt} {s.icon}</p>
+                  <p style={{ fontSize: 10, color: C.t3, margin: '2px 0 0' }}>{k.desc}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* C1: Waterfall Chart */}
+          <div className={card} style={{ marginBottom: 20 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 600, color: C.primario, margin: '0 0 4px' }}>Waterfall — Da Ricavi a Cash Flow Netto</h3>
+            <p style={{ fontSize: 11, color: C.t3, margin: '0 0 12px' }}>Decomposizione dei driver di valore (metodologia Finance Variance Analysis)</p>
+            <ResponsiveContainer width="100%" height={360}>
+              <BarChart data={waterfall} margin={{ top: 20, right: 20, left: 20, bottom: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="voce" fontSize={10} angle={-35} textAnchor="end" height={70} />
+                <YAxis tickFormatter={v => fmtK(v)} fontSize={10} />
+                <Tooltip content={({ active, payload, label }) => {
+                  if (!active || !payload || !payload[1]) return null;
+                  const d = waterfallRaw.find(w => w.voce === label);
+                  return (
+                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,.1)' }}>
+                      <p style={{ fontWeight: 600, fontSize: 12, margin: '0 0 4px' }}>{label}</p>
+                      <p style={{ fontSize: 12, color: d.val >= 0 ? C.verde : C.rosso, margin: 0 }}>{fmt(d.val)}</p>
+                      <p style={{ fontSize: 10, color: C.t3, margin: '2px 0 0' }}>{d.tipo === 'uscita' ? `${((d.val/TOT.ric)*100).toFixed(1)}% dei ricavi` : ''}</p>
+                    </div>
+                  );
+                }} />
+                <Bar dataKey="base" stackId="a" fill="transparent" />
+                <Bar dataKey="bar" stackId="a" radius={[3,3,0,0]}>
+                  {waterfall.map((w, i) => {
+                    const raw = waterfallRaw[i];
+                    let fill = C.uscita;
+                    if (raw.tipo === 'entrata') fill = C.entrata;
+                    if (raw.tipo === 'subtotale') fill = C.subtotale;
+                    if (raw.tipo === 'finale') fill = raw.val >= 0 ? C.verde : C.rosso;
+                    return <Cell key={i} fill={fill} />;
+                  })}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            <div style={{ textAlign: 'center', marginTop: 8 }}>
+              <span style={{ fontSize: 12, padding: '4px 12px', borderRadius: 20, background: waterfallRaw[waterfallRaw.length-1].val >= 0 ? C.verdeBg : C.rossoBg, color: waterfallRaw[waterfallRaw.length-1].val >= 0 ? C.verde : C.rosso, fontWeight: 700 }}>
+                Cash Flow Netto: {fmt(waterfallRaw[waterfallRaw.length-1].val)}
+              </span>
+            </div>
+          </div>
+
+          {/* Row: Cassa settimanale + Scenari */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            {/* C2: Saldo cassa settimanale */}
+            <div className={card}>
+              <h3 style={{ fontSize: 14, fontWeight: 600, color: C.primario, margin: '0 0 4px' }}>Proiezione Cassa — 12 Settimane</h3>
+              <p style={{ fontSize: 11, color: C.t3, margin: '0 0 12px' }}>Soglia minima €200k (linea tratteggiata)</p>
+              <ResponsiveContainer width="100%" height={260}>
+                <ComposedChart data={cassaSett} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="s" fontSize={10} />
+                  <YAxis tickFormatter={v => fmtK(v)} fontSize={10} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area type="monotone" dataKey="saldo" name="Saldo" fill={C.primarioChiaro} fillOpacity={0.15} stroke={C.primario} strokeWidth={2.5} dot={(props) => {
+                    const { cx, cy, payload } = props;
+                    if (payload.saldo < 200000) return <circle cx={cx} cy={cy} r={5} fill={C.rosso} stroke="#fff" strokeWidth={2} />;
+                    return <circle cx={cx} cy={cy} r={3} fill={C.primario} />;
+                  }} />
+                  <ReferenceLine y={200000} stroke={C.rosso} strokeDasharray="8 4" strokeWidth={1.5} label={{ value: 'Soglia €200k', fontSize: 10, fill: C.rosso, position: 'right' }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+              <div style={{ background: C.rossoBg, borderRadius: 6, padding: '6px 10px', marginTop: 8, fontSize: 11, color: C.rosso }}>
+                ⚠️ S10: saldo €180k sotto soglia minima — possibile tensione di cassa per ritardo incassi ASP
+              </div>
+            </div>
+
+            {/* C3: Scenario Analysis */}
+            <div className={card}>
+              <h3 style={{ fontSize: 14, fontWeight: 600, color: C.primario, margin: '0 0 4px' }}>Scenario Analysis — Cash Flow Cumulato 5 Anni</h3>
+              <p style={{ fontSize: 11, color: C.t3, margin: '0 0 12px' }}>Ottimistico / Base / Pessimistico</p>
+              <ResponsiveContainer width="100%" height={260}>
+                <ComposedChart data={scenari} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="anno" fontSize={11} />
+                  <YAxis tickFormatter={v => fmtK(v)} fontSize={10} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <ReferenceLine y={0} stroke={C.soglia} strokeWidth={2} />
+                  <Area type="monotone" dataKey="ott" name="Ottimistico" fill={C.verde} fillOpacity={0.08} stroke={C.verde} strokeWidth={1.5} />
+                  <Line type="monotone" dataKey="base" name="Base" stroke={C.primario} strokeWidth={3} dot={{ r: 4, fill: C.primario }} />
+                  <Area type="monotone" dataKey="pess" name="Pessimistico" fill={C.rosso} fillOpacity={0.08} stroke={C.rosso} strokeWidth={1.5} />
+                </ComposedChart>
+              </ResponsiveContainer>
+              <div style={{ background: C.gialloBg, borderRadius: 6, padding: '6px 10px', marginTop: 8, fontSize: 11, color: C.giallo }}>
+                Scenario pessimistico: CF negativo dal 2027 — necessaria rinegoziazione debito o riduzione CAPEX
+              </div>
+            </div>
+          </div>
+        </>)}
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* KPI SEMAFORI */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {tab === 'kpi' && (<>
+          {['VLB','CTA','COS','LAB','KCP'].map(cod => {
+            const u = UO.find(x => x.cod === cod);
+            const kpis = KPI.filter(k => k.uo === cod);
+            return (
+              <div key={cod} className={card} style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
+                  <span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', background: u.colore, marginRight: 8 }}></span>
+                  <h3 style={{ fontSize: 14, fontWeight: 600, color: C.t1, margin: 0 }}>{u.cod} — {u.nome}</h3>
+                  <span style={{ marginLeft: 8, fontSize: 11, color: C.t3 }}>({u.tipo}{u.pl > 0 ? `, ${u.pl} PL` : ''})</span>
+                  <BadgeQualita u={u} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+                  {kpis.map((k, i) => {
+                    const s = alertStyle(k.a);
+                    return (
+                      <div key={i} style={{ padding: '10px 12px', borderRadius: 8, background: s.bg, borderLeft: `4px solid ${s.color}` }}>
+                        <p style={{ fontSize: 11, color: C.t2, margin: '0 0 4px' }}>{k.kpi}</p>
+                        <p style={{ fontSize: 20, fontWeight: 700, color: s.color, margin: 0 }}>{fmtPct(k.v)}</p>
+                        <p style={{ fontSize: 10, color: C.t3, margin: '4px 0 0' }}>Target: {fmtPct(k.tgt)} — {s.icon} {k.a}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          {/* Gruppo */}
+          <div className={card} style={{ background: C.primario, color: '#fff' }}>
+            <h3 style={{ fontSize: 14, fontWeight: 600, margin: '0 0 10px' }}>GRUPPO KAROL — KPI Consolidati</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+              {KPI.filter(k => k.uo === 'GRUPPO').map((k, i) => {
+                const s = alertStyle(k.a);
+                return (
+                  <div key={i} style={{ padding: '12px', borderRadius: 8, background: 'rgba(255,255,255,.15)', borderLeft: `4px solid ${s.color}` }}>
+                    <p style={{ fontSize: 11, opacity: .7, margin: '0 0 4px' }}>{k.kpi}</p>
+                    <p style={{ fontSize: 24, fontWeight: 700, color: s.color === C.verde ? '#86efac' : s.color === C.rosso ? '#fca5a5' : '#fde68a', margin: 0 }}>{fmtPct(k.v)}</p>
+                    <p style={{ fontSize: 10, opacity: .6, margin: '4px 0 0' }}>Target: {fmtPct(k.tgt)} {s.icon}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>)}
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* TREND MENSILE */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {tab === 'trend' && (<>
+          {/* B3: Multi-UO Overlay */}
+          <div className={card} style={{ marginBottom: 20 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 600, color: C.primario, margin: '0 0 4px' }}>Trend Ricavi per UO — Confronto 12 Mesi</h3>
+            <p style={{ fontSize: 11, color: C.t3, margin: '0 0 12px' }}>Clicca sulla legenda per mostrare/nascondere le singole UO</p>
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart data={mesi.map((m, i) => {
+                const d = { mese: m };
+                UO.forEach(u => { d[u.cod] = u.rM[i]; });
+                return d;
+              })} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="mese" fontSize={11} />
+                <YAxis tickFormatter={v => fmtK(v)} fontSize={10} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend onClick={(e) => {}} wrapperStyle={{ cursor: 'pointer' }} />
+                {UO.map(u => (
+                  <Line key={u.cod} type="monotone" dataKey={u.cod} stroke={u.colore} strokeWidth={2} dot={{ r: 2.5, fill: u.colore }} activeDot={{ r: 5 }} />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className={card} style={{ marginBottom: 20 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 600, color: C.primario, margin: '0 0 12px' }}>Trend Ricavi vs Costi — Gruppo (12 Mesi)</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={trend} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="mese" fontSize={11} />
+                <YAxis tickFormatter={v => fmtK(v)} fontSize={10} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                <Area type="monotone" dataKey="MOL" name="MOL-I" fill={C.verdeBg} stroke={C.verde} strokeWidth={1} fillOpacity={0.5} />
+                <Line type="monotone" dataKey="Ricavi" stroke={C.primario} strokeWidth={2.5} dot={false} />
+                <Line type="monotone" dataKey="Costi" stroke={C.rossoChiaro} strokeWidth={2} dot={false} strokeDasharray="5 3" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 16 }}>
+            {UO.map(u => {
+              const data = mesi.map((m, i) => ({ mese: m, Ricavi: u.rM[i], Costi: u.cM[i] }));
+              return (
+                <div key={u.cod} className={cardSm}>
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: u.colore, display: 'inline-block', marginRight: 6 }}></span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: C.t1 }}>{u.cod}</span>
+                    <span style={{ fontSize: 11, color: C.t3, marginLeft: 6 }}>{u.tipo}</span>
+                    <BadgeQualita u={u} />
+                    <span style={{ marginLeft: 'auto', fontSize: 11, padding: '2px 8px', borderRadius: 12, background: u.molGPct >= .08 ? C.verdeBg : u.molGPct >= 0 ? C.gialloBg : C.rossoBg, color: u.molGPct >= .08 ? C.verde : u.molGPct >= 0 ? C.giallo : C.rosso, fontWeight: 600 }}>
+                      MOL-G {fmtPct(u.molGPct)}
+                    </span>
+                  </div>
+                  <ResponsiveContainer width="100%" height={150}>
+                    <LineChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                      <XAxis dataKey="mese" fontSize={9} tick={{ fill: C.t3 }} />
+                      <YAxis tickFormatter={v => `${(v/1000).toFixed(0)}k`} fontSize={9} width={38} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Line type="monotone" dataKey="Ricavi" stroke={u.colore} strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="Costi" stroke={C.rossoChiaro} strokeWidth={1.5} dot={false} strokeDasharray="4 3" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              );
+            })}
+          </div>
+        </>)}
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* ANALISI SCOSTAMENTI — Finance Variance Analysis */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {tab === 'analisi' && (<>
+          <div className={card} style={{ marginBottom: 20 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 600, color: C.primario, margin: '0 0 4px' }}>Variance Analysis — Decomposizione Scostamenti</h3>
+            <p style={{ fontSize: 11, color: C.t3, margin: '0 0 16px' }}>Metodologia: driver decomposition con narrative per il management (Finance Skill)</p>
+
+            {narrative.map((n, i) => {
+              const u = UO.find(x => x.cod === n.uo);
+              const s = alertStyle(n.alert);
+              return (
+                <div key={i} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 10, background: s.bg, borderLeft: `5px solid ${s.color}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+                    {u && <span style={{ width: 10, height: 10, borderRadius: '50%', background: u.colore, display: 'inline-block', marginRight: 8 }}></span>}
+                    <span style={{ fontWeight: 700, fontSize: 14, color: C.t1 }}>{n.uo === 'GRUPPO' ? 'GRUPPO KAROL' : `${n.uo} — ${u?.nome}`}</span>
+                    <span style={{ marginLeft: 8, fontSize: 11, padding: '2px 8px', borderRadius: 12, background: s.color, color: '#fff' }}>{s.icon} {n.alert}</span>
+                    {u && <span style={{ marginLeft: 'auto', fontFamily: 'monospace', fontSize: 13, fontWeight: 600, color: (u?.molG ?? TOT.molG) >= 0 ? C.verde : C.rosso }}>
+                      MOL-G: {fmt(u?.molG ?? TOT.molG)}
+                    </span>}
+                    {!u && <span style={{ marginLeft: 'auto', fontFamily: 'monospace', fontSize: 13, fontWeight: 600, color: TOT.molG >= 0 ? C.verde : C.rosso }}>
+                      MOL-G: {fmt(TOT.molG)}
+                    </span>}
+                  </div>
+                  <p style={{ fontSize: 12, color: C.t1, margin: '0 0 6px', lineHeight: 1.6 }}>{n.testo}</p>
+                  <p style={{ fontSize: 11, color: C.t2, margin: 0, fontStyle: 'italic', borderTop: `1px solid ${s.color}33`, paddingTop: 6 }}>
+                    <strong>Outlook:</strong> {n.outlook}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Waterfall riepilogo */}
+          <div className={card}>
+            <h3 style={{ fontSize: 14, fontWeight: 600, color: C.primario, margin: '0 0 4px' }}>Bridge Reconciliation — Ricavi → CF Netto</h3>
+            <p style={{ fontSize: 11, color: C.t3, margin: '0 0 12px' }}>Waterfall text-based (5-8 driver max, aggregazione residuale)</p>
+            <div style={{ fontFamily: 'monospace', fontSize: 12, background: '#f8fafc', borderRadius: 8, padding: 16, border: '1px solid #e2e8f0' }}>
+              {waterfallRaw.map((w, i) => {
+                const pctRic = Math.abs(w.val / TOT.ric * 100).toFixed(1);
+                const bar = '█'.repeat(Math.min(30, Math.round(Math.abs(w.val) / TOT.ric * 60)));
+                return (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', borderBottom: (w.tipo === 'subtotale' || w.tipo === 'finale') ? `2px solid ${C.primario}33` : 'none' }}>
+                    <span style={{ width: 140, color: w.tipo === 'subtotale' || w.tipo === 'finale' ? C.primario : C.t2, fontWeight: (w.tipo === 'subtotale' || w.tipo === 'finale') ? 700 : 400 }}>
+                      {w.tipo === 'uscita' ? '  ├─ ' : ''}{w.voce}
+                    </span>
+                    <span style={{ color: w.val >= 0 ? C.verde : C.rosso, fontWeight: 600, width: 100, textAlign: 'right' }}>{fmt(w.val)}</span>
+                    <span style={{ color: C.t3, width: 60, textAlign: 'right' }}>{pctRic}%</span>
+                    <span style={{ color: w.val >= 0 ? C.verde : C.rosso, opacity: .4 }}>{bar}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>)}
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* MODAL DETTAGLIO UO */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {selUO && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }} onClick={() => setSelUO(null)}>
+            <div style={{ background: '#fff', borderRadius: 16, padding: 24, maxWidth: 720, width: '95%', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ width: 14, height: 14, borderRadius: '50%', background: selUO.colore, display: 'inline-block' }}></span>
+                  <h3 style={{ fontSize: 18, fontWeight: 700, color: C.t1, margin: 0 }}>{selUO.cod} — {selUO.nome}</h3>
+                </div>
+                <button onClick={() => setSelUO(null)} style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: C.t3 }}>×</button>
+              </div>
+
+              {/* Mini KPI */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
+                {[
+                  { lab: 'Ricavi', val: fmt(selUO.ricavi), col: C.primario },
+                  { lab: 'MOL-I', val: `${fmtK(selUO.molI)} (${fmtPct(selUO.molIPct)})`, col: C.verde },
+                  { lab: 'MOL-G', val: `${fmtK(selUO.molG)} (${fmtPct(selUO.molGPct)})`, col: selUO.molG >= 0 ? C.verde : C.rosso },
+                  { lab: 'Info', val: selUO.tipo, sub: selUO.pl > 0 ? `${selUO.pl} posti letto` : 'No degenza', col: C.t2 },
+                ].map((k, i) => (
+                  <div key={i} style={{ padding: 10, borderRadius: 8, background: '#f8fafc', textAlign: 'center' }}>
+                    <p style={{ fontSize: 10, color: C.t3, margin: '0 0 2px' }}>{k.lab}</p>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: k.col, margin: 0 }}>{k.val}</p>
+                    {k.sub && <p style={{ fontSize: 10, color: C.t3, margin: '2px 0 0' }}>{k.sub}</p>}
+                  </div>
+                ))}
+              </div>
+
+              {/* KPI semafori UO */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, marginBottom: 16 }}>
+                {KPI.filter(k => k.uo === selUO.cod).map((k, i) => {
+                  const s = alertStyle(k.a);
+                  return (
+                    <div key={i} style={{ padding: '8px 10px', borderRadius: 8, background: s.bg, borderLeft: `3px solid ${s.color}` }}>
+                      <p style={{ fontSize: 10, color: C.t2, margin: '0 0 2px' }}>{k.kpi}</p>
+                      <p style={{ fontSize: 16, fontWeight: 700, color: s.color, margin: 0 }}>{fmtPct(k.v)}</p>
+                      <p style={{ fontSize: 9, color: C.t3, margin: '2px 0 0' }}>vs {fmtPct(k.tgt)} {s.icon}</p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Narrative */}
+              {narrative.filter(n => n.uo === selUO.cod).map((n, i) => {
+                const s = alertStyle(n.alert);
+                return (
+                  <div key={i} style={{ padding: '10px 12px', borderRadius: 8, background: s.bg, borderLeft: `4px solid ${s.color}`, marginBottom: 12 }}>
+                    <p style={{ fontSize: 12, color: C.t1, margin: '0 0 4px', lineHeight: 1.5 }}>{n.testo}</p>
+                    <p style={{ fontSize: 11, color: C.t2, margin: 0, fontStyle: 'italic' }}>Outlook: {n.outlook}</p>
+                  </div>
+                );
+              })}
+
+              {/* Trend */}
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={mesi.map((m, i) => ({ mese: m, Ricavi: selUO.rM[i], Costi: selUO.cM[i] }))} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="mese" fontSize={10} />
+                  <YAxis tickFormatter={v => fmtK(v)} fontSize={10} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Line type="monotone" dataKey="Ricavi" stroke={selUO.colore} strokeWidth={2} />
+                  <Line type="monotone" dataKey="Costi" stroke={C.rossoChiaro} strokeWidth={2} strokeDasharray="5 3" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div style={{ textAlign: 'center', fontSize: 11, color: C.t3, marginTop: 24, paddingBottom: 16 }}>
+          Karol S.p.A. — Controllo di Gestione | Pipeline: elabora.py v1.0 | Finance Analysis: Variance Decomposition + Waterfall
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+export default KarolCdG;
