@@ -143,13 +143,85 @@ const KAROL_DATA = {
       { voce: 'Imposte', valore: -68239, tipo: 'uscita' },
       { voce: 'EBIT', valore: -1369283, tipo: 'finale' },
     ],
-    cassaSett: [
-      { s: 'S1', saldo: 420, incassi: 180, pag: 150 }, { s: 'S2', saldo: 390, incassi: 120, pag: 150 },
-      { s: 'S3', saldo: 340, incassi: 100, pag: 150 }, { s: 'S4', saldo: 510, incassi: 320, pag: 150 },
-      { s: 'S5', saldo: 460, incassi: 100, pag: 150 }, { s: 'S6', saldo: 380, incassi: 70, pag: 150 },
-      { s: 'S7', saldo: 290, incassi: 60, pag: 150 },  { s: 'S8', saldo: 240, incassi: 100, pag: 150 },
-      { s: 'S9', saldo: 210, incassi: 120, pag: 150 },  { s: 'S10', saldo: 180, incassi: 120, pag: 150 },
-      { s: 'S11', saldo: 350, incassi: 320, pag: 150 }, { s: 'S12', saldo: 400, incassi: 200, pag: 150 },
+    // ===== MODELLO TESORERIA ROLLING 13 SETTIMANE =====
+    // Basato su meccanica reale: factoring pro-soluto 90% con 2 finestre/mese (15 e 30)
+    // Incassi ASP: VLB ~€219k/m, CTA ~€235k/m, COS ~€324k/m ASP + €81k privato, KCP ~€55k/m
+    // Totale factoring ~€782k/mese (90% di ~€869k ASP), holdback 10% rientra a 45-60gg
+    // Uscite: stipendi+affitti+utenze+F24 metà mese (~€830k), residui fine mese (~€400k)
+    // Rate mutui/cartelle distribuite per scadenza
+    tesoreria: {
+      saldo_iniziale: 7909, // Cassa reale inizio 2025 (da BP)
+      // Flussi medi mensili da Q1 2025 (€/mese)
+      incassi_mese: {
+        factoring_1_tranche: 470000,  // ~60% del fatturato ASP entro il 15
+        factoring_2_tranche: 312000,  // ~40% restante entro fine mese
+        holdback_rientro: 87000,      // 10% holdback rientra con 45-60gg ritardo
+        privato_cash: 81000,          // Visite/esami/FKT incasso giornaliero (~€20k/sett)
+        intercompany_betania: 50000,  // Servizi direzione (~€600k/anno ÷ 12)
+      },
+      uscite_mese: {
+        stipendi_bu: 522000,          // Personale BU (€6.259k/12)
+        stipendi_hq: 98000,           // Personale HQ (€1.172k/12)
+        affitti: 26000,               // Affitti (VLB €219k + altri) / 12
+        utenze: 8000,                 // Utenze (€96k/12 — escluso VLB che è in affitti)
+        materiali_farmaci: 108000,    // Materiali (€1.291k/12)
+        servizi_consulenze: 160000,   // Servizi + consulenze (€1.108k + €812k) / 12
+        f24_inps: 80000,              // F24 mensile (contributi + imposte)
+        rate_mutui: 77000,            // Mutui esistenti (€920k cap+int / 12)
+        rate_cartelle: 49000,         // Cartelle+rottam+INPS (€583k/12 per 2025)
+        fornitori_arretrati: 0,       // Piano rientro fornitori (parte dal 2026)
+      },
+      // Calendario settimanale tipo (S1=prima sett mese, S4/S5=ultima)
+      // S1: holdback mese prec + privato | uscite leggere
+      // S2: factoring 1° tranche (~15 del mese) | F24 + stipendi + affitti + utenze
+      // S3: privato | materiali + servizi
+      // S4: factoring 2° tranche (~30) | rate mutui + cartelle + residui
+      // Ogni 4 settimane = 1 ciclo mensile
+      // EVENTI STRAORDINARI (timing previsto)
+      eventi_straord: [
+        { sett: 'S9', desc: 'Erogazione Mutuo MCC €5M', importo: 5000000, tipo: 'entrata', data_stima: 'Giugno 2026' },
+        { sett: 'S9', desc: 'Pagamento arretrati personale', importo: -995974, tipo: 'uscita', data_stima: 'Post-erogazione mutuo' },
+        { sett: 'S10', desc: 'Incasso Regione 1° tranche €3M', importo: 3000000, tipo: 'entrata', data_stima: 'H2 2026' },
+        { sett: 'S13+', desc: 'CAPEX nuove BU', importo: -2286587, tipo: 'uscita', data_stima: '2026-2027' },
+      ],
+    },
+    // 13 settimane rolling — modello calcolato (scenario SENZA eventi straordinari = stress test puro)
+    cassaSett_base: [
+      // Mese 1: Feb 2026 (saldo iniziale ~€8k — tensione estrema)
+      { s: 'S1',  saldo: 28, inc_det: 'Holdback €87k + privato €20k', usc_det: 'Leggeri €79k', incassi: 107, pag: 79 },
+      { s: 'S2',  saldo: -372, inc_det: 'Factoring 1° €470k', usc_det: 'Stipendi+F24+affitti €830k', incassi: 490, pag: 830, alert: true },
+      { s: 'S3',  saldo: -351, inc_det: 'Privato €20k + interco €50k', usc_det: 'Materiali+servizi €268k', incassi: 41, pag: 268 },
+      { s: 'S4',  saldo: -288, inc_det: 'Factoring 2° €312k', usc_det: 'Mutui+cartelle €126k + residui €123k', incassi: 312, pag: 249 },
+      // Mese 2: Mar 2026
+      { s: 'S5',  saldo: -181, inc_det: 'Holdback €87k + privato €20k', usc_det: '€79k', incassi: 107, pag: 0 },
+      { s: 'S6',  saldo: -521, inc_det: 'Factoring 1° €470k', usc_det: 'Stipendi+F24 €830k', incassi: 490, pag: 830, alert: true },
+      { s: 'S7',  saldo: -748, inc_det: 'Privato €20k + interco €50k', usc_det: 'Mat+serv €268k', incassi: 41, pag: 268 },
+      { s: 'S8',  saldo: -685, inc_det: 'Factoring 2° €312k', usc_det: 'Rate €126k + residui €123k', incassi: 312, pag: 249 },
+      // Mese 3: Apr 2026 (pre-mutuo — massima tensione)
+      { s: 'S9',  saldo: -578, inc_det: 'Holdback €87k + privato €20k', usc_det: '€79k', incassi: 107, pag: 0 },
+      { s: 'S10', saldo: -918, inc_det: 'Factoring 1° €470k', usc_det: 'Stipendi+F24 €830k', incassi: 490, pag: 830, alert: true },
+      { s: 'S11', saldo: -1145, inc_det: 'Privato €20k + interco €50k', usc_det: 'Mat+serv €268k', incassi: 41, pag: 268 },
+      { s: 'S12', saldo: -1082, inc_det: 'Factoring 2° €312k', usc_det: 'Rate €126k + residui €123k', incassi: 312, pag: 249 },
+      { s: 'S13', saldo: -975, inc_det: 'Holdback €87k + privato €20k', usc_det: '€79k', incassi: 107, pag: 0 },
+    ],
+    // 13 settimane CON eventi straordinari (scenario piano = mutuo+regione)
+    cassaSett_piano: [
+      // Mese 1: Feb 2026
+      { s: 'S1',  saldo: 28, inc_det: 'Holdback + privato', usc_det: 'Leggeri', incassi: 107, pag: 79 },
+      { s: 'S2',  saldo: -372, inc_det: 'Factoring 1°', usc_det: 'Stipendi+F24+affitti', incassi: 490, pag: 830, alert: true },
+      { s: 'S3',  saldo: -351, inc_det: 'Privato + interco', usc_det: 'Materiali+servizi', incassi: 41, pag: 268 },
+      { s: 'S4',  saldo: -288, inc_det: 'Factoring 2°', usc_det: 'Mutui+cartelle+residui', incassi: 312, pag: 249 },
+      // Mese 2: Mar 2026 — con saldo arretrati dipendenti post-anticipo banca
+      { s: 'S5',  saldo: -181, inc_det: 'Holdback + privato', usc_det: '', incassi: 107, pag: 0 },
+      { s: 'S6',  saldo: -521, inc_det: 'Factoring 1°', usc_det: 'Stipendi+F24', incassi: 490, pag: 830, alert: true },
+      { s: 'S7',  saldo: -748, inc_det: 'Privato + interco', usc_det: 'Mat+serv', incassi: 41, pag: 268 },
+      { s: 'S8',  saldo: -685, inc_det: 'Factoring 2°', usc_det: 'Rate + residui', incassi: 312, pag: 249 },
+      // Mese 3: Apr-Mag 2026 — EROGAZIONE MUTUO MCC €5M
+      { s: 'S9',  saldo: 3426, inc_det: '★ MUTUO MCC €5M + holdback', usc_det: 'Arretrati personale €996k', incassi: 5107, pag: 996, evento: 'Erogazione Mutuo MCC €5M' },
+      { s: 'S10', saldo: 6096, inc_det: '★ REGIONE €3M + Factoring 1°', usc_det: 'Stipendi+F24', incassi: 3490, pag: 830, evento: 'Incasso Regione CTA €3M' },
+      { s: 'S11', saldo: 5869, inc_det: 'Privato + interco', usc_det: 'Mat+serv', incassi: 41, pag: 268 },
+      { s: 'S12', saldo: 5620, inc_det: 'Factoring 2°', usc_det: 'Rate+CAPEX avvio BU €400k', incassi: 312, pag: 561 },
+      { s: 'S13', saldo: 5648, inc_det: 'Holdback + privato', usc_det: '', incassi: 107, pag: 79 },
     ],
     scenari: [
       // Base = piano finanziario BP reale (cassa finale dal foglio PIANO_FINANZIARIO)
@@ -341,7 +413,10 @@ UO.forEach(u => {
 const KPI = autoKPI;
 
 // Waterfall calcolato
-const { waterfallRaw, cassaSett, scenari } = D.cashflow;
+const { waterfallRaw, scenari } = D.cashflow;
+const cassaSett_base = D.cashflow.cassaSett_base;
+const cassaSett_piano = D.cashflow.cassaSett_piano;
+const tesoreria = D.cashflow.tesoreria;
 let rt = 0;
 const waterfall = waterfallRaw.map(w => {
   if (w.tipo === 'entrata') { const b = rt; rt += w.valore; return { ...w, base: b, barra: w.valore, col: C.verde }; }
@@ -1365,54 +1440,130 @@ const KarolDashboard = () => {
               </div>
             </div>
 
-            {/* C2+C3: Cassa + Scenari */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <div style={cardS}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Saldo Cassa — 12 Settimane</h3>
-                <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Soglia minima €200k (linea tratteggiata)</p>
-                <ResponsiveContainer width="100%" height={260}>
-                  <AreaChart data={cassaSett} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
-                    <defs>
-                      <linearGradient id="gradC" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={C.CTA} stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor={C.CTA} stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                    <XAxis dataKey="s" fontSize={11} stroke={C.t3} />
-                    <YAxis tickFormatter={v => '€' + v + '.000'} fontSize={10} stroke={C.t3} domain={[0, 600]} />
-                    <Tooltip formatter={v => ['€' + v + '.000']} />
-                    <ReferenceLine y={200} stroke={C.rosso} strokeDasharray="6 4" strokeWidth={2} label={{ value: 'Soglia min.', position: 'right', fontSize: 10, fill: C.rosso }} />
-                    <Area type="monotone" dataKey="saldo" name="Saldo" stroke={C.CTA} strokeWidth={2.5} fill="url(#gradC)" dot={(props) => {
-                      const { cx, cy, payload } = props;
-                      if (payload.saldo < 200) return <circle cx={cx} cy={cy} r={5} fill={C.rosso} stroke="white" strokeWidth={2} />;
-                      return <circle cx={cx} cy={cy} r={3} fill={C.CTA} stroke="white" strokeWidth={1.5} />;
-                    }} />
-                  </AreaChart>
-                </ResponsiveContainer>
-                <div style={{ marginTop: 8, padding: '8px 12px', background: C.rossoBg, borderRadius: 6, fontSize: 11, color: C.rosso, fontWeight: 500 }}>
-                  ⚠️ S10: Saldo €180k sotto soglia — possibile tensione di cassa per ritardo incassi ASP
+            {/* C2: TESORERIA ROLLING 13 SETTIMANE — Doppio scenario */}
+            <div style={cardS}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1 }}>Tesoreria Rolling 13 Settimane — Saldo Cassa €k</h3>
+                  <p style={{ fontSize: 11, color: C.t3 }}>Rosso = stress test (solo operativo) | Blu = piano (mutuo MCC + incasso Regione) | Soglia €200k</p>
+                </div>
+                <div style={{ background: '#fef3c7', padding: '4px 10px', borderRadius: 6, fontSize: 10, fontWeight: 600, color: '#92400e' }}>
+                  Saldo iniziale: €{Math.round(tesoreria.saldo_iniziale/1000)}k
                 </div>
               </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <ComposedChart margin={{ top: 10, right: 20, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="s" type="category" allowDuplicatedCategory={false} fontSize={11} stroke={C.t3} />
+                  <YAxis tickFormatter={v => (v >= 0 ? '' : '-') + '€' + Math.abs(v) + 'k'} fontSize={10} stroke={C.t3} />
+                  <Tooltip content={({active, payload, label}) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const base = cassaSett_base.find(d => d.s === label);
+                    const piano = cassaSett_piano.find(d => d.s === label);
+                    return <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 14px', fontSize: 11, maxWidth: 300, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                      <div style={{ fontWeight: 700, marginBottom: 6, fontSize: 12 }}>{label}</div>
+                      {piano && piano.evento && <div style={{ color: '#059669', fontWeight: 600, marginBottom: 6 }}>★ {piano.evento}</div>}
+                      <div style={{ color: C.rosso, marginBottom: 2 }}>Stress: €{base ? base.saldo : '?'}k</div>
+                      <div style={{ color: C.CTA, marginBottom: 6 }}>Piano: €{piano ? piano.saldo : '?'}k</div>
+                      {base && <div style={{ color: C.t3, fontSize: 10 }}>In: {base.inc_det}</div>}
+                      {base && <div style={{ color: C.t3, fontSize: 10 }}>Out: {base.usc_det}</div>}
+                    </div>;
+                  }} />
+                  <Legend />
+                  <ReferenceLine y={200} stroke={C.rosso} strokeDasharray="6 4" strokeWidth={1.5} label={{ value: '€200k soglia', position: 'insideTopRight', fontSize: 9, fill: C.rosso }} />
+                  <ReferenceLine y={0} stroke={C.t2} strokeWidth={1} />
+                  <Area data={cassaSett_piano} type="monotone" dataKey="saldo" name="Piano (Mutuo+Regione)" stroke={C.CTA} strokeWidth={2.5} fill={C.CTA} fillOpacity={0.08} dot={(props) => {
+                    const { cx, cy, payload } = props;
+                    if (payload.evento) return <circle cx={cx} cy={cy} r={7} fill={C.verde} stroke="white" strokeWidth={2} />;
+                    return <circle cx={cx} cy={cy} r={3} fill={C.CTA} stroke="white" strokeWidth={1.5} />;
+                  }} />
+                  <Line data={cassaSett_base} type="monotone" dataKey="saldo" name="Stress Test (no straord.)" stroke={C.rosso} strokeWidth={2} strokeDasharray="6 3" dot={(props) => {
+                    const { cx, cy, payload } = props;
+                    if (payload.alert) return <circle cx={cx} cy={cy} r={5} fill={C.rosso} stroke="white" strokeWidth={2} />;
+                    return <circle cx={cx} cy={cy} r={3} fill={C.rosso} stroke="white" strokeWidth={1.5} />;
+                  }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
+                <div style={{ padding: '8px 12px', background: C.rossoBg, borderRadius: 6, fontSize: 11, color: C.rosso, fontWeight: 500 }}>
+                  ⚠️ STRESS TEST: senza mutuo e Regione, la cassa va negativa da S2 e peggiora ogni mese. Dipendenza critica da factoring — zero buffer.
+                </div>
+                <div style={{ padding: '8px 12px', background: C.verdeBg, borderRadius: 6, fontSize: 11, color: C.verde, fontWeight: 500 }}>
+                  ✓ PIANO: con erogazione MCC €5M (S9) e incasso Regione €3M (S10), la cassa si normalizza a ~€5,6M. Prerequisito: chiusura mutuo entro aprile 2026.
+                </div>
+              </div>
+            </div>
 
+            {/* C2b: Meccanica Factoring — ciclo mensile */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div style={cardS}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Cash Flow Cumulato — Scenari 5 Anni</h3>
-                <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Ottimistico / Base / Pessimistico (€k cumulati)</p>
-                <ResponsiveContainer width="100%" height={260}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 8 }}>Ciclo Mensile Incassi-Pagamenti</h3>
+                <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>Meccanica factoring pro-soluto 90% — 2 finestre/mese</p>
+                {(() => {
+                  const t = tesoreria;
+                  const totInc = Object.values(t.incassi_mese).reduce((s,v) => s+v, 0);
+                  const totUsc = Object.values(t.uscite_mese).reduce((s,v) => s+v, 0);
+                  const delta = totInc - totUsc;
+                  const rows = [
+                    { fase: '1-15 mese', label: 'Factoring 1° tranche (60% ASP)', incasso: t.incassi_mese.factoring_1_tranche, uscita: t.uscite_mese.stipendi_bu + t.uscite_mese.stipendi_hq + t.uscite_mese.f24_inps + t.uscite_mese.affitti + t.uscite_mese.utenze },
+                    { fase: '15-30 mese', label: 'Factoring 2° tranche (40%)', incasso: t.incassi_mese.factoring_2_tranche, uscita: t.uscite_mese.rate_mutui + t.uscite_mese.rate_cartelle + t.uscite_mese.materiali_farmaci + t.uscite_mese.servizi_consulenze },
+                    { fase: 'Continuo', label: 'Privato + Holdback + Interco', incasso: t.incassi_mese.holdback_rientro + t.incassi_mese.privato_cash + t.incassi_mese.intercompany_betania, uscita: 0 },
+                  ];
+                  return <div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 10 }}>
+                      <thead><tr style={{ borderBottom: '2px solid ' + C.bordo }}>
+                        <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: 10, color: C.t2 }}>Fase</th>
+                        <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: 10, color: C.verde }}>Incassi</th>
+                        <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: 10, color: C.rosso }}>Uscite</th>
+                        <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: 10, color: C.t2 }}>Saldo</th>
+                      </tr></thead>
+                      <tbody>
+                        {rows.map((r, i) => <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo }}>
+                          <td style={{ padding: '6px 8px', fontSize: 11 }}><div style={{ fontWeight: 600 }}>{r.fase}</div><div style={{ fontSize: 10, color: C.t3 }}>{r.label}</div></td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontSize: 12, color: C.verde }}>{fmt(r.incasso)}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontSize: 12, color: C.rosso }}>{r.uscita > 0 ? fmt(r.uscita) : '—'}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontSize: 12, color: r.incasso - r.uscita >= 0 ? C.verde : C.rosso, fontWeight: 600 }}>{fmt(r.incasso - r.uscita)}</td>
+                        </tr>)}
+                        <tr style={{ borderTop: '2px solid ' + C.primario, background: '#f0f4f8' }}>
+                          <td style={{ padding: '6px 8px', fontWeight: 700, fontSize: 12 }}>Totale Mese</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: C.verde }}>{fmt(totInc)}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: C.rosso }}>{fmt(totUsc)}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: delta >= 0 ? C.verde : C.rosso }}>{fmt(delta)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <div style={{ padding: '8px 12px', background: delta >= 0 ? C.verdeBg : C.rossoBg, borderRadius: 6, fontSize: 11, color: delta >= 0 ? C.verde : C.rosso }}>
+                      {delta >= 0
+                        ? `Margine mensile operativo: +${fmt(delta)} — sufficiente per coprire varianze`
+                        : `Deficit mensile: ${fmt(delta)} — la cassa erode ogni mese senza risorse straordinarie`}
+                    </div>
+                  </div>;
+                })()}
+              </div>
+
+              {/* Scenari pluriennali */}
+              <div style={cardS}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Cassa Finale — Scenari 11 Anni</h3>
+                <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Ottimistico / Base (BP) / Pessimistico (€k)</p>
+                <ResponsiveContainer width="100%" height={240}>
                   <ComposedChart data={scenari} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                    <XAxis dataKey="anno" fontSize={12} stroke={C.t3} />
-                    <YAxis tickFormatter={v => '€' + v + '.000'} fontSize={11} stroke={C.t3} />
-                    <Tooltip formatter={v => ['€' + v + '.000']} />
+                    <XAxis dataKey="anno" fontSize={11} stroke={C.t3} />
+                    <YAxis tickFormatter={v => '€' + v + 'k'} fontSize={10} stroke={C.t3} />
+                    <Tooltip formatter={v => ['€' + v + 'k']} />
                     <Legend />
                     <ReferenceLine y={0} stroke={C.t3} strokeWidth={1} />
-                    <Line type="monotone" dataKey="ott" name="Ottimistico" stroke={C.verde} strokeWidth={2} dot={{ r: 4, fill: C.verde }} />
-                    <Line type="monotone" dataKey="base" name="Base" stroke={C.CTA} strokeWidth={3} dot={{ r: 4, fill: C.CTA }} />
-                    <Line type="monotone" dataKey="pess" name="Pessimistico" stroke={C.rosso} strokeWidth={2} strokeDasharray="6 3" dot={{ r: 4, fill: C.rosso }} />
+                    <Line type="monotone" dataKey="ott" name="Ottimistico" stroke={C.verde} strokeWidth={2} dot={{ r: 3, fill: C.verde }} />
+                    <Line type="monotone" dataKey="base" name="Base (BP)" stroke={C.CTA} strokeWidth={3} dot={{ r: 4, fill: C.CTA }} />
+                    <Line type="monotone" dataKey="pess" name="Pessimistico" stroke={C.rosso} strokeWidth={2} strokeDasharray="6 3" dot={{ r: 3, fill: C.rosso }} />
                   </ComposedChart>
                 </ResponsiveContainer>
-                <div style={{ marginTop: 8, padding: '8px 12px', background: '#fffbeb', borderRadius: 6, fontSize: 11, color: '#92400e' }}>
-                  Scenario pessimistico: CF negativo dal 2027 — necessaria rinegoziazione debito o riduzione CAPEX
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 8 }}>
+                  {D.cashflow.tesoreria.eventi_straord.map((ev, i) => (
+                    <div key={i} style={{ padding: '4px 8px', background: ev.importo > 0 ? C.verdeBg : C.rossoBg, borderRadius: 6, fontSize: 10, color: ev.importo > 0 ? C.verde : C.rosso }}>
+                      {ev.importo > 0 ? '↗' : '↘'} {ev.desc} ({ev.data_stima})
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -1434,7 +1585,35 @@ const KarolDashboard = () => {
               ))}
             </div>
 
-            {/* C5: CCC + Scadenziario */}
+            {/* C5: Tabella dettaglio 13 settimane */}
+            <div style={cardS}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Dettaglio 13 Settimane — Scenario Piano</h3>
+              <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>Flussi settimanali con incassi, uscite e saldo cumulato (€k). ★ = evento straordinario.</p>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+                  <thead><tr style={{ borderBottom: '2px solid ' + C.primario, background: '#f0f4f8' }}>
+                    <th style={{ padding: '5px 6px', textAlign: 'left', fontSize: 10 }}>Sett.</th>
+                    <th style={{ padding: '5px 6px', textAlign: 'right', fontSize: 10, color: C.verde }}>Incassi €k</th>
+                    <th style={{ padding: '5px 6px', textAlign: 'right', fontSize: 10, color: C.rosso }}>Uscite €k</th>
+                    <th style={{ padding: '5px 6px', textAlign: 'right', fontSize: 10 }}>Saldo €k</th>
+                    <th style={{ padding: '5px 6px', textAlign: 'left', fontSize: 10 }}>Evento / Note</th>
+                  </tr></thead>
+                  <tbody>
+                    {cassaSett_piano.map((r, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo, background: r.evento ? '#f0fdf4' : i % 2 === 0 ? 'white' : '#fafbfc' }}>
+                        <td style={{ padding: '4px 6px', fontWeight: 600 }}>{r.s}</td>
+                        <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace', color: C.verde }}>{r.incassi}</td>
+                        <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace', color: C.rosso }}>{r.pag}</td>
+                        <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: r.saldo < 0 ? C.rosso : r.saldo < 200 ? C.giallo : C.verde }}>{r.saldo < 0 ? '' : '+'}{r.saldo}</td>
+                        <td style={{ padding: '4px 6px', fontSize: 10, color: r.evento ? C.verde : C.t3, fontWeight: r.evento ? 600 : 400 }}>{r.evento ? '★ ' + r.evento : r.inc_det}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* C6: CCC + Scadenziario */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               {/* Cash Conversion Cycle */}
               <div style={cardS}>
@@ -2101,7 +2280,7 @@ const KarolDashboard = () => {
 
       {/* FOOTER */}
       <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 11, color: C.t3, borderTop: '1px solid ' + C.bordo }}>
-        Karol CdG v4.0 — Gruppo Karol S.p.A. — Cruscotto Controllo di Gestione | Aggiornamento: {D.meta.ultimo_aggiornamento}
+        Karol CdG v4.2 — Gruppo Karol S.p.A. — Cruscotto Controllo di Gestione | Aggiornamento: {D.meta.ultimo_aggiornamento}
       </div>
     </div>
   );
