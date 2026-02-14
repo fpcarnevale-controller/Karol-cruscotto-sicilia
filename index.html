@@ -52,7 +52,7 @@ const C = {
 // ============================================================================
 const KAROL_DATA = {
   meta: { anno: 2025, mesi_chiusi: 3, dati_reali: true, ultimo_aggiornamento: '14/02/2026',
-    fonte: 'CE Q1 31/03/2025 + HR Zucchetti Q1 + Bilancio SPA/Consolidato 2024 + Provvisorio 8M 31/08/2025', metodo_ann: 'Q1×4 con rettifiche da FY2024' },
+    fonte: 'Bilancio Verifica 31/08/2025 + Piano Rateizzazioni + Rottamazione 5 + CE Q1 + HR Zucchetti', metodo_ann: 'CE 8M×1,5 cross-validated vs Q1×4' },
 
   // Benchmark settore RSA/Healthcare
   BENCHMARK: {
@@ -199,7 +199,7 @@ const KAROL_DATA = {
         servizi_consulenze: 160000,   // Servizi + consulenze (€1.108k + €812k) / 12
         f24_inps: 80000,              // F24 mensile (contributi + imposte)
         rate_mutui: 77000,            // Mutui esistenti (€920k cap+int / 12)
-        rate_cartelle: 49000,         // Cartelle+rottam+INPS (€583k/12 per 2025)
+        rate_cartelle: 28000,         // Cartelle rateizzate reali (€333k/12 per 2025 da file ADER)
         fornitori_arretrati: 0,       // Piano rientro fornitori (parte dal 2026)
       },
       // Calendario settimanale tipo (4 settimane = 1 ciclo mensile)
@@ -382,6 +382,149 @@ const KAROL_DATA = {
     },
     // Obiettivi
     target: { riduzione_costi_pct: 0.10, ricavi_2027: 18636684, ebitda_target_pct: 0.143, pfn_zero: 2035 },
+  },
+
+  // ====== CE CONSUNTIVO 8M 2025 — Da Bilancio di Verifica Provvisorio 31/08/2025 ======
+  ce_8m: {
+    periodo: '8M Gen-Ago 2025',
+    ricavi: {
+      asp: 6111541, cta_extra: 394610, deg_privata: 226935, ambulatoriale: 101372,
+      riabilitazione: 49549, punto_prelievi: 65544, serv_non_san: 148564,
+      comfort: 4524, ticket: 31323, visite: 2320, cartelle: 1320,
+      sopravvenienze: 13035,
+      betania: 432740, zaharaziz: 32904, altri_proventi: 3193,
+      totale: 7619473,
+      totale_cash: 7224863, // Escluso CTA extra €395k
+    },
+    costi: {
+      acquisti_prod: 640802, acquisti_diversi: 30317, sopravv_acq: 33955,
+      tot_acquisti: 705074,
+      servizi_prod: 537498, intermediazione: 48324, utenze: 278665, manutenzioni: 92914,
+      tot_servizi: 957401,
+      veicoli: 44198,
+      lav_autonomo: 109245, organi_sociali: 140973, tot_lav_non_dip: 250217,
+      spese_amm: 197262,
+      god_beni_terzi: 312109,
+      personale: 4716317,
+      oneri_diversi: 117732,
+      tot_operativi: 7300310,
+    },
+    financials: {
+      ebitda: 319163, ebitda_pct: 0.042,
+      ebitda_reale: -75447, // Escluso CTA extra non-cash
+      ebitda_reale_pct: -0.010,
+      oneri_fin: 196644, proventi_fin: 13344,
+      imposte: 63446,
+      risultato_netto: 72417,
+    },
+    kpi_8m: {
+      personale_pct: 0.619, // 61,9% — sopra soglia 55%
+      protesi: 363913, // Voce singola più grande acquisti
+      sanzioni_tributarie: 68913, // Puro spreco
+      factoring_costo: 147730, // Costo anticipazione
+      spese_legali_totali: 143369, // Consulenze + spese amm.legali
+    },
+    anomalie: [
+      { voce: 'Personale 61,9%', impatto_ann: 1540000, nota: '€7,07M ann. vs €5,53M budget — Delta €1,54M, sopra soglia 55%', priorita: 1 },
+      { voce: 'EBITDA reale negativo', impatto_ann: -113000, nota: 'CTA extra escluso: €319k - €395k = -€76k in 8M', priorita: 2 },
+      { voce: 'Sanzioni tributarie', impatto_ann: 103000, nota: 'Puro spreco da ritardi — recuperabile al 100%', priorita: 3 },
+      { voce: 'Affitti vs budget', impatto_ann: 247000, nota: '€314k ann. vs €67k budget: sottostima 4,7×', priorita: 4 },
+      { voce: 'Manutenzioni vs budget', impatto_ann: 76000, nota: '€139k ann. vs €63k budget: +120%', priorita: 5 },
+      { voce: 'Factoring €222k/anno', impatto_ann: 222000, nota: 'Costo della crisi di liquidità', priorita: 6 },
+      { voce: 'Budget 2026 irrealistico', impatto_ann: 1750000, nota: 'Gap €2,13M in ricavi ambulatoriale/servizi', priorita: 7 },
+    ],
+  },
+
+  // ====== MAPPA DEBITI — Dati reali da Bilancio Verifica 31/08/2025 + Piano Rateizzazioni ======
+  debiti: {
+    data_riferimento: '31/08/2025',
+    stock: {
+      bancari: { totale: 6435000, dettaglio: [
+        { desc: 'Intesa mutuo ipotecario', residuo: 1834000, tipo: 'MLT' },
+        { desc: 'Intesa liquidità €500k', residuo: 384000, tipo: 'MLT' },
+        { desc: 'IRFIS 24/6231', residuo: 793000, tipo: 'MLT' },
+        { desc: 'Banca Progetto', residuo: 631000, tipo: 'MLT' },
+        { desc: 'Banca Progetto investim.', residuo: 952000, tipo: 'MLT' },
+        { desc: 'B.Pop Sant\'Angelo', residuo: 178000, tipo: 'MLT' },
+        { desc: 'Banca Sistema', residuo: 100000, tipo: 'BT', nota: '⚠ tasso sconosciuto' },
+        { desc: 'MCC residuo', residuo: 445000, tipo: 'MLT' },
+        { desc: 'Soci c/finanziamento', residuo: 80000, tipo: 'MLT' },
+        { desc: 'Altri/minori', residuo: 38000, tipo: 'BT' },
+      ]},
+      erariali: { totale: 5941000, netto_crediti_rs: 4472000, dettaglio: [
+        { desc: 'Cartella MH 18/09/24', residuo: 3008000, nota: '⚠ NON in Rott.5', in_rate: true, rate_mese: 37697 },
+        { desc: 'Cartella MI 18/09/24', residuo: 289000 },
+        { desc: 'Ritenute dip. 2023', residuo: 1090000 },
+        { desc: 'Ritenute dip. 2024', residuo: 949000 },
+        { desc: 'Ritenute dip. 2025', residuo: 539000, nota: 'correnti' },
+        { desc: 'Ritenute aut. 2020', residuo: 202000, nota: '⚠ aperte da 5 anni' },
+        { desc: 'Ritenute aut. 2024', residuo: 215000 },
+        { desc: 'Rateizzazioni ADER varie', residuo: 846000, in_rate: true },
+        { desc: 'Rottamazione quater', residuo: 166000, nota: '→ Rott.5' },
+        { desc: 'Cartelle minori 2024-25', residuo: 221000 },
+        { desc: 'Crediti R&S', residuo: -1469000, nota: 'In uso F24' },
+      ]},
+      previdenziali: { totale: 4347000, dettaglio: [
+        { desc: 'INPS 2025 corrente', residuo: 849000 },
+        { desc: 'Rateizz. INPS 245219', residuo: 1095000, in_rate: true, nota: 'Probabile in Rott.5' },
+        { desc: 'Rateizz. INPS 422157', residuo: 594000, in_rate: true },
+        { desc: 'INPS sospeso 10/23-9/24', residuo: 1188000, nota: 'Giudice Catanzaro — vittime racket' },
+        { desc: 'Fondi pensione', residuo: 452000 },
+        { desc: 'INAIL', residuo: 75000 },
+      ]},
+      commerciali: { totale: 5449000, dettaglio: [
+        { desc: 'Fornitori', residuo: 5375000, nota: 'Stock alto' },
+        { desc: 'Fatture da ricevere', residuo: 67000 },
+        { desc: 'Partite da liquidare', residuo: 7000 },
+      ]},
+      personale: { totale: 1259000, dettaglio: [
+        { desc: 'Stipendi arretrati reali', residuo: 900000, nota: '⚠ ~€900k arretrati' },
+        { desc: 'Stipendi correnti agosto', residuo: 542000 },
+        { desc: 'Compensazioni', residuo: -183000 },
+      ]},
+      infragruppo: { totale_debiti: 10979000, totale_crediti: 7400000, netto: -3579000, dettaglio: [
+        { desc: 'vs Karol Betania', debito: 8708000, credito: 4405000, netto: -4303000, nota: '⚠ VORAGINE' },
+        { desc: 'vs Karol Lab', debito: 1661000, credito: 215000, netto: -1446000 },
+        { desc: 'vs Cosentino', debito: 171000, credito: 1256000, netto: 1085000 },
+        { desc: 'vs Karol Hospital', debito: 229000, credito: 1427000, netto: 1198000 },
+        { desc: 'vs Zaharaziz', debito: 0, credito: 2542000, netto: 2542000, nota: 'Credito immobilizzato' },
+        { desc: 'vs Karol Domus', debito: 50000, credito: 0, netto: -50000 },
+        { desc: 'vs KSS San Carlo', debito: 5000, credito: 95000, netto: 90000 },
+      ]},
+      altri: { totale: 1637000, dettaglio: [
+        { desc: 'Accolli piano art.67', residuo: 188000 },
+        { desc: 'Accolli Cosentino', residuo: 437000 },
+        { desc: 'Regione POFESR', residuo: 558000, nota: '⚠ Causa pendente' },
+        { desc: 'Cessioni V dipendenti', residuo: 95000 },
+        { desc: 'Fornitori a lungo', residuo: 124000 },
+        { desc: 'Varie minori', residuo: 235000 },
+      ]},
+    },
+    rate_annuali: [
+      { anno: 2025, capitale: 264715, interessi: 68296, totale: 333011, mese: 27751 },
+      { anno: 2026, capitale: 383023, interessi: 72307, totale: 455330, mese: 37944 },
+      { anno: 2027, capitale: 696195, interessi: 157028, totale: 853223, mese: 71102, nota: 'Sospese ripartono' },
+      { anno: 2028, capitale: 747808, interessi: 36191, totale: 784000, mese: 65333 },
+      { anno: 2029, capitale: 672066, interessi: 12681, totale: 684747, mese: 57062 },
+      { anno: 2030, capitale: 468554, interessi: 1266, totale: 469820, mese: 39152 },
+    ],
+    rottamazione5: {
+      karol_spa: { definibile: 1236408, residuo: 1856497, sopravvenienza: 620089, n_cartelle: 10 },
+      betania: { definibile: 507920, residuo: 720770, sopravvenienza: 212850, n_cartelle: 1 },
+      totale_risparmio: 832939,
+      nota: 'Cartella MH €3.008k NON inclusa. Probabile inclusione INPS 245219. Sopravvenienza €620k migliora CE 2026.',
+    },
+    esposizione: { bancari: 6435000, erariali_netti: 4472000, previdenziali: 4347000, commerciali: 5449000, personale: 1259000, infragruppo_netto: 3579000, altri: 1637000, totale: 27178000, cassa: -231000 },
+    rate_mensili_2025: { cartelle: 27751, mutui: 77000, inps_rate: 24500, totale: 129251 },
+    da_verificare: [
+      'Betania posizione netta -€4,3M: formazione e piano rientro',
+      'Zaharaziz credito immobilizzato €2,54M: recuperabilità',
+      'Ritenute autonomi 2020 €202k: perché ancora aperte',
+      'Cartella MH €3.008k: natura e rateizzabilità',
+      'INPS sospeso €1,19M: piano post-sentenza Catanzaro',
+      'Banca Sistema €100k: tasso applicato',
+      'POFESR €558k: esito causa pendente',
+    ],
   },
 };
 
@@ -822,6 +965,7 @@ const KarolDashboard = () => {
     { id: 'strutture', label: 'Strutture', icon: '🏥' },
     { id: 'trend', label: 'Trend', icon: '📈' },
     { id: 'cashflow', label: 'Cash Flow', icon: '💰' },
+    { id: 'debiti', label: 'Mappa Debiti', icon: '⚠️' },
     { id: 'piano', label: 'Piano Finanziario', icon: '🏗️' },
     { id: 'analisi', label: 'Analisi', icon: '🔍' },
     { id: 'simulazioni', label: 'Simulazioni', icon: '🎛️' },
@@ -1838,6 +1982,228 @@ const KarolDashboard = () => {
           </div>
         )}
 
+        {/* ======================== MAPPA DEBITI ======================== */}
+        {tab === 'debiti' && (() => {
+          const DEBT = D.debiti;
+          const ST = DEBT.stock;
+          const categorie = [
+            { key: 'bancari', label: 'Debiti Bancari', color: '#3b82f6', totale: ST.bancari.totale },
+            { key: 'erariali', label: 'Debiti Erariali (netto R&S)', color: '#dc2626', totale: ST.erariali.netto_crediti_rs },
+            { key: 'previdenziali', label: 'Debiti Previdenziali', color: '#f59e0b', totale: ST.previdenziali.totale },
+            { key: 'commerciali', label: 'Debiti Commerciali', color: '#8b5cf6', totale: ST.commerciali.totale },
+            { key: 'personale', label: 'Debiti Personale', color: '#06b6d4', totale: ST.personale.totale },
+            { key: 'altri', label: 'Altri Debiti', color: '#64748b', totale: ST.altri.totale },
+          ];
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+              {/* CARD 1: Esposizione Totale */}
+              <div style={cardS}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                  <div>
+                    <h3 style={{ fontSize: 18, fontWeight: 700, color: C.primario, marginBottom: 4 }}>Mappa Debiti — Karol S.p.A.</h3>
+                    <p style={{ fontSize: 12, color: C.t3 }}>Bilancio Verifica {DEBT.data_riferimento} + Piano Rateizzazioni</p>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: C.rosso }}>{fmt(DEBT.esposizione.totale)}</div>
+                    <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>Esposizione totale (escl. infragruppo lordo)</div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 16 }}>
+                  {categorie.map((cat, i) => (
+                    <div key={i} style={{ padding: '12px 16px', background: cat.color + '10', borderRadius: 12, borderLeft: '4px solid ' + cat.color }}>
+                      <div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>{cat.label}</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: cat.color }}>{fmt(cat.totale)}</div>
+                      <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>{fmtPct(cat.totale / DEBT.esposizione.totale)}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Alert EBITDA reale negativo */}
+                <div style={{ marginTop: 16, padding: '12px 16px', background: '#fee2e2', borderRadius: 10, borderLeft: '4px solid ' + C.rosso }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: C.rosso }}>⚠ EBITDA REALE 8M = -€76k</div>
+                  <div style={{ fontSize: 11, color: C.t1, marginTop: 2 }}>EBITDA contabile €319k - CTA extra-tariff non-cash €395k = <strong>-€76k</strong>. L'azienda brucia cassa operativamente. Personale al 61,9% dei ricavi (soglia: 55%). Il CdA ne ha presa coscienza solo recentemente.</div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginTop: 16 }}>
+                  <div style={{ padding: '12px 16px', background: C.sfondo, borderRadius: 10 }}>
+                    <div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Rate Mensili 2025</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: C.giallo }}>{fmt(DEBT.rate_mensili_2025.totale)}</div>
+                  </div>
+                  <div style={{ padding: '12px 16px', background: C.sfondo, borderRadius: 10 }}>
+                    <div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Cassa al 31/08</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: C.rosso }}>{fmt(DEBT.esposizione.cassa)}</div>
+                  </div>
+                  <div style={{ padding: '12px 16px', background: C.sfondo, borderRadius: 10 }}>
+                    <div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Sanzioni evitabili/anno</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: C.giallo }}>{fmt(103000)}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* CARD 2: Piano Rateizzazioni Grafico */}
+              <div style={cardS}>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: C.primario, marginBottom: 4 }}>Piano Rateizzazioni Cartelle — 2025-2030</h3>
+                <p style={{ fontSize: 12, color: C.t3, marginBottom: 16 }}>13 cartelle attive + 2 sospese (ripartono 2027). Cartella MH €3.008k pesa €37.697/mese per 8 anni.</p>
+
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={DEBT.rate_annuali} margin={{ top: 10, right: 20, left: 10, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis dataKey="anno" fontSize={12} stroke={C.t2} />
+                    <YAxis tickFormatter={v => (v/1000).toFixed(0) + 'k'} fontSize={9} stroke={C.t3} />
+                    <Tooltip formatter={v => [fmt(v)]} />
+                    <Legend />
+                    <Bar dataKey="capitale" stackId="rate" fill={C.rosso} name="Capitale" radius={[0,0,0,0]} />
+                    <Bar dataKey="interessi" stackId="rate" fill={C.giallo} name="Interessi" radius={[4,4,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+
+                <table style={{ width: '100%', marginTop: 12, borderCollapse: 'collapse', fontSize: 11 }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid ' + C.primario, background: '#f8fafc' }}>
+                      {['Anno','Capitale','Interessi','Totale','€/mese','Note'].map(h => (
+                        <th key={h} style={{ padding: '8px 6px', textAlign: h === 'Note' || h === 'Anno' ? 'left' : 'right', color: C.t2, fontWeight: 600 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {DEBT.rate_annuali.map((r, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo, background: i % 2 === 0 ? '#f8fafc' : 'white' }}>
+                        <td style={{ padding: '8px 6px', fontWeight: 600 }}>{r.anno}</td>
+                        <td style={{ padding: '8px 6px', textAlign: 'right', fontFamily: 'monospace' }}>{fmt(r.capitale)}</td>
+                        <td style={{ padding: '8px 6px', textAlign: 'right', fontFamily: 'monospace' }}>{fmt(r.interessi)}</td>
+                        <td style={{ padding: '8px 6px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 600, color: C.primario }}>{fmt(r.totale)}</td>
+                        <td style={{ padding: '8px 6px', textAlign: 'right', fontFamily: 'monospace' }}>{fmt(r.mese)}</td>
+                        <td style={{ padding: '8px 6px', fontSize: 10, color: r.nota ? C.rosso : C.t3 }}>{r.nota || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* CARD 3: Dettaglio Erariali + Previdenziali */}
+              <div style={cardS}>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: C.primario, marginBottom: 16 }}>Dettaglio Debiti Erariali e Previdenziali</h3>
+
+                {[{cat: ST.erariali, label: 'Erariali', color: '#dc2626', tot: ST.erariali.totale},
+                  {cat: ST.previdenziali, label: 'Previdenziali', color: '#f59e0b', tot: ST.previdenziali.totale}].map((sec, si) => (
+                  <div key={si} style={{ marginBottom: 20 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, paddingBottom: 6, borderBottom: '2px solid ' + sec.color }}>
+                      <h4 style={{ fontSize: 13, fontWeight: 700, color: sec.color }}>{sec.label}</h4>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: sec.color }}>{fmt(sec.tot)}</span>
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid ' + C.bordo }}>
+                          <th style={{ padding: '6px 8px', textAlign: 'left', color: C.t2 }}>Voce</th>
+                          <th style={{ padding: '6px 8px', textAlign: 'right', color: C.t2 }}>Importo</th>
+                          <th style={{ padding: '6px 8px', textAlign: 'center', color: C.t2 }}>In rate?</th>
+                          <th style={{ padding: '6px 8px', textAlign: 'left', color: C.t2 }}>Note</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sec.cat.dettaglio.map((d, di) => (
+                          <tr key={di} style={{ borderBottom: '1px solid ' + C.bordo, background: di % 2 === 0 ? '#f8fafc' : 'white' }}>
+                            <td style={{ padding: '6px 8px' }}>{d.desc}</td>
+                            <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 600, color: d.residuo < 0 ? C.verde : C.t1 }}>{fmt(d.residuo)}</td>
+                            <td style={{ padding: '6px 8px', textAlign: 'center', color: d.in_rate ? C.giallo : C.t3, fontWeight: d.in_rate ? 600 : 400 }}>{d.in_rate ? '✓ Sì' : '—'}</td>
+                            <td style={{ padding: '6px 8px', fontSize: 9, color: d.nota ? (d.nota.includes('⚠') ? C.rosso : C.t3) : C.t3 }}>{d.nota || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+              </div>
+
+              {/* CARD 4: Posizioni Intercompany */}
+              <div style={cardS}>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: C.primario, marginBottom: 4 }}>Posizioni Intercompany</h3>
+                <p style={{ fontSize: 12, color: C.t3, marginBottom: 16 }}>Debiti (rosso) vs Crediti (verde) — Netto evidenziato</p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {ST.infragruppo.dettaglio.map((rel, i) => {
+                    const maxVal = Math.max(rel.debito, rel.credito, 1);
+                    return (
+                      <div key={i}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: C.t1 }}>{rel.desc}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: rel.netto < 0 ? C.rosso : C.verde, fontFamily: 'monospace' }}>{fmt(rel.netto)}</span>
+                        </div>
+                        <div style={{ display: 'flex', height: 22, borderRadius: 6, overflow: 'hidden', background: '#f1f5f9', gap: 1 }}>
+                          {rel.debito > 0 && <div style={{ width: (rel.debito / maxVal * 100) + '%', background: C.rosso, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, color: 'white', fontWeight: 600 }}>{fmt(rel.debito)}</div>}
+                          {rel.credito > 0 && <div style={{ width: (rel.credito / maxVal * 100) + '%', background: C.verde, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, color: 'white', fontWeight: 600 }}>{fmt(rel.credito)}</div>}
+                        </div>
+                        {rel.nota && <div style={{ fontSize: 9, color: rel.nota.includes('⚠') ? C.rosso : C.t3, marginTop: 2 }}>{rel.nota}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* CARD 5: Rottamazione 5 */}
+              <div style={cardS}>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: C.primario, marginBottom: 4 }}>Rottamazione 5 — Impatto CE 2026</h3>
+                <p style={{ fontSize: 12, color: C.t3, marginBottom: 16 }}>Email Pecchia 23/01/2026 — 10 cartelle Karol Spa + 1 Betania</p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
+                  <div style={{ padding: '14px 16px', background: C.verdeBg, borderRadius: 10, borderLeft: '4px solid ' + C.verde }}>
+                    <div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Karol Spa — Sopravvenienza</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: C.verde }}>{fmt(DEBT.rottamazione5.karol_spa.sopravvenienza)}</div>
+                    <div style={{ fontSize: 10, color: C.t3, marginTop: 4 }}>Paga {fmt(DEBT.rottamazione5.karol_spa.definibile)} vs residuo {fmt(DEBT.rottamazione5.karol_spa.residuo)}</div>
+                  </div>
+                  <div style={{ padding: '14px 16px', background: C.gialloBg, borderRadius: 10, borderLeft: '4px solid ' + C.giallo }}>
+                    <div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Betania — Sopravvenienza</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: C.giallo }}>{fmt(DEBT.rottamazione5.betania.sopravvenienza)}</div>
+                    <div style={{ fontSize: 10, color: C.t3, marginTop: 4 }}>Paga {fmt(DEBT.rottamazione5.betania.definibile)} vs residuo {fmt(DEBT.rottamazione5.betania.residuo)}</div>
+                  </div>
+                  <div style={{ padding: '14px 16px', background: C.violaBg, borderRadius: 10, borderLeft: '4px solid ' + C.viola }}>
+                    <div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Risparmio Totale Gruppo</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: C.viola }}>{fmt(DEBT.rottamazione5.totale_risparmio)}</div>
+                    <div style={{ fontSize: 10, color: C.t3, marginTop: 4 }}>Migliora CE 2026 (one-off)</div>
+                  </div>
+                </div>
+                <div style={{ padding: '10px 14px', background: C.sfondo, borderRadius: 8, fontSize: 11, color: C.t2 }}>{DEBT.rottamazione5.nota}</div>
+              </div>
+
+              {/* CARD 6: Anomalie CE 8M + Da Verificare */}
+              <div style={cardS}>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: C.primario, marginBottom: 4 }}>Anomalie CE 8M 2025 — Rubinetti Aperti</h3>
+                <p style={{ fontSize: 12, color: C.t3, marginBottom: 16 }}>Da Bilancio Verifica Provvisorio 31/08/2025 — ordine di impatto</p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {D.ce_8m.anomalie.map((a, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 14px', background: a.priorita <= 2 ? '#fee2e2' : a.priorita <= 4 ? '#fef9c3' : '#f8fafc', borderRadius: 8, borderLeft: '3px solid ' + (a.priorita <= 2 ? C.rosso : a.priorita <= 4 ? C.giallo : C.t3) }}>
+                      <div style={{ minWidth: 24, height: 24, borderRadius: '50%', background: a.priorita <= 2 ? C.rosso : a.priorita <= 4 ? C.giallo : C.t3, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700 }}>{a.priorita}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: C.t1 }}>{a.voce}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: a.impatto_ann < 0 ? C.rosso : C.giallo, fontFamily: 'monospace' }}>{fmt(a.impatto_ann)}/anno</span>
+                        </div>
+                        <div style={{ fontSize: 10, color: C.t2 }}>{a.nota}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* CARD 7: Checklist Da Verificare */}
+              <div style={cardS}>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: C.primario, marginBottom: 16 }}>Checklist — Da Verificare</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {DEBT.da_verificare.map((item, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 12px', background: C.sfondo, borderRadius: 8, borderLeft: '3px solid ' + C.giallo }}>
+                      <span style={{ fontSize: 12, color: C.t1, lineHeight: 1.5 }}>{i + 1}. {item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          );
+        })()}
+
         {/* ======================== PIANO FINANZIARIO ======================== */}
         {tab === 'piano' && (() => {
           const P = D.piano;
@@ -2501,7 +2867,7 @@ const KarolDashboard = () => {
 
       {/* FOOTER */}
       <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 11, color: C.t3, borderTop: '1px solid ' + C.bordo }}>
-        Karol CdG v4.2 — Gruppo Karol S.p.A. — Cruscotto Controllo di Gestione | Aggiornamento: {D.meta.ultimo_aggiornamento}
+        Karol CdG v4.3 — Gruppo Karol S.p.A. — Cruscotto Controllo di Gestione | Aggiornamento: {D.meta.ultimo_aggiornamento}
       </div>
     </div>
   );
