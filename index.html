@@ -129,7 +129,27 @@ const KAROL_DATA = {
   SEDE: { totale: 2335144, personale_hq: 1171805, affitti: 92861, consulenze: 811812, IT: 0, assicurazioni: 0, altri: 165619,
     oneri_fin: 91009, imposte: 68239,
     ricavi_hq: 208790, // CE AVERE Div.18 × 4 (proventi finanziari, sopravvenienze)
-    nota: 'Totale costi HQ Q1 €583.786 × 4. Include: personale €1.172k, consulenze/servizi €812k, altri oneri €166k, affitti €93k, oneri fin. €91k, imposte €68k.' },
+    // RICAVI INTERCOMPANY (da consolidato 2024, non in Div.18 CE) — riducono costo netto Sede
+    ricavi_interco: { betania: 600000, zaharaziz: 65000, lab_ristorno: 100000, totale: 765000 },
+    // PERSONALE HQ — scomposizione funzionale (DA COMPLETARE con dati Zucchetti dettaglio)
+    // €1.172k totale — stima allocazione per funzione da verificare
+    funzioni: [
+      { funzione: 'Amministrazione/Contabilità', stima: null, note: 'Contabilità interna, deposito bilanci esterno (costo limitato)', duplica_bu: true },
+      { funzione: 'HR/Buste paga/Consulenza lavoro', stima: null, note: 'Gestione centralizzata per tutte le BU', duplica_bu: false },
+      { funzione: 'Ufficio Acquisti', stima: null, note: '⚠ CRITICO: se comprano anche i direttori amm.vi BU → doppio costo, metà responsabilità', duplica_bu: true },
+      { funzione: 'Direzione Generale + Staff', stima: null, note: 'Amministratore, emolumenti CdA, sindaci', duplica_bu: false },
+      { funzione: 'Tecnico/Manutentore/Ingegnere', stima: null, note: 'Supervisione acquisti, consulenze energetiche, manutenzione attrezzature mediche', duplica_bu: false },
+      { funzione: 'Ufficio Qualità', stima: null, note: 'Revisioni contratti ASP, visite ispettive, accreditamenti', duplica_bu: false },
+      { funzione: 'Ufficio Legale', stima: null, note: 'Contenzioso, contratti, tutte le strutture', duplica_bu: false },
+      { funzione: 'IT/Informatica', stima: null, note: 'Responsabile informatico', duplica_bu: false },
+      { funzione: 'Marketing', stima: null, note: 'Centralizzato', duplica_bu: false },
+      { funzione: 'Lab Analisi (buste paga S.p.A.)', stima: 80000, note: 'Personale Lab a busta paga Karol — da verificare se in Div.18 o separato', duplica_bu: false },
+    ],
+    // CONSULENZE €812k — breakdown DA COMPLETARE (management ha detto "raccolgo informazioni")
+    consulenze_det: [
+      { fornitore: 'Da dettagliare', importo: 811812, tipo: 'servizi professionali', note: '⚠ In attesa dettaglio per fornitore/contratto' },
+    ],
+    nota: 'Totale costi HQ Q1 €583.786 × 4. Include: personale €1.172k, consulenze/servizi €812k, altri oneri €166k, affitti €93k, oneri fin. €91k, imposte €68k. Ricavi interco da controllate €765k (Betania €600k, Zaharaziz €65k, Lab €100k) riducono costo netto a ~€1.570k.' },
 
   // Cash Flow
   cashflow: {
@@ -417,11 +437,16 @@ TOT.persPct = TOT.ric > 0 ? TOT.pers / TOT.ric : 0;
 TOT.ebit = TOT.molG - TOT.ammort - TOT.oneri_fin;
 TOT.budget_ric = UO.reduce((s, u) => s + u.budget_ricavi, 0);
 TOT.budget_cDir = UO.reduce((s, u) => s + budgetCostiTot(u), 0);
+// Ricavi intercompany HQ (riducono costo netto Sede)
+const INTERCO = D.SEDE.ricavi_interco;
+TOT.sede_lorda = TOT.sede; // €2.335k costi lordi
+TOT.sede_netta = TOT.sede - INTERCO.totale - D.SEDE.ricavi_hq; // €2.335k - €765k interco - €209k proventi = €1.361k
 // Totali normalizzati (affitto figurativo)
 const TOT_AFFITTI_FIG = UO.reduce((s, u) => s + (u.immobile ? u.immobile.affitto_figurativo : 0), 0); // €420k
 TOT.molINorm = UO.reduce((s, u) => s + u.molINorm, 0);
 TOT.molINormPct = TOT.ric > 0 ? TOT.molINorm / TOT.ric : 0;
-TOT.sedeNorm = TOT.sede - TOT_AFFITTI_FIG; // HQ ridotta: incassa "affitti interni"
+TOT.sedeNorm = TOT.sede - TOT_AFFITTI_FIG; // HQ ridotta per affitti figurativi
+TOT.sedeNettaNorm = TOT.sede_netta - TOT_AFFITTI_FIG; // Sede netta + affitti figurativi
 TOT.molGNorm = TOT.molINorm - TOT.sedeNorm;
 
 // KPI semafori auto-calcolati
@@ -2107,7 +2132,7 @@ const KarolDashboard = () => {
                 });
                 // Aggiungi costi sede
                 Object.entries(D.SEDE).forEach(([k, v]) => {
-                  if (k !== 'totale' && v > 0) {
+                  if (k !== 'totale' && typeof v === 'number' && v > 0) {
                     const label = k.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
                     tmData.push({ name: 'SEDE — ' + label, size: v, uo: 'SEDE', cat: 'Sede', color: catColors.Sede });
                   }
@@ -2175,6 +2200,101 @@ const KarolDashboard = () => {
                   <Bar dataKey="Costi Dir %" fill="#8b5cf6" barSize={14} radius={[0,4,4,0]} />
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+
+            {/* RADIOGRAFIA SEDE HQ */}
+            <div style={cardS}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Radiografia Sede HQ — Costo Lordo vs Netto</h3>
+              <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>La Sede internalizza servizi per il gruppo e incassa ricavi intercompany. Costo netto = costo lordo - ricavi controllate.</p>
+              {(() => {
+                const S = D.SEDE;
+                const sedeItems = [
+                  { voce: 'Personale HQ', importo: S.personale_hq, pct: S.personale_hq/S.totale, note: '~12 FTE. Include: amm.ne, HR, acquisti, qualità, legale, IT, tecnico, marketing' },
+                  { voce: 'Consulenze/Servizi', importo: S.consulenze, pct: S.consulenze/S.totale, note: '⚠ €812k — dettaglio per fornitore IN ATTESA', alert: true },
+                  { voce: 'Altri oneri', importo: S.altri, pct: S.altri/S.totale, note: 'Emolumenti CdA, sindaci, spese legali, varie' },
+                  { voce: 'Affitti sede', importo: S.affitti, pct: S.affitti/S.totale, note: 'Locazione uffici direzione' },
+                  { voce: 'Oneri finanziari', importo: S.oneri_fin, pct: S.oneri_fin/S.totale, note: 'Interessi mutui immobiliari CTA+COS + altri' },
+                  { voce: 'Imposte', importo: S.imposte, pct: S.imposte/S.totale, note: '' },
+                ];
+                const ricItems = [
+                  { voce: 'Betania (servizi direzione)', importo: INTERCO.betania },
+                  { voce: 'Zaharaziz (servizi mensa)', importo: INTERCO.zaharaziz },
+                  { voce: 'Lab (ristorno partecipazione)', importo: INTERCO.lab_ristorno },
+                  { voce: 'Proventi fin./sopravvenienze', importo: S.ricavi_hq },
+                ];
+                const totRicHQ = INTERCO.totale + S.ricavi_hq;
+                return <div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    {/* Costi */}
+                    <div>
+                      <h4 style={{ fontSize: 12, fontWeight: 700, color: C.rosso, marginBottom: 8 }}>Costi Sede — {fmt(S.totale)}</h4>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <tbody>
+                          {sedeItems.map((r, i) => (
+                            <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo }}>
+                              <td style={{ padding: '5px 6px', fontSize: 11, fontWeight: 500 }}>{r.voce}</td>
+                              <td style={{ padding: '5px 6px', textAlign: 'right', fontFamily: 'monospace', fontSize: 12, color: C.rosso }}>{fmt(r.importo)}</td>
+                              <td style={{ padding: '5px 6px', textAlign: 'right', fontSize: 10, color: C.t3 }}>{fmtPct(r.pct)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {/* Ricavi */}
+                    <div>
+                      <h4 style={{ fontSize: 12, fontWeight: 700, color: C.verde, marginBottom: 8 }}>Ricavi HQ — {fmt(totRicHQ)}</h4>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <tbody>
+                          {ricItems.map((r, i) => (
+                            <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo }}>
+                              <td style={{ padding: '5px 6px', fontSize: 11, fontWeight: 500 }}>{r.voce}</td>
+                              <td style={{ padding: '5px 6px', textAlign: 'right', fontFamily: 'monospace', fontSize: 12, color: C.verde }}>{fmt(r.importo)}</td>
+                            </tr>
+                          ))}
+                          <tr style={{ borderTop: '2px solid ' + C.primario, background: '#f0f4f8' }}>
+                            <td style={{ padding: '5px 6px', fontWeight: 700, fontSize: 12 }}>COSTO NETTO SEDE</td>
+                            <td style={{ padding: '5px 6px', textAlign: 'right', fontFamily: 'monospace', fontSize: 14, fontWeight: 700, color: C.rosso }}>{fmt(S.totale - totRicHQ)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <div style={{ marginTop: 12, padding: '8px 10px', background: '#eff6ff', borderRadius: 6, fontSize: 11, color: C.primario }}>
+                        Incidenza netta su ricavi BU: <b>{fmtPct((S.totale - totRicHQ) / TOT.ric)}</b> (vs {fmtPct(S.totale / TOT.ric)} lordo)
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Funzioni HQ e duplicazioni */}
+                  <div style={{ marginTop: 16 }}>
+                    <h4 style={{ fontSize: 12, fontWeight: 700, color: C.t1, marginBottom: 8 }}>Mappa Funzioni HQ — Dove si Duplica?</h4>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+                      <thead><tr style={{ borderBottom: '2px solid ' + C.primario, background: '#f0f4f8' }}>
+                        <th style={{ padding: '5px 8px', textAlign: 'left', fontSize: 10 }}>Funzione</th>
+                        <th style={{ padding: '5px 8px', textAlign: 'right', fontSize: 10 }}>Costo Stimato</th>
+                        <th style={{ padding: '5px 8px', textAlign: 'center', fontSize: 10 }}>Duplica BU?</th>
+                        <th style={{ padding: '5px 8px', textAlign: 'left', fontSize: 10 }}>Note / Azione</th>
+                      </tr></thead>
+                      <tbody>
+                        {S.funzioni.map((f, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo, background: f.duplica_bu ? '#fef2f2' : 'white' }}>
+                            <td style={{ padding: '5px 8px', fontWeight: 500 }}>{f.funzione}</td>
+                            <td style={{ padding: '5px 8px', textAlign: 'right', fontFamily: 'monospace', color: f.stima ? C.t1 : C.t3 }}>{f.stima ? fmt(f.stima) : '⬜ da rilevare'}</td>
+                            <td style={{ padding: '5px 8px', textAlign: 'center' }}>{f.duplica_bu ? <span style={{ color: C.rosso, fontWeight: 700 }}>⚠ SÌ</span> : <span style={{ color: C.verde }}>No</span>}</td>
+                            <td style={{ padding: '5px 8px', fontSize: 10, color: C.t2 }}>{f.note}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 }}>
+                      <div style={{ padding: '8px 12px', background: C.rossoBg, borderRadius: 6, fontSize: 11, color: C.rosso }}>
+                        ⚠ DUPLICAZIONI: Amministrazione e Ufficio Acquisti sono le due funzioni dove BU e Sede rischiano di pagare due volte lo stesso lavoro. Serve mappa ruoli per decisione centralizza/decentra.
+                      </div>
+                      <div style={{ padding: '8px 12px', background: '#fef9c3', borderRadius: 6, fontSize: 11, color: '#92400e' }}>
+                        ⬜ DATI MANCANTI: costo per funzione da Zucchetti (chi fa cosa e quanto costa), dettaglio €812k consulenze per fornitore/contratto, personale Lab €80k — dove contabilizzato?
+                      </div>
+                    </div>
+                  </div>
+                </div>;
+              })()}
             </div>
 
             {/* Narrative per UO */}
