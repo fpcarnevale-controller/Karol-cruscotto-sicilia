@@ -1994,6 +1994,39 @@ const KarolDashboard = () => {
                 })()}
               </div>
             </div>
+
+            {/* INTERVENTI CRITICI — ROADMAP 2026 */}
+            <div style={cardS}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 12 }}>Interventi Critici — Roadmap 2026</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ padding: 14, background: C.rossoBg, borderRadius: 8, borderLeft: '4px solid ' + C.rosso }}>
+                  <div style={{ fontWeight: 700, color: C.rosso, marginBottom: 6, fontSize: 13 }}>URGENTE — Gennaio-Marzo 2026</div>
+                  <div style={{ fontSize: 11, color: C.t1, lineHeight: 1.7 }}>
+                    <div style={{ marginBottom: 4 }}><strong>Mutuo MCC €5M:</strong> Erogazione entro aprile per coprire cassa negativa — senza mutuo la cassa va in rosso da S2</div>
+                    <div style={{ marginBottom: 4 }}><strong>Rottamazione 5:</strong> Adesione per risparmio €833k sul debito tributario — sopravvenienza attiva migliora CE 2026</div>
+                    <div style={{ marginBottom: 4 }}><strong>Chiusura KCP:</strong> Migrazione 20 PL a Borgo Ritrovato — risparmio €300k/anno (brucia cassa)</div>
+                    <div><strong>Personale:</strong> Target 55% dei ricavi (oggi 61,9%) — risparmio €1,5M/anno se raggiunto</div>
+                  </div>
+                </div>
+                <div style={{ padding: 14, background: C.gialloBg, borderRadius: 8, borderLeft: '4px solid ' + C.giallo }}>
+                  <div style={{ fontWeight: 700, color: C.giallo, marginBottom: 6, fontSize: 13 }}>BREVE TERMINE — Aprile-Giugno 2026</div>
+                  <div style={{ fontSize: 11, color: C.t1, lineHeight: 1.7 }}>
+                    <div style={{ marginBottom: 4 }}><strong>Incasso Regione CTA €3M:</strong> Saldo contenzioso crediti extra-tariffari — stabilizza cassa post-mutuo</div>
+                    <div style={{ marginBottom: 4 }}><strong>Operatività BRT:</strong> 40 PL convenzionati da RSA + 20 Casa Protetta + FKT = €3,2M ricavi/anno</div>
+                    <div><strong>Sanzioni tributarie:</strong> €103k/anno evitabili — organizzare F24 mensili puntuali</div>
+                  </div>
+                </div>
+                <div style={{ padding: 14, background: C.verdeBg, borderRadius: 8, borderLeft: '4px solid ' + C.verde }}>
+                  <div style={{ fontWeight: 700, color: C.verde, marginBottom: 6, fontSize: 13 }}>MEDIO TERMINE — H2 2026</div>
+                  <div style={{ fontSize: 11, color: C.t1, lineHeight: 1.7 }}>
+                    <div style={{ marginBottom: 4 }}><strong>RSA→BRT:</strong> Spostamento PL convenzionati e chiusura locazione RSA Villabate (€219k/anno)</div>
+                    <div style={{ marginBottom: 4 }}><strong>Verifica intercompany:</strong> Betania -€4,3M netto, Zaharaziz €2,5M credito immobilizzato — piano rientro</div>
+                    <div><strong>Factoring:</strong> Rinegoziare tasso Banca Sistema (attualmente molto elevato) — potenziale risparmio €50-100k/anno</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
         )}
 
@@ -2882,7 +2915,7 @@ const KarolDashboard = () => {
 
       {/* FOOTER */}
       <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 11, color: C.t3, borderTop: '1px solid ' + C.bordo }}>
-        Karol CdG v4.3 — Gruppo Karol S.p.A. — Cruscotto Controllo di Gestione | Aggiornamento: {D.meta.ultimo_aggiornamento}
+        Karol CdG v5.0 — Gruppo Karol S.p.A. — Cruscotto Controllo di Gestione | Aggiornamento: {D.meta.ultimo_aggiornamento}
       </div>
     </div>
   );
