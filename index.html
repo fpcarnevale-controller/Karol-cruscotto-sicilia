@@ -43,7 +43,7 @@ const C = {
   giallo: '#d97706', gialloBg: '#fef9c3', gialloChiaro: '#f59e0b',
   rosso: '#dc2626', rossoBg: '#fee2e2', rossoChiaro: '#ef4444',
   viola: '#7c3aed', violaBg: '#ede9fe',
-  VLB: '#0ea5e9', CTA: '#3b82f6', COS: '#8b5cf6', LAB: '#f59e0b', KCP: '#ec4899',
+  RSA: '#0ea5e9', CTA: '#3b82f6', COS: '#8b5cf6', LAB: '#f59e0b', KCP: '#ec4899',
   budget: '#cbd5e1', t1: '#1e293b', t2: '#64748b', t3: '#94a3b8',
 };
 
@@ -51,7 +51,7 @@ const C = {
 // KAROL_DATA — Struttura centralizzata dati CdG
 // ============================================================================
 const KAROL_DATA = {
-  meta: { anno: 2025, mesi_chiusi: 3, dati_reali: true, ultimo_aggiornamento: '14/02/2026',
+  meta: { anno: 2025, mesi_chiusi: 8, dati_reali: true, ultimo_aggiornamento: '14/02/2026',
     fonte: 'Bilancio Verifica 31/08/2025 + Piano Rateizzazioni + Rottamazione 5 + CE Q1 + HR Zucchetti', metodo_ann: 'CE 8M×1,5 cross-validated vs Q1×4' },
 
   // Benchmark settore RSA/Healthcare
@@ -66,14 +66,14 @@ const KAROL_DATA = {
   // Ricavi: fonte CE AVERE (incl. convenzionato + privato + ambulatori + adeguamenti)
   // LAB: fuori perimetro gruppo, riportata separatamente
   UO: [
-    { cod: 'VLB', nome: 'RSA Villabate', tipo: 'RSA Alzheimer', pl: 44, colore: C.VLB,
+    { cod: 'RSA', nome: 'RSA Villabate', tipo: 'RSA Alzheimer', pl: 44, colore: C.RSA,
       ricavi: 2632599, budget_ricavi: 2632599, // Q1 658.150 × 4
       costi: { personale: 1971012, materiali: 22552, servizi: 224063, utenze: 219307, manutenzione: 0, altri: 3315 },
       budget_costi: { personale: 1971012, materiali: 22552, servizi: 224063, utenze: 219307, manutenzione: 0, altri: 3315 },
       sede: 0, ammortamenti: 214000, oneri_fin: 514, // D&A allocata pro-rata ricavi (24% di €893k)
       // IMMOBILE: in locazione — affitto €219k/anno incluso in utenze
       immobile: { tipo: 'locazione', affitto_reale: 219307, affitto_figurativo: 0, costo_storico: 0 },
-      // NOTA: VLB include personale Centro Gottardo (FKT ~€40k fatture), cucina, trasporto disabili
+      // NOTA: RSA include personale Centro Gottardo (FKT ~€40k fatture), cucina, trasporto disabili
       occ: 0.900, gg_degenza: 14454,
       rM: [227327, 204228, 226594],
       cM: [155958, 173522, 163273],
@@ -105,8 +105,8 @@ const KAROL_DATA = {
     },
     { cod: 'KCP', nome: 'Karol Casa Protetta', tipo: 'Casa Protetta', pl: 20, colore: C.KCP,
       ricavi: 664941, budget_ricavi: 664941, // Q1 166.235 × 4
-      costi: { personale: 527070, materiali: 16484, servizi: 62787, utenze: 0, manutenzione: 0, altri: 32 },
-      budget_costi: { personale: 527070, materiali: 16484, servizi: 62787, utenze: 0, manutenzione: 0, altri: 32 },
+      costi: { personale: 527070, materiali: 16484, servizi: 62787, utenze: 60000, manutenzione: 0, altri: 32 },
+      budget_costi: { personale: 527070, materiali: 16484, servizi: 62787, utenze: 60000, manutenzione: 0, altri: 32 },
       sede: 0, ammortamenti: 55000, oneri_fin: 4, // D&A allocata pro-rata ricavi (6% di €893k)
       // IMMOBILE: in locazione — affitto €60k/anno (€5k/mese)
       immobile: { tipo: 'locazione', affitto_reale: 60000, affitto_figurativo: 0, costo_storico: 0 },
@@ -175,7 +175,7 @@ const KAROL_DATA = {
     // ===== MODELLO TESORERIA ROLLING 13 SETTIMANE =====
     // NOTA CRITICA: CTA fattura €235k/mese ma ASP autorizza factoring solo su €182.800/mese (media 7M 2025)
     // La differenza (~€53k/mese = adeguamento extra-tariffa €640k/anno) NON è cassa — accumula crediti, parte contenzioso €7M+
-    // Incassi ASP reali incassabili: VLB ~€219k/m, CTA ~€183k/m (non €235k!), COS ~€324k ASP + €81k privato, KCP ~€55k/m
+    // Incassi ASP reali incassabili: RSA ~€219k/m, CTA ~€183k/m (non €235k!), COS ~€324k ASP + €81k privato, KCP ~€55k/m
     // Totale ASP incassabile: €781k/mese → factoring 90% = €703k/mese, holdback 10% = €78k rientra a 45-60gg
     // Uscite: stipendi+affitti+utenze+F24 metà mese (~€734k), materiali+servizi (~€268k), rate (~€126k)
     // Delta mensile strutturale: €911k incassi - €1.128k uscite = -€217k/mese
@@ -193,8 +193,8 @@ const KAROL_DATA = {
       uscite_mese: {
         stipendi_bu: 522000,          // Personale BU (€6.259k/12)
         stipendi_hq: 98000,           // Personale HQ (€1.172k/12)
-        affitti: 26000,               // Affitti (VLB €219k + altri) / 12
-        utenze: 8000,                 // Utenze (€96k/12 — escluso VLB che è in affitti)
+        affitti: 26000,               // Affitti (RSA €219k + altri) / 12
+        utenze: 8000,                 // Utenze (€96k/12 — escluso RSA che è in affitti)
         materiali_farmaci: 108000,    // Materiali (€1.291k/12)
         servizi_consulenze: 160000,   // Servizi + consulenze (€1.108k + €812k) / 12
         f24_inps: 80000,              // F24 mensile (contributi + imposte)
@@ -289,7 +289,7 @@ const KAROL_DATA = {
   },
 
   narrative: [
-    { uo: 'VLB', alert: 'ROSSO', testo: 'Personale 74,9% dei ricavi — include personale Centro Gottardo (FKT, ~€40k fatture attive), cucina centralizzata e trasporto disabili allocati impropriamente. Affitto €219k da proprietario rigido. Piano strategico: spostare i 40 PL convenzionati al Borgo Ritrovato (nuova BU giugno 2026) per risparmiare locazione e razionalizzare personale.', outlook: 'In ristrutturazione — migrazione a BRT prevista H2 2026' },
+    { uo: 'RSA', alert: 'ROSSO', testo: 'Personale 74,9% dei ricavi — include personale Centro Gottardo (FKT, ~€40k fatture attive), cucina centralizzata e trasporto disabili allocati impropriamente. Affitto €219k da proprietario rigido. Piano strategico: spostare i 40 PL convenzionati al Borgo Ritrovato (nuova BU giugno 2026) per risparmiare locazione e razionalizzare personale.', outlook: 'In ristrutturazione — migrazione a BRT prevista H2 2026' },
     { uo: 'CTA', alert: 'GIALLO', testo: 'MOL-I contabile 33% ma ATTENZIONE: fattura €235k/mese, incassa solo €183k/mese (media 7M 2025). I €53k/mese di adeguamento extra-tariffa (€640k/anno) non sono cassa — si accumulano come crediti e fanno parte del contenzioso €7M+ con Regione. Transazione imminente. Se confermata: game-changer per liquidità. Rischio residuo: se adeguamento non rinnovato, ricavi reali -23% e MOL-I crolla.', outlook: 'In attesa transazione regionale — alto impatto su cassa e crediti' },
     { uo: 'COS', alert: 'VERDE', testo: 'Top performer per volumi: ricavi FY stimati €4,86M. MOL-I 16,5%. Estate non opera: calo fatturato privato Q2-Q3 spiega parte del deterioramento MOL 8M. Materiali elevati (€1,23M) per attività chirurgica/riabilitativa. Personale 43,1% — il migliore del gruppo.', outlook: 'Favorevole — attenzione stagionalità estiva' },
     { uo: 'KCP', alert: 'ROSSO', testo: 'Casa Protetta 20 PL brucia €300k+/anno. Personale 79,3% dei ricavi — insostenibile per diseconomie di scala. Piano: chiusura e spostamento PL al Borgo Ritrovato, con razionalizzazione personale e risparmio su costi fissi.', outlook: 'In chiusura — migrazione PL a BRT' },
@@ -363,8 +363,8 @@ const KAROL_DATA = {
     nuove_bu: [
       { cod: 'BRT', nome: 'Borgo Ritrovato', tipo: 'RSA 40PL + Casa Protetta 20PL + FKT', pl: 60, regione: 'Sicilia (Palermo)',
         capex_residuo: 0, ricavi_regime: 2918060, apertura_stima: 'Giugno 2026', ramp_up_mesi: 4,
-        ricavi_bu: { r2025: 0, r2026: 3178890, r2027: 3377516 }, // Include VLB spostata
-        nota: 'Assorbe 40 PL convenzionati da VLB + FKT €250k. Elimina affitto VLB €219k.' },
+        ricavi_bu: { r2025: 0, r2026: 3178890, r2027: 3377516 }, // Include RSA spostata
+        nota: 'Assorbe 40 PL convenzionati da RSA + FKT €250k. Elimina affitto RSA €219k.' },
       { cod: 'KMC', nome: 'Karol Medical Center', tipo: 'Day Surgery + Ambulatorio Privato', pl: 0, regione: 'Sicilia (Palermo)',
         capex_residuo: 710000, ricavi_regime: 1428800, apertura_stima: 'Aprile 2026', ramp_up_mesi: 9,
         ricavi_bu: { r2025: 0, r2026: 857280, r2027: 1428800 }, // 9M primo anno, a regime 2027
@@ -556,7 +556,7 @@ UO.forEach(u => {
   u.delta_costi = u.costiDir - budgetCostiTot(u);
   // CE NORMALIZZATO — costo di occupazione equo per confronto BU
   // CTA/COS: aggiunge affitto figurativo (6% costo storico immobile)
-  // VLB/KCP: invariato (già paga affitto reale)
+  // RSA/KCP: invariato (già paga affitto reale)
   const aff = u.immobile ? u.immobile.affitto_figurativo : 0;
   u.costo_occupazione = u.immobile ? (u.immobile.affitto_reale + aff) : 0; // costo effettivo + figurativo
   u.costiNorm = u.costiDir + aff;
@@ -617,6 +617,19 @@ const waterfall = waterfallRaw.map(w => {
 });
 
 const narrative = D.narrative;
+
+// ============================================================================
+// KPI CALCOLATI — Copertura Cassa unificata (no hardcoded)
+// ============================================================================
+const copCassa = (() => {
+  const saldo = tesoreria.saldo_iniziale || 8000;
+  const burn = tesoreria.uscite_mese ? Object.values(tesoreria.uscite_mese).reduce((s,v) => s+v, 0) : 217000;
+  const incassi = tesoreria.incassi_mese ? Object.values(tesoreria.incassi_mese).reduce((s,v) => s+v, 0) : 0;
+  const deficit = burn - incassi;
+  const mesi = deficit > 0 ? saldo / deficit : 99;
+  const giorni = Math.round(mesi * 30);
+  return { saldo, burn, incassi, deficit, mesi: +mesi.toFixed(2), giorni };
+})();
 
 // ============================================================================
 // HELPERS — formattazione importi PRECISI (no abbreviazioni)
@@ -820,7 +833,7 @@ const KarolDashboard = () => {
       const kpCF = D.cashflow.kpi;
       const ccc = kpCF.dso + 15 - kpCF.dpo;
       [['DSO ASP', kpCF.dso + ' gg', '< ' + BENCH.dso + ' gg'], ['DPO Fornitori', kpCF.dpo + ' gg', '< ' + BENCH.dpo + ' gg'],
-       ['DSCR', kpCF.dscr + 'x', '> 1.2x'], ['Copertura Cassa', kpCF.cop_cassa + ' mesi', '> 2.0 mesi'],
+       ['DSCR', kpCF.dscr + 'x', '> 1.2x'], ['Autonomia Cassa', copCassa.giorni + ' gg (' + copCassa.mesi + ' mesi)', '> 2.0 mesi'],
        ['CCC', ccc + ' gg', '< ' + (BENCH.dso + 15 - BENCH.dpo) + ' gg']].forEach(([l, v, t]) => {
         pdf.setFont(undefined, 'normal'); pdf.setTextColor(80); pdf.text(l + ':', M + 2, Y);
         pdf.setFont(undefined, 'bold'); pdf.setTextColor(30); pdf.text(v, M + 55, Y);
@@ -937,7 +950,7 @@ const KarolDashboard = () => {
         ['DSO ASP', D.cashflow.kpi.dso],
         ['DPO Fornitori', D.cashflow.kpi.dpo],
         ['DSCR', D.cashflow.kpi.dscr],
-        ['Copertura Cassa (mesi)', D.cashflow.kpi.cop_cassa],
+        ['Autonomia Cassa (giorni)', copCassa.giorni],
       ];
       const ws5 = XLSX.utils.aoa_to_sheet(cfRows);
       XLSX.utils.book_append_sheet(wb, ws5, 'Cash Flow');
@@ -1044,7 +1057,7 @@ const KarolDashboard = () => {
             { label: 'Costi Sede', valore: fmt(TOT.sede), sub: fmtPct(TOT.sede / TOT.ric) + ' ricavi', colore: C.viola },
             { label: 'MOL Gestionale', valore: fmt(TOT.molG), sub: fmtPct(TOT.molGPct), colore: TOT.molG >= 0 ? C.verde : C.rosso },
             { label: 'DSO ASP', valore: D.cashflow.kpi.dso + ' gg', sub: 'Target <' + BENCH.dso, colore: D.cashflow.kpi.dso > BENCH.dso ? C.giallo : C.verde },
-            { label: 'Copertura Cassa', valore: D.cashflow.kpi.cop_cassa + ' mesi', sub: 'Target >' + BENCH.cop_cassa_mesi, colore: D.cashflow.kpi.cop_cassa < BENCH.cop_cassa_mesi ? C.giallo : C.verde },
+            { label: 'Autonomia Cassa', valore: copCassa.giorni + ' gg', sub: copCassa.mesi + ' mesi (target >' + BENCH.cop_cassa_mesi + ')', colore: copCassa.mesi < 1 ? C.rosso : copCassa.mesi < BENCH.cop_cassa_mesi ? C.giallo : C.verde },
             { label: 'Alert', valore: (nR+nG) + ' attivi', sub: nR + ' rossi / ' + nG + ' gialli / ' + nV + ' verdi', colore: nR > 0 ? C.rosso : C.giallo },
           ].map((kpi, i) => (
             <div key={i} style={{ background: C.card, borderRadius: 10, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid ' + kpi.colore, borderTop: '1px solid #f1f5f9' }}>
@@ -1555,7 +1568,7 @@ const KarolDashboard = () => {
             {/* TABELLA CE NORMALIZZATO — Confronto equo con costo di occupazione */}
             <div style={{ ...cardS, marginTop: 16 }}>
               <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>CE Industriale Normalizzato — Costo di Occupazione Equo</h3>
-              <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>CTA e COS operano in immobili di proprietà (€7M, mutui attivi in Sede). VLB e KCP pagano affitto. Affitto figurativo al 6% costo storico per confronto equo.</p>
+              <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>CTA e COS operano in immobili di proprietà (€7M, mutui attivi in Sede). RSA e KCP pagano affitto. Affitto figurativo al 6% costo storico per confronto equo.</p>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                   <thead><tr style={{ borderBottom: '2px solid ' + C.primario, background: '#f0f4f8' }}>
@@ -1844,7 +1857,7 @@ const KarolDashboard = () => {
                 { label: 'DSO ASP', valore: D.cashflow.kpi.dso + ' gg', target: '< ' + BENCH.dso + ' gg', sem: React.createElement(Semaforo, { valore: D.cashflow.kpi.dso, verdeMin: BENCH.dso, gialloMin: BENCH.dso * 1.5, invertito: true }) },
                 { label: 'DPO Fornitori', valore: D.cashflow.kpi.dpo + ' gg', target: '< ' + BENCH.dpo + ' gg', sem: React.createElement(Semaforo, { valore: D.cashflow.kpi.dpo, verdeMin: BENCH.dpo, gialloMin: BENCH.dpo * 1.3, invertito: true }) },
                 { label: 'DSCR', valore: '1.15x', target: '> 1.2x', sem: React.createElement(Semaforo, { valore: 1.15, verdeMin: 1.2, gialloMin: 1.0 }) },
-                { label: 'Copertura Cassa', valore: '1.8 mesi', target: '> 2.0 mesi', sem: React.createElement(Semaforo, { valore: 1.8, verdeMin: 2.0, gialloMin: 1.0 }) },
+                { label: 'Autonomia Cassa', valore: copCassa.giorni + ' gg (' + copCassa.mesi + ' mesi)', target: '> 2.0 mesi', sem: React.createElement(Semaforo, { valore: copCassa.mesi, verdeMin: 2.0, gialloMin: 1.0 }) },
               ].map((kpi, i) => (
                 <div key={i} style={{ ...cardS, textAlign: 'center' }}>
                   <div style={{ fontSize: 11, color: C.t3, fontWeight: 500 }}>{kpi.label}</div>
