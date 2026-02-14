@@ -666,7 +666,7 @@ const DeltaBadge = ({ v, inverse }) => {
 // COMPONENTE PRINCIPALE
 // ============================================================================
 const KarolDashboard = () => {
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState('home');
   const [selUO, setSelUO] = useState(null);
   const [ceView, setCeView] = useState('consolidato');
   const [simRic, setSimRic] = useState(0);
@@ -968,14 +968,12 @@ const KarolDashboard = () => {
   const trendUO = mesiDisp.map((m, i) => { const d = { mese: m }; UO.forEach(u => { d[u.cod] = u.rM[i]; }); return d; });
 
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: '📊' },
+    { id: 'home', label: 'Home', icon: '🏠' },
     { id: 'ce', label: 'Conto Economico', icon: '📋' },
-    { id: 'strutture', label: 'Strutture', icon: '🏥' },
-    { id: 'trend', label: 'Trend', icon: '📈' },
     { id: 'cashflow', label: 'Cash Flow', icon: '💰' },
     { id: 'debiti', label: 'Mappa Debiti', icon: '⚠️' },
     { id: 'piano', label: 'Piano Finanziario', icon: '🏗️' },
-    { id: 'analisi', label: 'Analisi', icon: '🔍' },
+    { id: 'proiezione', label: 'Proiezione 5 Anni', icon: '📈' },
     { id: 'simulazioni', label: 'Simulazioni', icon: '🎛️' },
   ];
 
@@ -1079,66 +1077,74 @@ const KarolDashboard = () => {
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '20px 24px 40px' }}>
 
         {/* ======================== OVERVIEW ======================== */}
-        {tab === 'overview' && (
+        {tab === 'home' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-            {/* 6 Card Costi Gestionali */}
+            {/* ROW 1: 5 Card KPI Principali */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+              {[
+                { label: 'Ricavi Consolidati', valore: TOT.ric, sub: 'Annualizzato 8M', icon: '📊' },
+                { label: 'MOL Gestionale', valore: TOT.molG, sub: fmtPct(TOT.molGPct) + ' su ricavi', icon: '📋', colore: TOT.molG >= 0 ? C.verde : C.rosso },
+                { label: 'Saldo Cassa', valore: copCassa.saldo, sub: 'Bilancio 31/08/2025', icon: '💰', colore: copCassa.saldo > 0 ? C.verde : C.rosso },
+                { label: 'Burn Rate Mensile', valore: copCassa.deficit, sub: 'Stima indicativa', icon: '🔥', colore: C.giallo },
+                { label: 'Autonomia Cassa', valore: null, display: copCassa.giorni + ' gg (' + copCassa.mesi + ' mesi)', sub: 'Saldo / burn rate', icon: '⏱️', colore: copCassa.giorni < 30 ? C.rosso : copCassa.giorni < 90 ? C.giallo : C.verde },
+              ].map((c, i) => (
+                <div key={i} style={{ ...cardS, padding: '16px 18px', borderTop: '3px solid ' + (c.colore || C.primario) }}>
+                  <div style={{ fontSize: 11, color: C.t3, fontWeight: 500, marginBottom: 8 }}>{c.icon} {c.label}</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: C.t1 }}>{c.display || fmt(c.valore)}</div>
+                  <div style={{ fontSize: 10, color: C.t3, marginTop: 4 }}>{c.sub}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* ROW 2: 6 Card Costi — solo numeri, niente semafori */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
               {[
-                { label: 'Personale', valore: TOT.pers, pct: TOT.persPct, bench: BENCH.pers_pct, icon: '👥', inv: true },
-                { label: 'Materiali/Farmaci', valore: UO.reduce((s,u) => s + u.costi.materiali, 0), pct: UO.reduce((s,u) => s + u.costi.materiali, 0) / TOT.ric, bench: 0.12, icon: '💊', inv: true },
-                { label: 'Servizi', valore: UO.reduce((s,u) => s + u.costi.servizi, 0), pct: UO.reduce((s,u) => s + u.costi.servizi, 0) / TOT.ric, bench: 0.12, icon: '🔧', inv: true },
-                { label: 'Utenze', valore: UO.reduce((s,u) => s + u.costi.utenze, 0), pct: UO.reduce((s,u) => s + u.costi.utenze, 0) / TOT.ric, bench: 0.05, icon: '⚡', inv: true },
-                { label: 'Locazioni', valore: UO.reduce((s,u) => s + (u.immobile ? u.immobile.affitto_reale : 0), 0) + D.SEDE.affitti, pct: (UO.reduce((s,u) => s + (u.immobile ? u.immobile.affitto_reale : 0), 0) + D.SEDE.affitti) / TOT.ric, bench: 0.04, icon: '🏪', inv: true },
-                { label: 'Costi Sede/HQ', valore: TOT.sede, pct: TOT.sede / TOT.ric, bench: 0.12, icon: '🏢', inv: true },
-              ].map((c, i) => {
-                const ok = c.inv ? c.pct <= c.bench : c.pct >= c.bench;
-                const warn = c.inv ? c.pct <= c.bench * 1.15 : c.pct >= c.bench * 0.85;
-                const col = ok ? C.verde : warn ? C.giallo : C.rosso;
-                const bg = ok ? C.verdeBg : warn ? C.gialloBg : C.rossoBg;
-                return (
-                  <div key={i} style={{ ...cardS, padding: '14px 16px', borderLeft: '3px solid ' + col }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <span style={{ fontSize: 11, color: C.t3, fontWeight: 500 }}>{c.icon} {c.label}</span>
-                      <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 8, background: bg, color: col, fontWeight: 600 }}>{fmtPct(c.pct)}</span>
-                    </div>
-                    <div style={{ fontSize: 17, fontWeight: 700, color: C.t1 }}>{fmt(c.valore)}</div>
-                    <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>Bench: {fmtPct(c.bench)}</div>
+                { label: 'Personale', valore: TOT.pers, pct: TOT.persPct, icon: '👥' },
+                { label: 'Materiali/Farmaci', valore: UO.reduce((s,u) => s + u.costi.materiali, 0), pct: UO.reduce((s,u) => s + u.costi.materiali, 0) / TOT.ric, icon: '💊' },
+                { label: 'Servizi', valore: UO.reduce((s,u) => s + u.costi.servizi, 0), pct: UO.reduce((s,u) => s + u.costi.servizi, 0) / TOT.ric, icon: '🔧' },
+                { label: 'Utenze', valore: UO.reduce((s,u) => s + u.costi.utenze, 0), pct: UO.reduce((s,u) => s + u.costi.utenze, 0) / TOT.ric, icon: '⚡' },
+                { label: 'Locazioni', valore: UO.reduce((s,u) => s + (u.immobile ? u.immobile.affitto_reale : 0), 0) + D.SEDE.affitti, pct: (UO.reduce((s,u) => s + (u.immobile ? u.immobile.affitto_reale : 0), 0) + D.SEDE.affitti) / TOT.ric, icon: '🏪' },
+                { label: 'Costi Sede/HQ', valore: TOT.sede, pct: TOT.sede / TOT.ric, icon: '🏢' },
+              ].map((c, i) => (
+                <div key={i} style={{ ...cardS, padding: '14px 16px', borderLeft: '3px solid ' + C.primarioChiaro }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <span style={{ fontSize: 11, color: C.t3, fontWeight: 500 }}>{c.icon} {c.label}</span>
+                    <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 8, background: '#f1f5f9', color: C.t2, fontWeight: 600 }}>{fmtPct(c.pct)}</span>
                   </div>
-                );
-              })}
+                  <div style={{ fontSize: 17, fontWeight: 700, color: C.t1 }}>{fmt(c.valore)}</div>
+                </div>
+              ))}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              {/* B1: Cash Autonomy Gauge */}
+              {/* B1: Autonomia di Cassa */}
               <div style={cardS}>
                 <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Autonomia di Cassa</h3>
-                <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Saldo attuale vs burn rate — stress test senza eventi straordinari</p>
-
+                <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Saldo vs burn rate — senza eventi straordinari</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
-                  <div style={{ padding: 12, background: C.rossoBg, borderRadius: 8 }}>
+                  <div style={{ padding: 12, background: '#f8fafc', borderRadius: 8 }}>
                     <div style={{ fontSize: 10, color: C.t3, marginBottom: 4 }}>Saldo Cassa</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: C.rosso }}>{fmt(copCassa.saldo)}</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: C.t1 }}>{fmt(copCassa.saldo)}</div>
                     <div style={{ fontSize: 9, color: C.t2, marginTop: 2 }}>Bilancio 31/08</div>
                   </div>
-                  <div style={{ padding: 12, background: C.gialloBg, borderRadius: 8 }}>
+                  <div style={{ padding: 12, background: '#f8fafc', borderRadius: 8 }}>
                     <div style={{ fontSize: 10, color: C.t3, marginBottom: 4 }}>Deficit/mese</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: C.giallo }}>{fmt(copCassa.deficit)}</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: C.t1 }}>{fmt(copCassa.deficit)}</div>
                     <div style={{ fontSize: 9, color: C.t2, marginTop: 2 }}>Uscite - Incassi</div>
                   </div>
-                  <div style={{ padding: 12, background: copCassa.giorni < 30 ? C.rossoBg : C.gialloBg, borderRadius: 8 }}>
+                  <div style={{ padding: 12, background: '#f8fafc', borderRadius: 8 }}>
                     <div style={{ fontSize: 10, color: C.t3, marginBottom: 4 }}>Autonomia</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: copCassa.giorni < 30 ? C.rosso : C.giallo }}>{copCassa.giorni} gg</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: C.t1 }}>{copCassa.giorni} gg</div>
                     <div style={{ fontSize: 9, color: C.t2, marginTop: 2 }}>{copCassa.mesi} mesi</div>
                   </div>
                 </div>
-
               </div>
 
-              {/* B2: Matrice KPI per UO */}
+              {/* B2: Matrice KPI per UO — solo valori numerici, no semafori */}
               <div style={cardS}>
                 <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Matrice KPI per UO</h3>
-                <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Semaforo performance operativa</p>
+                <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>Valori numerici — benchmark in fase di validazione</p>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid ' + C.bordo }}>
@@ -1150,12 +1156,10 @@ const KarolDashboard = () => {
                   <tbody>
                     {UO.map((u, i) => {
                       const kpis = KPI.filter(k => k.uo === u.cod);
-                      const cell = (name) => {
+                      const cellVal = (name) => {
                         const k = kpis.find(x => x.kpi.startsWith(name));
                         if (!k) return <td style={{ textAlign: 'center', color: C.t3, fontSize: 11 }}>n/d</td>;
-                        const ac = alertCol(k.a);
-                        const display = fmtPct(k.v);
-                        return <td style={{ textAlign: 'center' }}><span style={{ background: ac.bg, color: ac.color, padding: '2px 6px', borderRadius: 10, fontSize: 10, fontWeight: 600, fontFamily: 'monospace' }}>{display}</span></td>;
+                        return <td style={{ textAlign: 'center' }}><span style={{ padding: '2px 6px', borderRadius: 10, fontSize: 10, fontWeight: 600, fontFamily: 'monospace', background: '#f1f5f9', color: C.t1 }}>{fmtPct(k.v)}</span></td>;
                       };
                       return (
                         <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo }}>
@@ -1163,19 +1167,31 @@ const KarolDashboard = () => {
                             <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: u.colore, marginRight: 6 }}></span>
                             {u.cod}
                           </td>
-                          {cell('MOL-I')}{cell('MOL-G')}{cell('Pers')}{cell('Occ')}
+                          {cellVal('MOL-I')}{cellVal('MOL-G')}{cellVal('Pers')}{cellVal('Occ')}
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
-                <div style={{ marginTop: 12, display: 'flex', gap: 16, justifyContent: 'center' }}>
-                  {[{ c: C.verdeBg, t: C.verde, l: 'In target' }, { c: C.gialloBg, t: C.giallo, l: 'Attenzione' }, { c: C.rossoBg, t: C.rosso, l: 'Critico' }]
-                    .map(leg => <span key={leg.l} style={{ fontSize: 10, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ width: 10, height: 10, borderRadius: 3, background: leg.c, border: '1px solid ' + leg.t }}></span>{leg.l}
-                    </span>)}
-                </div>
               </div>
+            </div>
+
+            {/* ROW 3: Grafico Scostamento MOL per UO */}
+            <div style={cardS}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>MOL Gestionale per UO</h3>
+              <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Margine operativo lordo netto costi sede allocati</p>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={scost} layout="vertical" margin={{ left: 80, right: 30 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={C.bordo} />
+                  <XAxis type="number" tickFormatter={v => fmt(v)} style={{ fontSize: 10 }} />
+                  <YAxis dataKey="nome" type="category" style={{ fontSize: 11 }} width={60} />
+                  <Tooltip formatter={v => fmt(v)} />
+                  <ReferenceLine x={0} stroke={C.t3} />
+                  <Bar dataKey="scost" name="MOL-G">
+                    {scost.map((s, i) => <Cell key={i} fill={s.fill} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
 
           </div>
@@ -2193,14 +2209,181 @@ const KarolDashboard = () => {
           );
         })()}
 
-        {/* ======================== ANALISI COSTI ======================== */}
+        {/* ======================== PROIEZIONE 5 ANNI ======================== */}
+        {tab === 'proiezione' && (() => {
+          // Dati da Business Plan — 2025 = dashboard (più aggiornato), 2026 = BP con prudenza, 2027+ = BP
+          const bpData = [
+            { anno: 2025, ricavi: TOT.ric, ebitda: TOT.molG + TOT.ammort, molG: TOT.molG, ebit: TOT.ebit, utile: null, fonte: 'Dashboard 8M ann.' },
+            { anno: 2026, ricavi: 17021878, ebitda: 2339958, molG: 2339958 - 837577, ebit: 1502381, utile: 520993, fonte: 'BP — anno di transizione' },
+            { anno: 2027, ricavi: 18636684, ebitda: 2665528, molG: 2665528 - 934929, ebit: 1730599, utile: 783010, fonte: 'BP' },
+            { anno: 2028, ricavi: 19080019, ebitda: 2821163, molG: 2821163 - 934929, ebit: 1886233, utile: 996750, fonte: 'BP' },
+            { anno: 2029, ricavi: 19536250, ebitda: 2984002, molG: 2984002 - 934929, ebit: 2049072, utile: 1200254, fonte: 'BP' },
+            { anno: 2030, ricavi: 20005838, ebitda: 3154378, molG: 3154378 - 934929, ebit: 2219449, utile: 1371804, fonte: 'BP' },
+          ];
+          const bpDebt = [
+            { anno: 2025, debiti: 24309471, pfn: 18801562, cassa: 7909, leverage: 13.05 },
+            { anno: 2026, debiti: 24941242, pfn: 20527319, cassa: 1913924, leverage: 8.77 },
+            { anno: 2027, debiti: 21837799, pfn: 18995902, cassa: 2341897, leverage: 7.13 },
+            { anno: 2028, debiti: 19156562, pfn: 17199824, cassa: 1556738, leverage: 6.10 },
+            { anno: 2029, debiti: 16941281, pfn: 15213886, cassa: 1427395, leverage: 5.10 },
+            { anno: 2030, debiti: 14615658, pfn: 13056621, cassa: 1359036, leverage: 4.14 },
+          ];
+          const bpBU = [
+            { cod: 'RSA', nome: 'RSA Villabate', ricavi: 3178890, ebitda: 299400, margin: 9.4 },
+            { cod: 'KMC', nome: 'Karol Medical Center', ricavi: 857280, ebitda: 194392, margin: 22.7 },
+            { cod: 'ROM', nome: 'RSA Roma (da apr.)', ricavi: 2514541, ebitda: 191605, margin: 7.6 },
+            { cod: 'BRG', nome: 'Borgo Ritrovato', ricavi: 1482730, ebitda: 549205, margin: 37.0 },
+            { cod: 'CTA', nome: 'CTA Ex Stagno', ricavi: 2482730, ebitda: 621430, margin: 25.0 },
+            { cod: 'COS', nome: 'CdC Cosentino', ricavi: 3474337, ebitda: 1318711, margin: 37.9 },
+            { cod: 'LAB', nome: 'Laboratorio', ricavi: 900000, ebitda: 158800, margin: 17.6 },
+            { cod: 'BET', nome: 'Betania', ricavi: 600000, ebitda: 600000, margin: 100.0 },
+            { cod: 'HQ', nome: 'Corporate/HQ', ricavi: 0, ebitda: -2540300, margin: null },
+          ];
+
+          return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ ...cardS, padding: '12px 16px', background: '#fffbeb', border: '1px solid #fcd34d' }}>
+              <span style={{ fontSize: 12, color: '#92400e' }}>Fonte: Business Plan Karol S.p.A. — scenario Mutuo MCC. I dati 2025 usano il consuntivo dashboard (più aggiornato). Il 2026 è anno di transizione — i dati BP sono ottimistici e andranno rivisti con prudenza. Dal 2027 i dati BP sono credibili con moderata prudenza.</span>
+            </div>
+
+            {/* Grafico principale: Ricavi / EBITDA / EBIT 5 anni */}
+            <div style={cardS}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Piano Industriale 2025-2030</h3>
+              <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Ricavi, EBITDA e Risultato Operativo — proiezione BP</p>
+              <ResponsiveContainer width="100%" height={320}>
+                <ComposedChart data={bpData} margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="anno" fontSize={12} stroke={C.t2} />
+                  <YAxis tickFormatter={v => fmt(v)} fontSize={9} stroke={C.t3} />
+                  <Tooltip formatter={v => [fmt(v)]} />
+                  <Legend />
+                  <Area type="monotone" dataKey="ricavi" name="Ricavi" fill="#e2e8f0" stroke="#94a3b8" fillOpacity={0.3} />
+                  <Bar dataKey="ebitda" name="EBITDA" fill={C.primarioChiaro} barSize={28} radius={[3,3,0,0]} />
+                  <Line type="monotone" dataKey="ebit" name="EBIT" stroke={C.verde} strokeWidth={2.5} dot={{ r: 4, fill: C.verde }} />
+                  <ReferenceLine y={0} stroke={C.t3} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              {/* Tabella CE proiezione */}
+              <div style={cardS}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, color: C.t1, marginBottom: 12 }}>CE Proiezione 2025-2030</h3>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid ' + C.bordo }}>
+                      {['Anno', 'Ricavi', 'EBITDA', 'EBITDA %', 'EBIT', 'Utile Netto'].map(h => (
+                        <th key={h} style={{ padding: '6px 4px', textAlign: h === 'Anno' ? 'left' : 'right', color: C.t2, fontWeight: 600, fontSize: 10 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bpData.map((r, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo, background: i === 0 ? '#f0f4f8' : i === 1 ? '#fffbeb' : 'white' }}>
+                        <td style={{ padding: '6px 4px', fontWeight: 600 }}>{r.anno}</td>
+                        <td style={{ padding: '6px 4px', textAlign: 'right', fontFamily: 'monospace' }}>{fmt(r.ricavi)}</td>
+                        <td style={{ padding: '6px 4px', textAlign: 'right', fontFamily: 'monospace' }}>{fmt(r.ebitda)}</td>
+                        <td style={{ padding: '6px 4px', textAlign: 'right', fontFamily: 'monospace' }}>{fmtPct(r.ebitda / r.ricavi)}</td>
+                        <td style={{ padding: '6px 4px', textAlign: 'right', fontFamily: 'monospace', color: r.ebit >= 0 ? C.verde : C.rosso }}>{fmt(r.ebit)}</td>
+                        <td style={{ padding: '6px 4px', textAlign: 'right', fontFamily: 'monospace' }}>{r.utile ? fmt(r.utile) : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Debito e PFN */}
+              <div style={cardS}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, color: C.t1, marginBottom: 12 }}>Debito e PFN 2025-2030</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <ComposedChart data={bpDebt} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis dataKey="anno" fontSize={11} />
+                    <YAxis tickFormatter={v => fmt(v)} fontSize={9} />
+                    <Tooltip formatter={v => [fmt(v)]} />
+                    <Legend />
+                    <Bar dataKey="debiti" name="Debiti Totali" fill={C.rossoBg} stroke={C.rosso} barSize={22} />
+                    <Line type="monotone" dataKey="cassa" name="Cassa" stroke={C.verde} strokeWidth={2} dot={{ r: 3 }} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10, marginTop: 8 }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid ' + C.bordo }}>
+                      {['Anno', 'Debiti Tot.', 'PFN Gest.', 'Cassa', 'Leverage'].map(h => (
+                        <th key={h} style={{ padding: '4px', textAlign: h === 'Anno' ? 'left' : 'right', color: C.t2, fontWeight: 600 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bpDebt.map((r, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo }}>
+                        <td style={{ padding: '4px', fontWeight: 600 }}>{r.anno}</td>
+                        <td style={{ padding: '4px', textAlign: 'right', fontFamily: 'monospace', color: C.rosso }}>{fmt(r.debiti)}</td>
+                        <td style={{ padding: '4px', textAlign: 'right', fontFamily: 'monospace' }}>{fmt(r.pfn)}</td>
+                        <td style={{ padding: '4px', textAlign: 'right', fontFamily: 'monospace', color: C.verde }}>{fmt(r.cassa)}</td>
+                        <td style={{ padding: '4px', textAlign: 'right', fontFamily: 'monospace' }}>{r.leverage.toFixed(1)}x</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Segment EBITDA 2026 da BP */}
+            <div style={cardS}>
+              <h3 style={{ fontSize: 14, fontWeight: 700, color: C.t1, marginBottom: 4 }}>EBITDA per BU — Proiezione 2026 (BP)</h3>
+              <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>Stime BP — include nuove BU (Roma da apr., KMC da apr., Borgo riattivato)</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={bpBU.filter(b => b.cod !== 'HQ')} layout="vertical" margin={{ left: 100, right: 30 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.bordo} />
+                    <XAxis type="number" tickFormatter={v => fmt(v)} fontSize={10} />
+                    <YAxis dataKey="nome" type="category" fontSize={10} width={90} />
+                    <Tooltip formatter={v => fmt(v)} />
+                    <ReferenceLine x={0} stroke={C.t3} />
+                    <Bar dataKey="ebitda" name="EBITDA" fill={C.primarioChiaro} barSize={18} radius={[0,3,3,0]}>
+                      {bpBU.filter(b => b.cod !== 'HQ').map((b, i) => <Cell key={i} fill={b.ebitda >= 0 ? C.primarioChiaro : C.rosso} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+                <table style={{ borderCollapse: 'collapse', fontSize: 10, alignSelf: 'start' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid ' + C.bordo }}>
+                      {['BU', 'Ricavi', 'EBITDA', '%'].map(h => (
+                        <th key={h} style={{ padding: '4px 6px', textAlign: h === 'BU' ? 'left' : 'right', color: C.t2, fontWeight: 600 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bpBU.map((b, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo, background: b.cod === 'HQ' ? '#f8fafc' : 'white' }}>
+                        <td style={{ padding: '4px 6px', fontWeight: 600 }}>{b.cod}</td>
+                        <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace' }}>{b.ricavi > 0 ? fmt(b.ricavi) : '—'}</td>
+                        <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace', color: b.ebitda >= 0 ? C.verde : C.rosso }}>{fmt(b.ebitda)}</td>
+                        <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace' }}>{b.margin !== null ? b.margin.toFixed(1) + '%' : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Nota nuove BU placeholder */}
+            <div style={{ ...cardS, padding: '12px 16px', background: '#f0f4f8' }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: C.t1 }}>Nuove BU previste</span>
+              <p style={{ fontSize: 11, color: C.t2, marginTop: 4 }}>ROM (RSA Roma 77 PL, da apr. 2026), KMC (Medical Center, da apr. 2026), BRG (Borgo Ritrovato, riattivazione). Dati dettagliati da Piano Industriale — placeholder in attesa di dati definitivi.</p>
+            </div>
+          </div>
+          );
+        })()}
+
         {/* ======================== SIMULAZIONI ======================== */}
         {tab === 'simulazioni' && (() => {
           // Calcola impatto simulazione
           const simTotRic = TOT.ric * (1 + simRic / 100);
           const simTotPers = TOT.pers * (1 + simPers / 100);
           const simTotSede = TOT.sede * (1 + simSede / 100);
-          const simAltriCosti = TOT.cDir - TOT.pers;
+          const simAltriCosti = (TOT.cDir - TOT.pers) * (1 + simOcc / 100); // simOcc = variazione costi variabili
           const simMolI = simTotRic - simTotPers - simAltriCosti;
           const simMolG = simMolI - simTotSede;
           const simEbit = simMolG - TOT.ammort - TOT.oneri_fin;
@@ -2235,7 +2418,7 @@ const KarolDashboard = () => {
                 <SliderRow label="Ricavi (variazione %)" value={simRic} setter={setSimRic} min={-20} max={20} />
                 <SliderRow label="Costo Personale (variazione %)" value={simPers} setter={setSimPers} min={-15} max={15} />
                 <SliderRow label="Costi Sede (variazione %)" value={simSede} setter={setSimSede} min={-30} max={10} />
-                <SliderRow label="Occupancy (delta pp)" value={simOcc} setter={setSimOcc} min={-10} max={10} />
+                <SliderRow label="Costi Variabili Servizi/Forniture (%)" value={simOcc} setter={setSimOcc} min={-20} max={10} />
                 <button onClick={() => { setSimRic(0); setSimPers(0); setSimOcc(0); setSimSede(0); }}
                   style={{ marginTop: 8, padding: '8px 20px', background: C.primario, color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' }}>
                   Reset
@@ -2309,9 +2492,10 @@ const KarolDashboard = () => {
                     const compRic = Math.pow(1 + simRic / 100, a);
                     const compPers = Math.pow(1 + simPers / 100, a);
                     const compSede = Math.pow(1 + simSede / 100, a);
+                    const compVar = Math.pow(1 + simOcc / 100, a);
                     const ric = TOT.ric * compRic;
                     const pers = TOT.pers * compPers;
-                    const altriC = TOT.cDir - TOT.pers;
+                    const altriC = (TOT.cDir - TOT.pers) * compVar;
                     const molI = ric - pers - altriC;
                     const sede = TOT.sede * compSede;
                     const molG = molI - sede;
@@ -2359,7 +2543,7 @@ const KarolDashboard = () => {
                 <div style={{ marginTop: 10, padding: '8px 12px', background: '#f0f4f8', borderRadius: 6, fontSize: 11, color: C.t2 }}>
                   {simRic === 0 && simPers === 0 && simSede === 0
                     ? 'Muovi gli slider per vedere la proiezione multi-anno. L\'effetto si compone geometricamente.'
-                    : `Ipotesi: Ricavi ${simRic >= 0 ? '+' : ''}${simRic}%/anno, Personale ${simPers >= 0 ? '+' : ''}${simPers}%/anno, Sede ${simSede >= 0 ? '+' : ''}${simSede}%/anno — compounding su 5 anni.`
+                    : `Ipotesi: Ricavi ${simRic >= 0 ? '+' : ''}${simRic}%/anno, Personale ${simPers >= 0 ? '+' : ''}${simPers}%/anno, Sede ${simSede >= 0 ? '+' : ''}${simSede}%/anno, Costi Var. ${simOcc >= 0 ? '+' : ''}${simOcc}%/anno — compounding su 5 anni.`
                   }
                 </div>
               </div>
