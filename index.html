@@ -552,7 +552,7 @@ UO.forEach(u => {
   // CTA/COS: aggiunge affitto figurativo (6% costo storico immobile)
   // RSA/KCP: invariato (già paga affitto reale)
   const aff = u.immobile ? u.immobile.affitto_figurativo : 0;
-  u.costo_occupazione = u.immobile ? (u.immobile.affitto_reale + aff) : 0; // costo effettivo + figurativo
+  u.costo_locazione = u.immobile ? (u.immobile.affitto_reale + aff) : 0; // costo effettivo + figurativo
   u.costiNorm = u.costiDir + aff;
   u.molINorm = u.ricavi - u.costiNorm;
   u.molINormPct = u.ricavi > 0 ? u.molINorm / u.ricavi : 0;
