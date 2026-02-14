@@ -217,43 +217,46 @@ const KAROL_DATA = {
         { sett: 'S12+', desc: 'CAPEX nuove BU (BRT+KMC+ROM)', importo: -2286587, tipo: 'uscita', data_stima: '2026-2027' },
       ],
     },
-    // 13 settimane STRESS TEST (solo flussi operativi, zero eventi straordinari)
-    // Mostra la realtà nuda: deficit €217k/mese, cassa negativa da S2 e in costante peggioramento
+    // 13 settimane STRESS TEST — calendario reale da 14/02/2026
+    // Deficit operativo ~€196k/mese (stima indicativa — trend di massima)
     cassaSett_base: [
-      // Mese 1 (saldo iniziale €8k)
-      { s: 'S1',  saldo: 106, inc_det: 'Holdback €78k + privato €20k', usc_det: '—', incassi: 98, pag: 0 },
-      { s: 'S2',  saldo: -187, inc_det: 'Factoring 1° €421k + privato €20k', usc_det: 'Stipendi €620k + F24 €80k + affitti+utenze €34k', incassi: 441, pag: 734, alert: true },
-      { s: 'S3',  saldo: -385, inc_det: 'Privato €20k + interco Betania €50k', usc_det: 'Materiali €108k + servizi €160k', incassi: 70, pag: 268 },
-      { s: 'S4',  saldo: -210, inc_det: 'Factoring 2° €281k + privato €20k', usc_det: 'Mutui €77k + cartelle €49k', incassi: 301, pag: 126 },
-      // Mese 2
-      { s: 'S5',  saldo: -112, inc_det: 'Holdback + privato', usc_det: '—', incassi: 98, pag: 0 },
-      { s: 'S6',  saldo: -405, inc_det: 'Factoring 1° + privato', usc_det: 'Stipendi+F24+affitti+utenze', incassi: 441, pag: 734, alert: true },
-      { s: 'S7',  saldo: -603, inc_det: 'Privato + interco', usc_det: 'Materiali+servizi', incassi: 70, pag: 268 },
-      { s: 'S8',  saldo: -428, inc_det: 'Factoring 2° + privato', usc_det: 'Mutui+cartelle', incassi: 301, pag: 126 },
-      // Mese 3 (massima tensione pre-mutuo)
-      { s: 'S9',  saldo: -330, inc_det: 'Holdback + privato', usc_det: '—', incassi: 98, pag: 0 },
-      { s: 'S10', saldo: -623, inc_det: 'Factoring 1° + privato', usc_det: 'Stipendi+F24+affitti+utenze', incassi: 441, pag: 734, alert: true },
-      { s: 'S11', saldo: -821, inc_det: 'Privato + interco', usc_det: 'Materiali+servizi', incassi: 70, pag: 268 },
-      { s: 'S12', saldo: -646, inc_det: 'Factoring 2° + privato', usc_det: 'Mutui+cartelle', incassi: 301, pag: 126 },
-      { s: 'S13', saldo: -548, inc_det: 'Holdback + privato', usc_det: '—', incassi: 98, pag: 0 },
+      // Feb 2026
+      { s: '21/02', saldo: 106, inc_det: 'Holdback €78k + privato €20k', usc_det: '—', incassi: 98, pag: 0, mese: 'Feb' },
+      { s: '28/02', saldo: -187, inc_det: 'Factoring 1° €421k + privato €20k', usc_det: 'Stipendi €620k + F24 €80k + affitti+utenze €34k', incassi: 441, pag: 734, alert: true, mese: 'Feb' },
+      // Mar 2026
+      { s: '07/03', saldo: -385, inc_det: 'Privato €20k + interco Betania €50k', usc_det: 'Materiali €108k + servizi €160k', incassi: 70, pag: 268, mese: 'Mar' },
+      { s: '14/03', saldo: -210, inc_det: 'Factoring 2° €281k + privato €20k', usc_det: 'Mutui €77k + cartelle €49k', incassi: 301, pag: 126, mese: 'Mar' },
+      { s: '21/03', saldo: -112, inc_det: 'Holdback + privato', usc_det: '—', incassi: 98, pag: 0, mese: 'Mar' },
+      { s: '28/03', saldo: -405, inc_det: 'Factoring 1° + privato', usc_det: 'Stipendi+F24+affitti+utenze', incassi: 441, pag: 734, alert: true, mese: 'Mar' },
+      // Apr 2026
+      { s: '04/04', saldo: -603, inc_det: 'Privato + interco', usc_det: 'Materiali+servizi', incassi: 70, pag: 268, mese: 'Apr' },
+      { s: '11/04', saldo: -428, inc_det: 'Factoring 2° + privato', usc_det: 'Mutui+cartelle', incassi: 301, pag: 126, mese: 'Apr' },
+      { s: '18/04', saldo: -330, inc_det: 'Holdback + privato', usc_det: '—', incassi: 98, pag: 0, mese: 'Apr' },
+      { s: '25/04', saldo: -623, inc_det: 'Factoring 1° + privato', usc_det: 'Stipendi+F24+affitti+utenze', incassi: 441, pag: 734, alert: true, mese: 'Apr' },
+      // Mag 2026
+      { s: '02/05', saldo: -821, inc_det: 'Privato + interco', usc_det: 'Materiali+servizi', incassi: 70, pag: 268, mese: 'Mag' },
+      { s: '09/05', saldo: -646, inc_det: 'Factoring 2° + privato', usc_det: 'Mutui+cartelle', incassi: 301, pag: 126, mese: 'Mag' },
+      { s: '16/05', saldo: -548, inc_det: 'Holdback + privato', usc_det: '—', incassi: 98, pag: 0, mese: 'Mag' },
     ],
-    // 13 settimane SCENARIO PIANO (con mutuo MCC + incasso Regione)
+    // 13 settimane SCENARIO PIANO (con mutuo MCC + incasso Regione) — calendario reale
     cassaSett_piano: [
-      // Mese 1-2: identici a stress — nessun evento straordinario ancora
-      { s: 'S1',  saldo: 106, inc_det: 'Holdback + privato', usc_det: '—', incassi: 98, pag: 0 },
-      { s: 'S2',  saldo: -187, inc_det: 'Factoring 1°', usc_det: 'Stipendi+F24+affitti+utenze', incassi: 441, pag: 734, alert: true },
-      { s: 'S3',  saldo: -385, inc_det: 'Privato + interco', usc_det: 'Materiali+servizi', incassi: 70, pag: 268 },
-      { s: 'S4',  saldo: -210, inc_det: 'Factoring 2°', usc_det: 'Mutui+cartelle', incassi: 301, pag: 126 },
-      { s: 'S5',  saldo: -112, inc_det: 'Holdback + privato', usc_det: '—', incassi: 98, pag: 0 },
-      { s: 'S6',  saldo: -405, inc_det: 'Factoring 1°', usc_det: 'Stipendi+F24+affitti+utenze', incassi: 441, pag: 734, alert: true },
-      { s: 'S7',  saldo: -603, inc_det: 'Privato + interco', usc_det: 'Materiali+servizi', incassi: 70, pag: 268 },
-      { s: 'S8',  saldo: -428, inc_det: 'Factoring 2°', usc_det: 'Mutui+cartelle', incassi: 301, pag: 126 },
-      // Mese 3: ★ EROGAZIONE MUTUO MCC + INCASSO REGIONE
-      { s: 'S9',  saldo: 3674, inc_det: '★ MUTUO MCC €5M + holdback+privato', usc_det: '★ Saldo arretrati personale €996k', incassi: 5098, pag: 996, evento: 'Erogazione Mutuo MCC €5M' },
-      { s: 'S10', saldo: 6381, inc_det: '★ REGIONE CTA €3M + Factoring 1°', usc_det: 'Stipendi+F24+affitti+utenze', incassi: 3441, pag: 734, evento: 'Incasso Regione €3M (contenzioso CTA)' },
-      { s: 'S11', saldo: 6183, inc_det: 'Privato + interco', usc_det: 'Materiali+servizi', incassi: 70, pag: 268 },
-      { s: 'S12', saldo: 5958, inc_det: 'Factoring 2°', usc_det: 'Mutui+cartelle + CAPEX avvio BU €400k', incassi: 301, pag: 526 },
-      { s: 'S13', saldo: 6056, inc_det: 'Holdback + privato', usc_det: '—', incassi: 98, pag: 0 },
+      // Feb 2026
+      { s: '21/02', saldo: 106, inc_det: 'Holdback + privato', usc_det: '—', incassi: 98, pag: 0, mese: 'Feb' },
+      { s: '28/02', saldo: -187, inc_det: 'Factoring 1°', usc_det: 'Stipendi+F24+affitti+utenze', incassi: 441, pag: 734, alert: true, mese: 'Feb' },
+      // Mar 2026
+      { s: '07/03', saldo: -385, inc_det: 'Privato + interco', usc_det: 'Materiali+servizi', incassi: 70, pag: 268, mese: 'Mar' },
+      { s: '14/03', saldo: -210, inc_det: 'Factoring 2°', usc_det: 'Mutui+cartelle', incassi: 301, pag: 126, mese: 'Mar' },
+      { s: '21/03', saldo: -112, inc_det: 'Holdback + privato', usc_det: '—', incassi: 98, pag: 0, mese: 'Mar' },
+      { s: '28/03', saldo: -405, inc_det: 'Factoring 1°', usc_det: 'Stipendi+F24+affitti+utenze', incassi: 441, pag: 734, alert: true, mese: 'Mar' },
+      // Apr 2026 — ★ EROGAZIONE MUTUO + INCASSO REGIONE
+      { s: '04/04', saldo: -603, inc_det: 'Privato + interco', usc_det: 'Materiali+servizi', incassi: 70, pag: 268, mese: 'Apr' },
+      { s: '11/04', saldo: -428, inc_det: 'Factoring 2°', usc_det: 'Mutui+cartelle', incassi: 301, pag: 126, mese: 'Apr' },
+      { s: '18/04', saldo: 3674, inc_det: '★ MUTUO MCC €5M + holdback+privato', usc_det: '★ Saldo arretrati personale €996k', incassi: 5098, pag: 996, evento: 'Erogazione Mutuo MCC €5M', mese: 'Apr' },
+      { s: '25/04', saldo: 6381, inc_det: '★ REGIONE CTA €3M + Factoring 1°', usc_det: 'Stipendi+F24+affitti+utenze', incassi: 3441, pag: 734, evento: 'Incasso Regione €3M (contenzioso CTA)', mese: 'Apr' },
+      // Mag 2026
+      { s: '02/05', saldo: 6183, inc_det: 'Privato + interco', usc_det: 'Materiali+servizi', incassi: 70, pag: 268, mese: 'Mag' },
+      { s: '09/05', saldo: 5958, inc_det: 'Factoring 2°', usc_det: 'Mutui+cartelle + CAPEX avvio BU €400k', incassi: 301, pag: 526, mese: 'Mag' },
+      { s: '16/05', saldo: 6056, inc_det: 'Holdback + privato', usc_det: '—', incassi: 98, pag: 0, mese: 'Mag' },
     ],
     scenari: [
       // Base = piano finanziario BP reale (cassa finale dal foglio PIANO_FINANZIARIO)
@@ -1463,7 +1466,7 @@ const KarolDashboard = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                 <div>
                   <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1 }}>Tesoreria Rolling 13 Settimane — Saldo Cassa €k</h3>
-                  <p style={{ fontSize: 11, color: C.t3 }}>Rosso = stress test (solo operativo) | Blu = piano (mutuo MCC + incasso Regione) | Soglia €200k</p>
+                  <p style={{ fontSize: 11, color: C.t3 }}>Calendario reale dal 14/02/2026 | Rosso = stress test | Blu = piano (mutuo+Regione) | Soglia €200k</p>
                 </div>
                 <div style={{ background: '#fef3c7', padding: '4px 10px', borderRadius: 6, fontSize: 10, fontWeight: 600, color: '#92400e' }}>
                   Saldo iniziale: €{Math.round(tesoreria.saldo_iniziale/1000)}k
@@ -1503,11 +1506,11 @@ const KarolDashboard = () => {
                 </ComposedChart>
               </ResponsiveContainer>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
-                <div style={{ padding: '8px 12px', background: C.rossoBg, borderRadius: 6, fontSize: 11, color: C.rosso, fontWeight: 500 }}>
-                  ⚠️ STRESS TEST: senza mutuo e Regione, la cassa va negativa da S2 e peggiora ogni mese.
+                <div style={{ padding: '8px 12px', background: '#f8fafc', borderRadius: 6, fontSize: 11, color: C.t2 }}>
+                  STRESS TEST: scenario senza eventi straordinari. Burn rate ~€196k/mese (stima indicativa).
                 </div>
-                <div style={{ padding: '8px 12px', background: C.verdeBg, borderRadius: 6, fontSize: 11, color: C.verde, fontWeight: 500 }}>
-                  ✓ PIANO: con erogazione MCC €5M (S9) e incasso Regione €3M (S10), la cassa si normalizza a ~€5,6M. Prerequisito: chiusura mutuo entro aprile 2026.
+                <div style={{ padding: '8px 12px', background: '#f8fafc', borderRadius: 6, fontSize: 11, color: C.t2 }}>
+                  PIANO: include erogazione MCC €5M (apr. 2026) e incasso Regione CTA €3M. Prerequisito: chiusura mutuo entro aprile.
                 </div>
               </div>
             </div>
@@ -1595,19 +1598,17 @@ const KarolDashboard = () => {
               </div>
             </div>
 
-            {/* C4: KPI Cash Flow */}
+            {/* C4: KPI Cash Flow — solo valori numerici */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
               {[
-                { label: 'DSO ASP', valore: D.cashflow.kpi.dso + ' gg', target: '< ' + BENCH.dso + ' gg', sem: React.createElement(Semaforo, { valore: D.cashflow.kpi.dso, verdeMin: BENCH.dso, gialloMin: BENCH.dso * 1.5, invertito: true }) },
-                { label: 'DPO Fornitori', valore: D.cashflow.kpi.dpo + ' gg', target: '< ' + BENCH.dpo + ' gg', sem: React.createElement(Semaforo, { valore: D.cashflow.kpi.dpo, verdeMin: BENCH.dpo, gialloMin: BENCH.dpo * 1.3, invertito: true }) },
-                { label: 'DSCR', valore: '1.15x', target: '> 1.2x', sem: React.createElement(Semaforo, { valore: 1.15, verdeMin: 1.2, gialloMin: 1.0 }) },
-                { label: 'Autonomia Cassa', valore: copCassa.giorni + ' gg (' + copCassa.mesi + ' mesi)', target: '> 2.0 mesi', sem: React.createElement(Semaforo, { valore: copCassa.mesi, verdeMin: 2.0, gialloMin: 1.0 }) },
+                { label: 'DSO ASP', valore: D.cashflow.kpi.dso + ' gg' },
+                { label: 'DPO Fornitori', valore: D.cashflow.kpi.dpo + ' gg' },
+                { label: 'DSCR', valore: '1.15x' },
+                { label: 'Autonomia Cassa', valore: copCassa.giorni + ' gg (' + copCassa.mesi + ' mesi)' },
               ].map((kpi, i) => (
                 <div key={i} style={{ ...cardS, textAlign: 'center' }}>
                   <div style={{ fontSize: 11, color: C.t3, fontWeight: 500 }}>{kpi.label}</div>
                   <div style={{ fontSize: 20, fontWeight: 700, color: C.t1, margin: '6px 0' }}>{kpi.valore}</div>
-                  <div style={{ marginBottom: 6 }}>{kpi.sem}</div>
-                  <div style={{ fontSize: 10, color: C.t3 }}>Target: {kpi.target}</div>
                 </div>
               ))}
             </div>
