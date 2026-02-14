@@ -902,22 +902,21 @@ const KarolDashboard = () => {
 
       // Foglio CE Consolidato
       const ceRows = [
-        ['Voce', 'Consuntivo', 'Budget', 'Delta', '% Ricavi'],
-        ['Ricavi', TOT.ric, TOT.budget_ric, TOT.ric - TOT.budget_ric, 1],
-        ['Personale', -TOT.pers, -UO.reduce((s,u) => s + u.budget_costi.personale, 0), '', ''],
-        ['Materiali', -UO.reduce((s,u) => s + u.costi.materiali, 0), -UO.reduce((s,u) => s + u.budget_costi.materiali, 0), '', ''],
-        ['Servizi', -UO.reduce((s,u) => s + u.costi.servizi, 0), -UO.reduce((s,u) => s + u.budget_costi.servizi, 0), '', ''],
-        ['Utenze', -UO.reduce((s,u) => s + u.costi.utenze, 0), -UO.reduce((s,u) => s + u.budget_costi.utenze, 0), '', ''],
-        ['Manutenzione', -UO.reduce((s,u) => s + u.costi.manutenzione, 0), -UO.reduce((s,u) => s + u.budget_costi.manutenzione, 0), '', ''],
-        ['MOL Industriale', TOT.molI, TOT.budget_ric - TOT.budget_cDir, '', TOT.molIPct],
-        ['Costi Sede', -TOT.sede, -D.meta.budget_sede, '', ''],
-        ['MOL Gestionale', TOT.molG, '', '', TOT.molGPct],
-        ['Ammortamenti', -TOT.ammort, -D.meta.budget_ammort, '', ''],
-        ['Oneri Finanziari', -TOT.oneri_fin, -D.meta.budget_oneri_fin, '', ''],
-        ['Risultato Operativo', TOT.ebit, '', '', ''],
+        ['Voce', 'Consuntivo', '% Ricavi'],
+        ['Ricavi', TOT.ric, 1],
+        ['Personale', -TOT.pers, TOT.pers / TOT.ric],
+        ['Materiali', -UO.reduce((s,u) => s + u.costi.materiali, 0), UO.reduce((s,u) => s + u.costi.materiali, 0) / TOT.ric],
+        ['Servizi', -UO.reduce((s,u) => s + u.costi.servizi, 0), UO.reduce((s,u) => s + u.costi.servizi, 0) / TOT.ric],
+        ['Utenze', -UO.reduce((s,u) => s + u.costi.utenze, 0), UO.reduce((s,u) => s + u.costi.utenze, 0) / TOT.ric],
+        ['MOL Industriale', TOT.molI, TOT.molIPct],
+        ['Costi Sede', -TOT.sede, TOT.sede / TOT.ric],
+        ['MOL Gestionale', TOT.molG, TOT.molGPct],
+        ['Ammortamenti', -TOT.ammort, TOT.ammort / TOT.ric],
+        ['Oneri Finanziari', -TOT.oneri_fin, TOT.oneri_fin / TOT.ric],
+        ['Risultato Operativo', TOT.ebit, TOT.ebit / TOT.ric],
       ];
       const ws2 = XLSX.utils.aoa_to_sheet(ceRows);
-      ws2['!cols'] = [{ wch: 22 }, ...Array(4).fill({ wch: 18 })];
+      ws2['!cols'] = [{ wch: 22 }, { wch: 18 }, { wch: 14 }];
       XLSX.utils.book_append_sheet(wb, ws2, 'CE Consolidato');
 
       // Foglio Trend Mensile
@@ -1199,84 +1198,69 @@ const KarolDashboard = () => {
 
         {/* ======================== CONTO ECONOMICO ======================== */}
         {tab === 'ce' && (() => {
-          // CE Consolidato righe
+          // CE Consolidato righe — solo Consuntivo + % Ricavi (Budget non approvato CdA = non attendibile)
           const ceRighe = [
-            { voce: 'Ricavi', val: TOT.ric, bud: TOT.budget_ric, cls: 'header' },
-            { voce: '  Personale', val: -TOT.pers, bud: -UO.reduce((s,u) => s + u.budget_costi.personale, 0), cls: 'costo' },
-            { voce: '  Materiali/Farmaci', val: -UO.reduce((s,u) => s + u.costi.materiali, 0), bud: -UO.reduce((s,u) => s + u.budget_costi.materiali, 0), cls: 'costo' },
-            { voce: '  Servizi', val: -UO.reduce((s,u) => s + u.costi.servizi, 0), bud: -UO.reduce((s,u) => s + u.budget_costi.servizi, 0), cls: 'costo' },
-            { voce: '  Utenze', val: -UO.reduce((s,u) => s + u.costi.utenze, 0), bud: -UO.reduce((s,u) => s + u.budget_costi.utenze, 0), cls: 'costo' },
-            { voce: '  Manutenzione', val: -UO.reduce((s,u) => s + u.costi.manutenzione, 0), bud: -UO.reduce((s,u) => s + u.budget_costi.manutenzione, 0), cls: 'costo' },
-            { voce: '  Altri costi diretti', val: -UO.reduce((s,u) => s + u.costi.altri, 0), bud: -UO.reduce((s,u) => s + u.budget_costi.altri, 0), cls: 'costo' },
-            { voce: 'MOL Industriale', val: TOT.molI, bud: TOT.budget_ric - TOT.budget_cDir, cls: 'subtotale' },
-            { voce: '  Costi Sede/HQ', val: -TOT.sede, bud: -D.meta.budget_sede, cls: 'costo' },
-            { voce: 'MOL Gestionale', val: TOT.molG, bud: (TOT.budget_ric - TOT.budget_cDir) - D.meta.budget_sede, cls: 'subtotale' },
-            { voce: '  Ammortamenti', val: -TOT.ammort, bud: -D.meta.budget_ammort, cls: 'costo' },
-            { voce: '  Oneri finanziari', val: -TOT.oneri_fin, bud: -D.meta.budget_oneri_fin, cls: 'costo' },
-            { voce: 'Risultato Operativo', val: TOT.ebit, bud: (TOT.budget_ric - TOT.budget_cDir) - D.meta.budget_sede - D.meta.budget_ammort - D.meta.budget_oneri_fin, cls: 'totale' },
+            { voce: 'Ricavi', val: TOT.ric, cls: 'header' },
+            { voce: '  Personale', val: -TOT.pers, cls: 'costo' },
+            { voce: '  Materiali/Farmaci', val: -UO.reduce((s,u) => s + u.costi.materiali, 0), cls: 'costo' },
+            { voce: '  Servizi', val: -UO.reduce((s,u) => s + u.costi.servizi, 0), cls: 'costo' },
+            { voce: '  Utenze', val: -UO.reduce((s,u) => s + u.costi.utenze, 0), cls: 'costo' },
+            { voce: '  Altri costi diretti', val: -UO.reduce((s,u) => s + u.costi.altri, 0), cls: 'costo' },
+            { voce: 'MOL Industriale', val: TOT.molI, cls: 'subtotale' },
+            { voce: '  Costi Sede/HQ', val: -TOT.sede, cls: 'costo' },
+            { voce: 'MOL Gestionale', val: TOT.molG, cls: 'subtotale' },
+            { voce: '  Ammortamenti', val: -TOT.ammort, cls: 'costo' },
+            { voce: '  Oneri finanziari', val: -TOT.oneri_fin, cls: 'costo' },
+            { voce: 'Risultato Operativo', val: TOT.ebit, cls: 'totale' },
           ];
 
-          // CE per singola BU
-          const ceBU = (u) => [
-            { voce: 'Ricavi', val: u.ricavi, bud: u.budget_ricavi, cls: 'header' },
-            { voce: '  Personale', val: -u.costi.personale, bud: -u.budget_costi.personale, cls: 'costo' },
-            { voce: '  Materiali', val: -u.costi.materiali, bud: -u.budget_costi.materiali, cls: 'costo' },
-            { voce: '  Servizi', val: -u.costi.servizi, bud: -u.budget_costi.servizi, cls: 'costo' },
-            { voce: '  Utenze', val: -u.costi.utenze, bud: -u.budget_costi.utenze, cls: 'costo' },
-            { voce: '  Manutenzione', val: -u.costi.manutenzione, bud: -u.budget_costi.manutenzione, cls: 'costo' },
-            { voce: '  Altri', val: -u.costi.altri, bud: -u.budget_costi.altri, cls: 'costo' },
-            { voce: 'MOL Industriale', val: u.molI, bud: u.budget_ricavi - budgetCostiTot(u), cls: 'subtotale' },
-            { voce: '  Quota Sede', val: -u.sede, bud: -u.sede * 0.95, cls: 'costo' },
-            { voce: 'MOL Gestionale', val: u.molG, bud: (u.budget_ricavi - budgetCostiTot(u)) - u.sede * 0.95, cls: 'subtotale' },
-            { voce: '  Ammortamenti', val: -u.ammortamenti, bud: -u.ammortamenti * 0.95, cls: 'costo' },
-            { voce: '  Oneri finanziari', val: -u.oneri_fin, bud: -u.oneri_fin * 0.95, cls: 'costo' },
-            { voce: 'Risultato Operativo', val: u.ebit, bud: (u.budget_ricavi - budgetCostiTot(u)) - u.sede * 0.95 - u.ammortamenti * 0.95 - u.oneri_fin * 0.95, cls: 'totale' },
-          ];
+          // CE per singola BU — solo consuntivo (budget non approvato)
+          const ceBU = (u) => {
+            const righe = [
+              { voce: 'Ricavi', val: u.ricavi, cls: 'header' },
+              { voce: '  Personale', val: -u.costi.personale, cls: 'costo' },
+              { voce: '  Materiali', val: -u.costi.materiali, cls: 'costo' },
+              { voce: '  Servizi', val: -u.costi.servizi, cls: 'costo' },
+              { voce: '  Utenze', val: -u.costi.utenze, cls: 'costo' },
+              { voce: '  Altri', val: -u.costi.altri, cls: 'costo' },
+              { voce: 'MOL Industriale', val: u.molI, cls: 'subtotale' },
+              { voce: '  Quota Sede', val: -u.sede, cls: 'costo' },
+              { voce: 'MOL Gestionale', val: u.molG, cls: 'subtotale' },
+              { voce: '  Ammortamenti', val: -u.ammortamenti, cls: 'costo' },
+              { voce: '  Oneri finanziari', val: -u.oneri_fin, cls: 'costo' },
+              { voce: 'Risultato Operativo', val: u.ebit, cls: 'totale' },
+            ];
+            // Rimuovi righe con valore = 0 (es. manutenzione non presente)
+            return righe.filter(r => r.cls === 'header' || r.cls === 'subtotale' || r.cls === 'totale' || Math.abs(r.val) >= 1);
+          };
 
-          // Forecast — 3 metodi
+          // Forecast Anno — logica corretta: Consuntivo YTD + stima mesi residui (media mensile)
           const mC = D.meta.mesi_chiusi;
           const mR = 12 - mC; // mesi residui
-          const forecastCalc = UO.map(u => {
+          const fcData = UO.map(u => {
             const ricMese = u.ricavi / mC;
             const costMese = u.costiDir / mC;
-            // Linearizzazione: media mensile × 12
-            const lin_ric = ricMese * 12;
-            const lin_cost = costMese * 12;
-            // Budget residuo: consuntivo YTD + budget residuo proporzionale
-            const budRicMese = u.budget_ricavi / 12;
-            const budCostMese = budgetCostiTot(u) / 12;
-            const bud_ric = u.ricavi + budRicMese * mR;
-            const bud_cost = u.costiDir + budCostMese * mR;
-            // Trend ponderato: media mobile ponderata ultimi 3 mesi × residui + YTD
-            const rM = u.rM || [];
-            const cM = u.cM || [];
-            const w3ric = rM.length >= 3 ? (rM[rM.length-1]*3 + rM[rM.length-2]*2 + rM[rM.length-3]*1) / 6 : ricMese;
-            const w3cost = cM.length >= 3 ? (cM[cM.length-1]*3 + cM[cM.length-2]*2 + cM[cM.length-3]*1) / 6 : costMese;
-            const trnd_ric = u.ricavi + w3ric * mR;
-            const trnd_cost = u.costiDir + w3cost * mR;
+            // Forecast = Consuntivo effettivo + (media mensile × mesi residui)
+            const fc_ric = u.ricavi + ricMese * mR;
+            const fc_cost = u.costiDir + costMese * mR;
             return {
               cod: u.cod, nome: u.nome, colore: u.colore,
-              lin: { ric: lin_ric, cost: lin_cost, molI: lin_ric - lin_cost },
-              bud: { ric: bud_ric, cost: bud_cost, molI: bud_ric - bud_cost },
-              trnd: { ric: trnd_ric, cost: trnd_cost, molI: trnd_ric - trnd_cost },
+              ytd_ric: u.ricavi, ytd_cost: u.costiDir,
+              fc: { ric: fc_ric, cost: fc_cost, molI: fc_ric - fc_cost },
             };
           });
-          const fcData = forecastCalc.map(f => ({ ...f, fc: f[fcMethod] }));
 
           const CETable = ({ righe }) => (
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid ' + C.bordo, background: '#f8fafc' }}>
-                  <th style={{ padding: '10px 8px', textAlign: 'left', color: C.t2, fontWeight: 600, width: '35%' }}>Voce</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'left', color: C.t2, fontWeight: 600, width: '45%' }}>Voce</th>
                   <th style={{ padding: '10px 8px', textAlign: 'right', color: C.t2, fontWeight: 600 }}>Consuntivo</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right', color: C.t2, fontWeight: 600 }}>Budget</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right', color: C.t2, fontWeight: 600 }}>Delta (Cons−Bud)</th>
                   <th style={{ padding: '10px 8px', textAlign: 'right', color: C.t2, fontWeight: 600 }}>% Ricavi</th>
                 </tr>
               </thead>
               <tbody>
                 {righe.map((r, i) => {
-                  const delta = r.val - r.bud;
                   const isH = r.cls === 'header' || r.cls === 'subtotale' || r.cls === 'totale';
                   const bg = r.cls === 'totale' ? '#f0f4f8' : r.cls === 'subtotale' ? '#f8fafc' : 'transparent';
                   const fw = isH ? 700 : 400;
@@ -1285,12 +1269,6 @@ const KarolDashboard = () => {
                     <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo, background: bg }}>
                       <td style={{ padding: '8px', fontWeight: fw, color: C.t1, fontSize: isH ? 13 : 12 }}>{r.voce}</td>
                       <td style={{ padding: '8px', textAlign: 'right', fontWeight: fw, color: C.t1, fontFamily: 'monospace' }}>{fmt(r.val)}</td>
-                      <td style={{ padding: '8px', textAlign: 'right', color: C.t2, fontFamily: 'monospace' }}>{fmt(r.bud)}</td>
-                      <td style={{ padding: '8px', textAlign: 'right' }}>
-                        <span style={{ color: delta >= 0 ? C.verde : C.rosso, fontWeight: 600, fontFamily: 'monospace', fontSize: 11 }}>
-                          {delta >= 0 ? '+' : ''}{fmt(delta)}
-                        </span>
-                      </td>
                       <td style={{ padding: '8px', textAlign: 'right', color: C.t3, fontSize: 11, fontFamily: 'monospace' }}>
                         {ricRef !== 0 ? fmtPct(Math.abs(r.val) / Math.abs(ricRef)) : '-'}
                       </td>
@@ -1317,7 +1295,7 @@ const KarolDashboard = () => {
               {ceView === 'consolidato' && (
                 <div style={cardS}>
                   <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Conto Economico Consolidato — Gruppo Karol Sicilia</h3>
-                  <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Anno {D.meta.anno} — {D.meta.mesi_chiusi} mesi | Consuntivo vs Budget</p>
+                  <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Anno {D.meta.anno} — Consuntivo {D.meta.mesi_chiusi} mesi annualizzato</p>
                   <CETable righe={ceRighe} />
                   <div style={{ marginTop: 16, padding: '10px 14px', background: TOT.ebit >= 0 ? C.verdeBg : C.rossoBg, borderRadius: 8, borderLeft: '4px solid ' + (TOT.ebit >= 0 ? C.verde : C.rosso) }}>
                     <p style={{ fontSize: 12, color: C.t1 }}>
@@ -1353,9 +1331,42 @@ const KarolDashboard = () => {
                           </div>
                         </div>
                         <CETable righe={ceBU(u)} />
+
+                        {/* Info strutturali (migrato da tab Strutture eliminato) */}
+                        <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                          <div style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: 8, fontSize: 11 }}>
+                            <div style={{ fontWeight: 600, color: C.t1, marginBottom: 4 }}>Dati Strutturali</div>
+                            <div style={{ color: C.t2 }}>Tipologia: {u.tipo}{u.pl > 0 ? ' — ' + u.pl + ' PL' : ''}</div>
+                            {u.immobile && <div style={{ color: C.t2 }}>Immobile: {u.immobile.tipo === 'proprieta' ? 'Proprietà (costo storico ' + fmt(u.immobile.costo_storico) + ')' : 'Locazione (' + fmt(u.immobile.affitto_reale) + '/anno)'}</div>}
+                            {u.occ > 0 && <div style={{ color: C.t2 }}>Occupazione: {fmtPct(u.occ)}</div>}
+                          </div>
+                          <div style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: 8, fontSize: 11 }}>
+                            <div style={{ fontWeight: 600, color: C.t1, marginBottom: 4 }}>Composizione Costi</div>
+                            {Object.entries(u.costi).filter(([k,v]) => v > 0).map(([k,v]) => (
+                              <div key={k} style={{ color: C.t2, display: 'flex', justifyContent: 'space-between' }}>
+                                <span>{k.charAt(0).toUpperCase() + k.slice(1)}</span>
+                                <span style={{ fontFamily: 'monospace' }}>{fmt(v)} ({fmtPct(v / u.costiDir)})</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Nota CTA: extra-tariffa non è cash */}
+                        {u.cod === 'CTA' && (
+                          <div style={{ marginTop: 8, padding: '8px 12px', background: '#fffbeb', borderRadius: 6, borderLeft: '3px solid #fcd34d', fontSize: 11, color: '#92400e' }}>
+                            CTA fattura extra-tariffa ~€53k/mese. Questo importo non è cash — genera credito contenzioso verso Regione Sicilia.
+                          </div>
+                        )}
+                        {/* Nota COS: protesi nei materiali */}
+                        {u.cod === 'COS' && u.costi.materiali > 500000 && (
+                          <div style={{ marginTop: 8, padding: '8px 12px', background: '#f0f4f8', borderRadius: 6, fontSize: 11, color: C.t2 }}>
+                            Materiali includono costo protesi (voce rilevante per CdC riabilitazione).
+                          </div>
+                        )}
+
                         {/* Riconciliazione */}
-                        <div style={{ marginTop: 12, padding: '8px 12px', background: '#f8fafc', borderRadius: 6, fontSize: 11, color: C.t2 }}>
-                          Riconciliazione: Ricavi {fmt(u.ricavi)} − Costi Diretti {fmt(u.costiDir)} = MOL-I {fmt(u.molI)} − Sede {fmt(u.sede)} = MOL-G {fmt(u.molG)} ✓
+                        <div style={{ marginTop: 8, padding: '8px 12px', background: '#f8fafc', borderRadius: 6, fontSize: 11, color: C.t2 }}>
+                          Riconciliazione: Ricavi {fmt(u.ricavi)} − Costi Diretti {fmt(u.costiDir)} = MOL-I {fmt(u.molI)} − Sede {fmt(u.sede)} = MOL-G {fmt(u.molG)}
                         </div>
                       </div>
                     );
@@ -1363,18 +1374,18 @@ const KarolDashboard = () => {
                 </div>
               )}
 
-              {/* Forecast — semplificato con 8M dati */}
+              {/* Forecast — logica corretta: consuntivo YTD + stima residuo (media mensile) */}
               {ceView === 'forecast' && (() => {
                 const totFcRic = fcData.reduce((s,f) => s + f.fc.ric, 0);
                 const totFcMolI = fcData.reduce((s,f) => s + f.fc.molI, 0);
-                const totFcVsBud = totFcRic - TOT.budget_ric;
+                const totYtdRic = fcData.reduce((s,f) => s + f.ytd_ric, 0);
                 return (
                 <div style={cardS}>
-                  <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Forecast Anno — Budget Residuo</h3>
-                  <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>Consuntivo {mC} mesi + budget pro-rata {mR} mesi residui</p>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Forecast Anno {D.meta.anno}</h3>
+                  <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>Consuntivo {mC}M effettivo + stima {mR}M residui (media mensile consuntivo)</p>
 
-                  <div style={{ padding: 10, background: C.gialloBg, borderRadius: 8, borderLeft: '4px solid ' + C.giallo, marginBottom: 16, fontSize: 11, color: C.giallo }}>
-                    <strong>Nota:</strong> Con {mC} mesi consuntivati e solo {mR} residui, il Budget Residuo (YTD reale + budget pro-rata) è il metodo più affidabile. Le proiezioni alternative (linearizzazione, trend ponderato) hanno margini di errore elevati su {mR} mesi.
+                  <div style={{ padding: 10, background: '#f0f4f8', borderRadius: 8, marginBottom: 16, fontSize: 11, color: C.t2 }}>
+                    Formula: Forecast = Consuntivo YTD + (Consuntivo YTD / {mC}) × {mR}
                   </div>
 
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
@@ -1382,46 +1393,36 @@ const KarolDashboard = () => {
                       <tr style={{ borderBottom: '2px solid ' + C.bordo, background: '#f8fafc' }}>
                         <th style={{ padding: '8px', textAlign: 'left', color: C.t2 }}>UO</th>
                         <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Consuntivo {mC}M</th>
+                        <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Media/mese</th>
                         <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Forecast 12M</th>
-                        <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Budget Anno</th>
-                        <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Delta Fc−Bud</th>
                         <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>MOL-I Fc</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {fcData.map((f, i) => {
-                        const u = UO[i];
-                        const fcVsBud = f.fc.ric - u.budget_ricavi;
-                        return (
-                          <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo }}>
-                            <td style={{ padding: '8px', fontWeight: 600, color: C.t1 }}>
-                              <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: f.colore, marginRight: 6 }}></span>
-                              {f.cod}
-                            </td>
-                            <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace' }}>{fmt(u.ricavi)}</td>
-                            <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 600 }}>{fmt(f.fc.ric)}</td>
-                            <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace', color: C.t2 }}>{fmt(u.budget_ricavi)}</td>
-                            <td style={{ padding: '8px', textAlign: 'right' }}>
-                              <span style={{ color: fcVsBud >= 0 ? C.verde : C.rosso, fontWeight: 600, fontFamily: 'monospace', fontSize: 11 }}>
-                                {fcVsBud >= 0 ? '+' : ''}{fmt(fcVsBud)}
-                              </span>
-                            </td>
-                            <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace', color: f.fc.molI >= 0 ? C.verde : C.rosso, fontWeight: 600 }}>{fmt(f.fc.molI)}</td>
-                          </tr>
-                        );
-                      })}
+                      {fcData.map((f, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo }}>
+                          <td style={{ padding: '8px', fontWeight: 600, color: C.t1 }}>
+                            <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: f.colore, marginRight: 6 }}></span>
+                            {f.cod}
+                          </td>
+                          <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace' }}>{fmt(f.ytd_ric)}</td>
+                          <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace', color: C.t2 }}>{fmt(Math.round(f.ytd_ric / mC))}</td>
+                          <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 600 }}>{fmt(f.fc.ric)}</td>
+                          <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace', color: f.fc.molI >= 0 ? C.verde : C.rosso, fontWeight: 600 }}>{fmt(f.fc.molI)}</td>
+                        </tr>
+                      ))}
                       <tr style={{ borderTop: '2px solid ' + C.primario, background: '#f0f4f8' }}>
                         <td style={{ padding: '8px', fontWeight: 700 }}>TOTALE</td>
-                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace' }}>{fmt(TOT.ric)}</td>
+                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace' }}>{fmt(totYtdRic)}</td>
+                        <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace', color: C.t2 }}>{fmt(Math.round(totYtdRic / mC))}</td>
                         <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace' }}>{fmt(totFcRic)}</td>
-                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: C.t2 }}>{fmt(TOT.budget_ric)}</td>
-                        <td style={{ padding: '8px', textAlign: 'right' }}>
-                          <span style={{ color: totFcVsBud >= 0 ? C.verde : C.rosso, fontWeight: 700, fontFamily: 'monospace' }}>{totFcVsBud >= 0 ? '+' : ''}{fmt(totFcVsBud)}</span>
-                        </td>
                         <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: totFcMolI >= 0 ? C.verde : C.rosso }}>{fmt(totFcMolI)}</td>
                       </tr>
                     </tbody>
                   </table>
+                  <div style={{ marginTop: 12, fontSize: 11, color: C.t2 }}>
+                    Stima basata su media mensile consuntivo {mC}M. La proiezione assume stabilità dei ricavi e dei costi nei mesi residui.
+                  </div>
                 </div>
                 );
               })()}
