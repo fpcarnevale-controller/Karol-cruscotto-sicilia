@@ -624,7 +624,10 @@ const narrative = D.narrative;
 const copCassa = (() => {
   const saldo = tesoreria.saldo_iniziale || 8000;
   const burn = tesoreria.uscite_mese ? Object.values(tesoreria.uscite_mese).reduce((s,v) => s+v, 0) : 217000;
-  const incassi = tesoreria.incassi_mese ? Object.values(tesoreria.incassi_mese).reduce((s,v) => s+v, 0) : 0;
+  // Escludi cta_extra_non_cash dagli incassi (non è cassa reale)
+  const incassi = tesoreria.incassi_mese ? Object.entries(tesoreria.incassi_mese)
+    .filter(([k]) => k !== 'cta_extra_non_cash')
+    .reduce((s,[,v]) => s+v, 0) : 0;
   const deficit = burn - incassi;
   const mesi = deficit > 0 ? saldo / deficit : 99;
   const giorni = Math.round(mesi * 30);
@@ -638,7 +641,9 @@ const formatEuro = v => new Intl.NumberFormat('it-IT', { style: 'currency', curr
 const fmt = formatEuro;
 const fmtPct = v => (v * 100).toFixed(1) + '%';
 const mesi = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-const mesiDisp = mesi.slice(0, D.meta.mesi_chiusi); // Solo mesi con dati reali
+// mesiDisp: usa il minimo tra mesi_chiusi e lunghezza reale dati mensili UO
+const mesiDataLen = Math.min(D.meta.mesi_chiusi, ...D.UO.map(u => (u.rM || []).length));
+const mesiDisp = mesi.slice(0, mesiDataLen); // Solo mesi con dati reali disponibili
 
 const Semaforo = ({ valore, testo, verdeMin, gialloMin, invertito }) => {
   let colore, sfondo;
@@ -680,7 +685,7 @@ const KarolDashboard = () => {
   const [simSede, setSimSede] = useState(0);
   const [showExport, setShowExport] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [fcMethod, setFcMethod] = useState('lin');
+  const [fcMethod, setFcMethod] = useState('bud'); // Default Budget Residuo (più affidabile con 8M dati)
 
   // ---- Export PDF — Report strutturato multi-pagina ----
   const exportPDF = async () => {
@@ -1056,7 +1061,7 @@ const KarolDashboard = () => {
             { label: 'MOL Industriale', valore: fmt(TOT.molI), sub: fmtPct(TOT.molIPct), colore: C.verde },
             { label: 'Costi Sede', valore: fmt(TOT.sede), sub: fmtPct(TOT.sede / TOT.ric) + ' ricavi', colore: C.viola },
             { label: 'MOL Gestionale', valore: fmt(TOT.molG), sub: fmtPct(TOT.molGPct), colore: TOT.molG >= 0 ? C.verde : C.rosso },
-            { label: 'EBITDA Reale', valore: fmt(D.ce_8m ? (D.ce_8m.ebitda.contabile - D.ce_8m.ebitda.cta_extra_non_cash) * 1.5 : TOT.molI), sub: D.ce_8m ? 'Escl. CTA extra-tariff' : '', colore: (D.ce_8m && (D.ce_8m.ebitda.contabile - D.ce_8m.ebitda.cta_extra_non_cash) < 0) ? C.rosso : C.verde },
+            { label: 'EBITDA Reale', valore: fmt(D.ce_8m ? D.ce_8m.financials.ebitda_reale * 1.5 : TOT.molI), sub: D.ce_8m ? 'Ann. 8M, escl. CTA extra' : '', colore: (D.ce_8m && D.ce_8m.financials.ebitda_reale < 0) ? C.rosso : C.verde },
             { label: 'Autonomia Cassa', valore: copCassa.giorni + ' gg', sub: copCassa.mesi + ' mesi (target >' + BENCH.cop_cassa_mesi + ')', colore: copCassa.mesi < 1 ? C.rosso : copCassa.mesi < BENCH.cop_cassa_mesi ? C.giallo : C.verde },
             { label: 'Alert', valore: (nR+nG) + ' attivi', sub: nR + ' rossi / ' + nG + ' gialli / ' + nV + ' verdi', colore: nR > 0 ? C.rosso : C.giallo },
           ].map((kpi, i) => (
