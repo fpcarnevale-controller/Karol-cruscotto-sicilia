@@ -376,8 +376,8 @@ const KAROL_DATA = {
     ],
     // Crediti attesi (non nel CE operativo)
     crediti_attesi: {
-      cta_contenzioso: { importo: 5500000, probabilita: 'alta', tempistica: 'imminente', incasso_piano: '3M 2026 + 2M 2027 + 100k/anno' },
-      crediti_fiscali: { importo: 1500000, tipo: 'innovazione + patent box', stato: 'in certificazione (studio Roma)' },
+      cta_contenzioso: { importo_certo: 3000000, importo_probabile: 4000000, importo_totale: 7000000, probabilita_certo: 'alta', probabilita_prob: 'media', tempistica: '3M attesi 2026 + 4M probabili (contenzioso in corso)', incasso_piano: '3M 2026 + saldo da definire' },
+      crediti_fiscali: { importo: 4000000, tipo: 'innovazione + patent box (aggregato)', stato: 'in certificazione (studio Roma)' },
       zes_unica: { importo: 550000, finestra: 'marzo-maggio 2026', nel_bp: false },
     },
     // Obiettivi
@@ -2012,7 +2012,9 @@ const KarolDashboard = () => {
                   { l: 'PFN Gest. 2025', v: fmtM(P.pfn.gestionale[0]), c: '#dc2626' },
                   { l: 'Cassa 2026', v: fmtM(P.cassa[1]), c: '#10b981' },
                   { l: 'PFN → 0', v: String(P.target.pfn_zero), c: '#8b5cf6' },
-                  { l: 'Crediti Regione', v: fmtM(5500000), c: '#f59e0b' },
+                  { l: 'Crediti CTA (certi)', v: fmtM(3000000), c: '#f59e0b' },
+                  { l: 'Crediti CTA (prob.)', v: fmtM(4000000), c: '#d97706' },
+                  { l: 'Crediti Fiscali', v: fmtM(4000000), c: '#8b5cf6' },
                   { l: 'Debt Service 2026', v: fmtM(P.servizio.totale[1]), c: '#ef4444' },
                 ].map((k, i) => (
                   <div key={i} style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: '6px 12px', minWidth: 120 }}>
@@ -2165,9 +2167,10 @@ const KarolDashboard = () => {
               <div style={cardS}>
                 <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 12 }}>Crediti Attesi — Risorse Straordinarie</h3>
                 {[
-                  { titolo: 'Crediti v/Regione (contenzioso CTA)', importo: P.crediti_attesi.cta_contenzioso.importo, stato: P.crediti_attesi.cta_contenzioso.incasso_piano, prob: 'Alta', c: C.verde },
-                  { titolo: 'Crediti Fiscali (Innovazione + Patent Box)', importo: P.crediti_attesi.crediti_fiscali.importo, stato: P.crediti_attesi.crediti_fiscali.stato, prob: 'Media-Alta', c: C.giallo },
-                  { titolo: 'ZES Unica', importo: P.crediti_attesi.zes_unica.importo, stato: 'Finestra ' + P.crediti_attesi.zes_unica.finestra, prob: 'Media', c: '#7c3aed' },
+                  { titolo: 'Crediti CTA — attesi 2026', importo: P.crediti_attesi.cta_contenzioso.importo_certo, stato: 'Contenzioso CTA — attesi con alta probabilità', c: C.verde },
+                  { titolo: 'Crediti CTA — probabili (contenzioso)', importo: P.crediti_attesi.cta_contenzioso.importo_probabile, stato: 'Contenzioso in corso — probabilità media', c: '#d97706' },
+                  { titolo: 'Crediti Fiscali (aggregato)', importo: P.crediti_attesi.crediti_fiscali.importo, stato: P.crediti_attesi.crediti_fiscali.stato, c: '#8b5cf6' },
+                  { titolo: 'ZES Unica', importo: P.crediti_attesi.zes_unica.importo, stato: 'Finestra ' + P.crediti_attesi.zes_unica.finestra, c: C.giallo },
                 ].map((cr, i) => (
                   <div key={i} style={{ border: '1px solid ' + C.bordo, borderRadius: 8, padding: 12, marginBottom: 8, borderLeft: '3px solid ' + cr.c }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2179,7 +2182,7 @@ const KarolDashboard = () => {
                     </div>
                   </div>
                 ))}
-                <p style={{ fontSize: 11, color: C.t3, fontStyle: 'italic' }}>Totale potenziale: {fmt(5500000 + 1500000 + 550000)}</p>
+                <p style={{ fontSize: 11, color: C.t3 }}>Totale crediti attesi: {fmt(3000000 + 4000000 + 4000000 + 550000)} (di cui €4M probabili)</p>
               </div>
 
               <div style={cardS}>
