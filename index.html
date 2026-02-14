@@ -139,7 +139,7 @@ const KAROL_DATA = {
     funzioni: [
       { funzione: 'Amministrazione/Contabilità', stima: null, note: 'Contabilità interna, deposito bilanci esterno (costo limitato)', duplica_bu: true },
       { funzione: 'HR/Buste paga/Consulenza lavoro', stima: null, note: 'Gestione centralizzata per tutte le BU', duplica_bu: false },
-      { funzione: 'Ufficio Acquisti', stima: null, note: '⚠ CRITICO: se comprano anche i direttori amm.vi BU → doppio costo, metà responsabilità', duplica_bu: true },
+      { funzione: 'Ufficio Acquisti', stima: null, note: 'Acquisti centralizzati — verifica sovrapposizione con BU', duplica_bu: true },
       { funzione: 'Direzione Generale + Staff', stima: null, note: 'Amministratore, emolumenti CdA, sindaci', duplica_bu: false },
       { funzione: 'Tecnico/Manutentore/Ingegnere', stima: null, note: 'Supervisione acquisti, consulenze energetiche, manutenzione attrezzature mediche', duplica_bu: false },
       { funzione: 'Ufficio Qualità', stima: null, note: 'Revisioni contratti ASP, visite ispettive, accreditamenti', duplica_bu: false },
@@ -150,7 +150,7 @@ const KAROL_DATA = {
     ],
     // CONSULENZE €812k — breakdown DA COMPLETARE (management ha detto "raccolgo informazioni")
     consulenze_det: [
-      { fornitore: 'Da dettagliare', importo: 811812, tipo: 'servizi professionali', note: '⚠ In attesa dettaglio per fornitore/contratto' },
+      { fornitore: 'Da dettagliare', importo: 811812, tipo: 'servizi professionali', note: 'In attesa dettaglio per fornitore/contratto' },
     ],
     nota: 'Totale costi HQ Q1 €583.786 × 4. Include: personale €1.172k, consulenze/servizi €812k, altri oneri €166k, affitti €93k, oneri fin. €91k, imposte €68k. Ricavi interco da controllate €765k (Betania €600k, Zaharaziz €65k, Lab €100k) riducono costo netto a ~€1.570k.' },
 
@@ -191,7 +191,7 @@ const KAROL_DATA = {
         holdback_rientro: 78000,      // 10% holdback rientra con 45-60gg ritardo
         privato_cash: 81000,          // COS visite/esami/FKT incasso giornaliero (~€20k/sett)
         intercompany_betania: 50000,  // Servizi direzione Betania (~€600k/anno ÷ 12)
-        cta_extra_non_cash: 53000,    // ⚠ MEMO: adeguamento CTA fatturato NON incassato — credito contenzioso
+        cta_extra_non_cash: 53000,    // Adeguamento CTA fatturato non incassato
       },
       uscite_mese: {
         stipendi_bu: 522000,          // Personale BU (€6.259k/12)
@@ -291,13 +291,7 @@ const KAROL_DATA = {
     },
   },
 
-  narrative: [
-    { uo: 'RSA', alert: 'ROSSO', testo: 'Personale 74,9% dei ricavi — include personale Centro Gottardo (FKT, ~€40k fatture attive), cucina centralizzata e trasporto disabili allocati impropriamente. Affitto €219k da proprietario rigido. Piano strategico: spostare i 40 PL convenzionati al Borgo Ritrovato (nuova BU giugno 2026) per risparmiare locazione e razionalizzare personale.', outlook: 'In ristrutturazione — migrazione a BRT prevista H2 2026' },
-    { uo: 'CTA', alert: 'GIALLO', testo: 'MOL-I contabile 33% ma ATTENZIONE: fattura €235k/mese, incassa solo €183k/mese (media 7M 2025). I €53k/mese di adeguamento extra-tariffa (€640k/anno) non sono cassa — si accumulano come crediti e fanno parte del contenzioso €7M+ con Regione. Transazione imminente. Se confermata: game-changer per liquidità. Rischio residuo: se adeguamento non rinnovato, ricavi reali -23% e MOL-I crolla.', outlook: 'In attesa transazione regionale — alto impatto su cassa e crediti' },
-    { uo: 'COS', alert: 'VERDE', testo: 'Top performer per volumi: ricavi FY stimati €4,86M. MOL-I 16,5%. Estate non opera: calo fatturato privato Q2-Q3 spiega parte del deterioramento MOL 8M. Materiali elevati (€1,23M) per attività chirurgica/riabilitativa. Personale 43,1% — il migliore del gruppo.', outlook: 'Favorevole — attenzione stagionalità estiva' },
-    { uo: 'KCP', alert: 'ROSSO', testo: 'Casa Protetta 20 PL brucia €300k+/anno. Personale 79,3% dei ricavi — insostenibile per diseconomie di scala. Piano: chiusura e spostamento PL al Borgo Ritrovato, con razionalizzazione personale e risparmio su costi fissi.', outlook: 'In chiusura — migrazione PL a BRT' },
-    { uo: 'GRUPPO', alert: 'ROSSO', testo: 'MOL-I BU €1,99M (18,1%) sopra benchmark, ma Sede HQ €2,34M (21,3%) + D&A €893k + Oneri Fin. €268k portano l\'EBIT a -€1,37M. Crescita storica a debito + COVID + gestione paternalistica (eccesso personale). Normalizzando il bilancio 2024 (senza €1,26M interessi ASP straordinari): perdita operativa reale ~€800k. Target management: -10% costi per superare DSCR critico 2027-28. Strumento: mutuo bancario 10yr (non Bond) + crediti fiscali innovazione/patent box + transazione CTA €7M.', outlook: 'Critico — passaggio stretto 2027-28, piano di rientro in corso' },
-  ],
+  narrative: [],
 
   // ====== PIANO FINANZIARIO — Dati reali da BP Excel + Memorandum Mutuo ======
   piano: {
@@ -423,19 +417,11 @@ const KAROL_DATA = {
     kpi_8m: {
       personale_pct: 0.619, // 61,9% — sopra soglia 55%
       protesi: 363913, // Voce singola più grande acquisti
-      sanzioni_tributarie: 68913, // Puro spreco
+      sanzioni_tributarie: 68913,
       factoring_costo: 147730, // Costo anticipazione
       spese_legali_totali: 143369, // Consulenze + spese amm.legali
     },
-    anomalie: [
-      { voce: 'Personale 61,9%', impatto_ann: 1540000, nota: '€7,07M ann. vs €5,53M budget — Delta €1,54M, sopra soglia 55%', priorita: 1 },
-      { voce: 'EBITDA reale negativo', impatto_ann: -113000, nota: 'CTA extra escluso: €319k - €395k = -€76k in 8M', priorita: 2 },
-      { voce: 'Sanzioni tributarie', impatto_ann: 103000, nota: 'Puro spreco da ritardi — recuperabile al 100%', priorita: 3 },
-      { voce: 'Affitti vs budget', impatto_ann: 247000, nota: '€314k ann. vs €67k budget: sottostima 4,7×', priorita: 4 },
-      { voce: 'Manutenzioni vs budget', impatto_ann: 76000, nota: '€139k ann. vs €63k budget: +120%', priorita: 5 },
-      { voce: 'Factoring €222k/anno', impatto_ann: 222000, nota: 'Costo della crisi di liquidità', priorita: 6 },
-      { voce: 'Budget 2026 irrealistico', impatto_ann: 1750000, nota: 'Gap €2,13M in ricavi ambulatoriale/servizi', priorita: 7 },
-    ],
+    anomalie: [],
   },
 
   // ====== MAPPA DEBITI — Dati reali da Bilancio Verifica 31/08/2025 + Piano Rateizzazioni ======
@@ -449,7 +435,7 @@ const KAROL_DATA = {
         { desc: 'Banca Progetto', residuo: 631000, tipo: 'MLT' },
         { desc: 'Banca Progetto investim.', residuo: 952000, tipo: 'MLT' },
         { desc: 'B.Pop Sant\'Angelo', residuo: 178000, tipo: 'MLT' },
-        { desc: 'Banca Sistema', residuo: 100000, tipo: 'BT', nota: '⚠ tasso sconosciuto' },
+        { desc: 'Banca Sistema', residuo: 100000, tipo: 'BT' },
         { desc: 'MCC residuo', residuo: 445000, tipo: 'MLT' },
         { desc: 'Soci c/finanziamento', residuo: 80000, tipo: 'MLT' },
         { desc: 'Altri/minori', residuo: 38000, tipo: 'BT' },
@@ -460,7 +446,7 @@ const KAROL_DATA = {
         { desc: 'Ritenute dip. 2023', residuo: 1090000 },
         { desc: 'Ritenute dip. 2024', residuo: 949000 },
         { desc: 'Ritenute dip. 2025', residuo: 539000, nota: 'correnti' },
-        { desc: 'Ritenute aut. 2020', residuo: 202000, nota: '⚠ aperte da 5 anni' },
+        { desc: 'Ritenute aut. 2020', residuo: 202000 },
         { desc: 'Ritenute aut. 2024', residuo: 215000 },
         { desc: 'Rateizzazioni ADER varie', residuo: 846000, in_rate: true },
         { desc: 'Rottamazione quater', residuo: 166000, nota: '→ Rott.5' },
@@ -481,14 +467,14 @@ const KAROL_DATA = {
         { desc: 'Partite da liquidare', residuo: 7000 },
       ]},
       personale: { totale: 1259000, dettaglio: [
-        { desc: 'Stipendi arretrati reali', residuo: 900000, nota: '⚠ ~€900k arretrati' },
+        { desc: 'Stipendi arretrati', residuo: 900000 },
         { desc: 'Stipendi correnti agosto', residuo: 542000 },
         { desc: 'Compensazioni', residuo: -183000 },
       ]},
       // Infragruppo: totale_crediti = esigibili (esclude Zaharaziz €2.542k immobilizzato)
       // Netto esposizione = debiti - crediti esigibili = €10.979k - €7.400k = -€3.579k
       infragruppo: { totale_debiti: 10979000, totale_crediti: 7400000, crediti_immobilizzati: 2542000, netto: -3579000, dettaglio: [
-        { desc: 'vs Karol Betania', debito: 8708000, credito: 4405000, netto: -4303000, nota: '⚠ VORAGINE' },
+        { desc: 'vs Karol Betania', debito: 8708000, credito: 4405000, netto: -4303000 },
         { desc: 'vs Karol Lab', debito: 1661000, credito: 215000, netto: -1446000 },
         { desc: 'vs Cosentino', debito: 171000, credito: 1256000, netto: 1085000 },
         { desc: 'vs Karol Hospital', debito: 229000, credito: 1427000, netto: 1198000 },
@@ -559,7 +545,7 @@ UO.forEach(u => {
   // Budget delta
   u.delta_ricavi = u.ricavi - u.budget_ricavi;
   u.delta_costi = u.costiDir - budgetCostiTot(u);
-  // CE NORMALIZZATO — costo di occupazione equo per confronto BU
+  // CE NORMALIZZATO — costo locazioni equo per confronto BU
   // CTA/COS: aggiunge affitto figurativo (6% costo storico immobile)
   // RSA/KCP: invariato (già paga affitto reale)
   const aff = u.immobile ? u.immobile.affitto_figurativo : 0;
@@ -604,7 +590,6 @@ UO.forEach(u => {
   autoKPI.push({ kpi: 'MOL-G %', uo: u.cod, v: u.molGPct, tgt: BENCH.mol_g_pct, a: u.molGPct >= BENCH.mol_g_pct ? 'VERDE' : u.molGPct >= 0 ? 'GIALLO' : 'ROSSO' });
   autoKPI.push({ kpi: 'Pers. %', uo: u.cod, v: u.persPct, tgt: BENCH.pers_pct, a: u.persPct <= BENCH.pers_pct ? 'VERDE' : u.persPct <= BENCH.pers_pct * 1.1 ? 'GIALLO' : 'ROSSO' });
   if (u.occ !== null) autoKPI.push({ kpi: 'Occ. %', uo: u.cod, v: u.occ, tgt: BENCH.occ_pct, a: u.occ >= BENCH.occ_pct ? 'VERDE' : u.occ >= BENCH.occ_pct * 0.9 ? 'GIALLO' : 'ROSSO' });
-  if (u.costo_pl_gg !== null) autoKPI.push({ kpi: 'Costo PL/gg', uo: u.cod, v: u.costo_pl_gg, tgt: BENCH.costo_pl_gg, a: u.costo_pl_gg <= BENCH.costo_pl_gg ? 'VERDE' : u.costo_pl_gg <= BENCH.costo_pl_gg * 1.15 ? 'GIALLO' : 'ROSSO' });
 });
 const KPI = autoKPI;
 
@@ -1068,7 +1053,6 @@ const KarolDashboard = () => {
             { label: 'MOL Gestionale', valore: fmt(TOT.molG), sub: fmtPct(TOT.molGPct), colore: TOT.molG >= 0 ? C.verde : C.rosso },
             { label: 'EBITDA Reale', valore: fmt(D.ce_8m ? D.ce_8m.financials.ebitda_reale * 1.5 : TOT.molI), sub: D.ce_8m ? 'Ann. 8M, escl. CTA extra' : '', colore: (D.ce_8m && D.ce_8m.financials.ebitda_reale < 0) ? C.rosso : C.verde },
             { label: 'Autonomia Cassa', valore: copCassa.giorni + ' gg', sub: copCassa.mesi + ' mesi (target >' + BENCH.cop_cassa_mesi + ')', colore: copCassa.mesi < 1 ? C.rosso : copCassa.mesi < BENCH.cop_cassa_mesi ? C.giallo : C.verde },
-            { label: 'Alert', valore: (nR+nG) + ' attivi', sub: nR + ' rossi / ' + nG + ' gialli / ' + nV + ' verdi', colore: nR > 0 ? C.rosso : C.giallo },
           ].map((kpi, i) => (
             <div key={i} style={{ background: C.card, borderRadius: 10, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid ' + kpi.colore, borderTop: '1px solid #f1f5f9' }}>
               <div style={{ fontSize: 11, color: C.t3, fontWeight: 500, marginBottom: 6 }}>{kpi.label}</div>
@@ -1149,34 +1133,16 @@ const KarolDashboard = () => {
                   </div>
                 </div>
 
-                <div style={{ padding: 10, background: C.rossoBg, borderRadius: 8, borderLeft: '4px solid ' + C.rosso, marginBottom: 10 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: C.rosso, marginBottom: 4 }}>SCENARIO STRESS</div>
-                  <div style={{ fontSize: 11, color: C.t1, lineHeight: 1.5 }}>
-                    Senza mutuo MCC (€5M) e incasso Regione CTA (€3M), la cassa va in negativo entro <strong>2 settimane</strong>.
-                    Dipendenza critica da factoring pro-soluto 90%.
-                  </div>
-                </div>
-
-                <div style={{ padding: 10, background: '#f0fdf4', borderRadius: 8, borderLeft: '4px solid ' + C.verde }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: C.verde, marginBottom: 4 }}>PIANO</div>
-                  <div style={{ fontSize: 11, color: C.t1, lineHeight: 1.5 }}>
-                    Mutuo MCC €5M (erogazione apr 2026) + Rottamazione 5 (risparmio €833k) + chiusura KCP (€300k/anno).
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'center', marginTop: 10, fontSize: 10, color: C.t3, cursor: 'pointer' }} onClick={() => setTab('cashflow')}>
-                  Vedi tab Cash Flow per dettaglio settimana per settimana →
-                </div>
               </div>
 
-              {/* B2: Tabella semaforo aggiornata con Costo PL/gg */}
+              {/* B2: Matrice KPI per UO */}
               <div style={cardS}>
                 <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Matrice KPI per UO</h3>
                 <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Semaforo performance operativa</p>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid ' + C.bordo }}>
-                      {['UO', 'MOL-I %', 'MOL-G %', 'Pers. %', 'Occ. %', 'Costo PL/gg'].map(h => (
+                      {['UO', 'MOL-I %', 'MOL-G %', 'Pers. %', 'Occ. %'].map(h => (
                         <th key={h} style={{ padding: '8px 4px', textAlign: h === 'UO' ? 'left' : 'center', color: C.t2, fontWeight: 600, fontSize: 10 }}>{h}</th>
                       ))}
                     </tr>
@@ -1188,16 +1154,16 @@ const KarolDashboard = () => {
                         const k = kpis.find(x => x.kpi.startsWith(name));
                         if (!k) return <td style={{ textAlign: 'center', color: C.t3, fontSize: 11 }}>n/d</td>;
                         const ac = alertCol(k.a);
-                        const display = name === 'Costo PL' ? fmt(k.v) : fmtPct(k.v);
+                        const display = fmtPct(k.v);
                         return <td style={{ textAlign: 'center' }}><span style={{ background: ac.bg, color: ac.color, padding: '2px 6px', borderRadius: 10, fontSize: 10, fontWeight: 600, fontFamily: 'monospace' }}>{display}</span></td>;
                       };
                       return (
-                        <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo, cursor: 'pointer' }} onClick={() => { setSelUO(u); setTab('strutture'); }}>
+                        <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo }}>
                           <td style={{ padding: '10px 4px', fontWeight: 600, color: C.t1, fontSize: 12 }}>
                             <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: u.colore, marginRight: 6 }}></span>
                             {u.cod}
                           </td>
-                          {cell('MOL-I')}{cell('MOL-G')}{cell('Pers')}{cell('Occ')}{cell('Costo PL')}
+                          {cell('MOL-I')}{cell('MOL-G')}{cell('Pers')}{cell('Occ')}
                         </tr>
                       );
                     })}
@@ -1212,19 +1178,6 @@ const KarolDashboard = () => {
               </div>
             </div>
 
-            {/* Sintesi direzionale */}
-            <div style={cardS}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 12 }}>Sintesi Direzionale</h3>
-              {narrative.filter(n => n.uo === 'GRUPPO').map((n, i) => {
-                const ac = alertCol(n.alert);
-                return (
-                  <div key={i} style={{ padding: '12px 16px', background: ac.bg, borderRadius: 8, borderLeft: '4px solid ' + ac.color, marginBottom: 8 }}>
-                    <p style={{ fontSize: 12, color: C.t1, lineHeight: 1.6, marginBottom: 4 }}>{n.testo}</p>
-                    <p style={{ fontSize: 11, color: C.t2, fontStyle: 'italic' }}>Outlook: {n.outlook}</p>
-                  </div>
-                );
-              })}
-            </div>
           </div>
         )}
 
@@ -1460,244 +1413,6 @@ const KarolDashboard = () => {
           );
         })()}
 
-        {/* ======================== STRUTTURE ======================== */}
-        {tab === 'strutture' && (
-          <div>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-              {UO.map(u => (
-                <button key={u.cod} onClick={() => setSelUO(u)}
-                  style={{ padding: '8px 16px', border: '2px solid ' + (selUO && selUO.cod === u.cod ? u.colore : C.bordo), background: selUO && selUO.cod === u.cod ? u.colore + '15' : C.card, borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: selUO && selUO.cod === u.cod ? u.colore : C.t2, fontFamily: 'inherit' }}>
-                  {u.cod} — {u.nome}
-                </button>
-              ))}
-            </div>
-            {(() => {
-              const u = selUO || UO[0];
-              const data = mesiDisp.map((m, i) => ({ mese: m, Ricavi: u.rM[i], Costi: u.cM[i], MOL: u.rM[i] - u.cM[i] }));
-              const uKpi = KPI.filter(k => k.uo === u.cod);
-              const uNarr = narrative.find(n => n.uo === u.cod);
-              return (
-                <div style={cardS}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                    <div>
-                      <h3 style={{ fontSize: 17, fontWeight: 700, color: C.t1 }}>{u.nome} <Badge reale={u.datiReali} /></h3>
-                      <p style={{ fontSize: 12, color: C.t2 }}>{u.tipo}{u.pl > 0 ? ' — ' + u.pl + ' PL' : ''} | Ricavo/gg: {u.ricGg ? fmt(Math.round(u.ricGg)) : 'n/a'}{u.costo_pl_gg ? ' | Costo PL/gg: ' + fmt(Math.round(u.costo_pl_gg)) : ''}</p>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 22, fontWeight: 700, color: u.molG >= 0 ? C.verde : C.rosso }}>{fmt(u.molG)}</div>
-                      <div style={{ fontSize: 11, color: C.t3 }}>MOL Gestionale ({fmtPct(u.molGPct)})</div>
-                    </div>
-                  </div>
-                  {/* KPI */}
-                  <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-                    {uKpi.map((k, i) => {
-                      const ac = alertCol(k.a);
-                      return (
-                        <div key={i} style={{ padding: '8px 12px', borderRadius: 8, background: ac.bg, borderLeft: '3px solid ' + ac.color, flex: '1 1 120px' }}>
-                          <div style={{ fontSize: 10, color: C.t2 }}>{k.kpi}</div>
-                          <div style={{ fontSize: 18, fontWeight: 700, color: ac.color }}>{fmtPct(k.v)}</div>
-                          <div style={{ fontSize: 9, color: C.t3 }}>vs {fmtPct(k.tgt)}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {/* Narrative */}
-                  {uNarr && (
-                    <div style={{ padding: '10px 14px', background: alertCol(uNarr.alert).bg, borderRadius: 8, borderLeft: '4px solid ' + alertCol(uNarr.alert).color, marginBottom: 16 }}>
-                      <p style={{ fontSize: 12, color: C.t1, lineHeight: 1.5 }}>{uNarr.testo}</p>
-                    </div>
-                  )}
-                  {/* Donut composizione costi + Chart trend */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16 }}>
-                    <div>
-                      <h4 style={{ fontSize: 12, fontWeight: 600, color: C.t2, marginBottom: 8 }}>Composizione Costi</h4>
-                      <ResponsiveContainer width="100%" height={200}>
-                        <PieChart>
-                          <Pie data={[
-                            { name: 'Personale', value: u.costi.personale, fill: '#3b82f6' },
-                            { name: 'Materiali', value: u.costi.materiali, fill: '#8b5cf6' },
-                            { name: 'Servizi', value: u.costi.servizi, fill: '#06b6d4' },
-                            { name: 'Utenze', value: u.costi.utenze, fill: '#f59e0b' },
-                            { name: 'Manut.', value: u.costi.manutenzione, fill: '#ef4444' },
-                            { name: 'Altri', value: u.costi.altri, fill: '#94a3b8' },
-                          ].filter(d => d.value > 0)} dataKey="value" innerRadius={50} outerRadius={80} paddingAngle={2}>
-                          </Pie>
-                          <Tooltip formatter={v => [fmt(v)]} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
-                        {[
-                          { c: '#3b82f6', l: 'Pers.' }, { c: '#8b5cf6', l: 'Mat.' }, { c: '#06b6d4', l: 'Serv.' },
-                          { c: '#f59e0b', l: 'Uten.' }, { c: '#ef4444', l: 'Man.' }, { c: '#94a3b8', l: 'Altri' },
-                        ].map(leg => <span key={leg.l} style={{ fontSize: 9, display: 'flex', alignItems: 'center', gap: 3 }}>
-                          <span style={{ width: 8, height: 8, borderRadius: 2, background: leg.c }}></span>{leg.l}
-                        </span>)}
-                      </div>
-                    </div>
-                    <div>
-                      <h4 style={{ fontSize: 12, fontWeight: 600, color: C.t2, marginBottom: 8 }}>Trend Mensile Ricavi vs Costi</h4>
-                      <ResponsiveContainer width="100%" height={250}>
-                        <ComposedChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                          <XAxis dataKey="mese" fontSize={12} stroke={C.t3} />
-                          <YAxis tickFormatter={v => fmt(v)} fontSize={9} stroke={C.t3} />
-                          <Tooltip formatter={v => [fmt(v)]} />
-                          <Legend />
-                          <Bar dataKey="Ricavi" fill={u.colore} radius={[4,4,0,0]} barSize={18} />
-                          <Bar dataKey="Costi" fill={C.budget} radius={[4,4,0,0]} barSize={18} />
-                          <Line type="monotone" dataKey="MOL" name="MOL-I" stroke={C.verde} strokeWidth={2} dot={{ r: 3 }} />
-                        </ComposedChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* BOX RIEPILOGO LOCAZIONI */}
-            <div style={{ ...cardS, marginTop: 16, padding: 16, borderLeft: '4px solid ' + C.viola }}>
-              <h4 style={{ fontSize: 13, fontWeight: 700, color: C.t1, marginBottom: 8 }}>Locazioni e Costo di Occupazione — Quadro 2025</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 11, color: C.t1 }}>
-                <div>
-                  <div style={{ fontWeight: 600, color: C.rosso, marginBottom: 4 }}>Affitti Reali (in CE)</div>
-                  <div>RSA Villabate: <strong>{fmt(219307)}</strong>/anno (in utenze)</div>
-                  <div>KCP Casa Protetta: <strong>{fmt(60000)}</strong>/anno (in utenze)</div>
-                  <div>Sede via La Farina: <strong>{fmt(D.SEDE.affitti)}</strong>/anno</div>
-                  <div style={{ fontWeight: 700, marginTop: 4, borderTop: '1px solid ' + C.bordo, paddingTop: 4 }}>Totale reale: <strong>{fmt(219307 + 60000 + D.SEDE.affitti)}</strong>/anno</div>
-                </div>
-                <div>
-                  <div style={{ fontWeight: 600, color: C.viola, marginBottom: 4 }}>Affitti Figurativi (per normalizzazione)</div>
-                  <div>CTA Ex Stagno: <strong>{fmt(180000)}</strong>/anno (6% su €3M)</div>
-                  <div>COS Cosentino: <strong>{fmt(240000)}</strong>/anno (6% su €4M)</div>
-                  <div style={{ fontWeight: 700, marginTop: 4, borderTop: '1px solid ' + C.bordo, paddingTop: 4 }}>Totale figurativo: <strong>{fmt(420000)}</strong>/anno</div>
-                </div>
-              </div>
-              <div style={{ fontSize: 10, color: C.t3, marginTop: 8, fontStyle: 'italic' }}>
-                CTA e COS sono proprietà Karol S.p.A. (costo storico €7M, mutui in Sede). Gli affitti figurativi servono per confrontare MOL-I tra BU in locazione e proprietà.
-              </div>
-            </div>
-
-            {/* TABELLA CE NORMALIZZATO — Confronto equo con costo di occupazione */}
-            <div style={{ ...cardS, marginTop: 16 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>CE Industriale Normalizzato — Costo di Occupazione Equo</h3>
-              <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>CTA e COS: + affitto figurativo 6% costo storico. RSA e KCP: invariati (già pagano affitto reale).</p>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
-                  <thead><tr style={{ borderBottom: '2px solid ' + C.primario, background: '#f0f4f8' }}>
-                    <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: 10, color: C.t2 }}>BU</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: 10, color: C.t2 }}>Ricavi</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: 10, color: C.t2 }}>Costi Dir.</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: 10, color: C.t2 }}>MOL-I</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: 10, color: C.t2 }}>MOL-I %</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'center', fontSize: 10, color: '#92400e', background: '#fef9c3' }}>Occupazione</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: 10, color: C.primario, fontWeight: 700 }}>MOL-I Norm.</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: 10, color: C.primario, fontWeight: 700 }}>MOL-I Norm. %</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'center', fontSize: 10, color: C.t2 }}>Delta</th>
-                  </tr></thead>
-                  <tbody>
-                    {UO.map((u, i) => {
-                      const aff = u.immobile ? u.immobile.affitto_figurativo : 0;
-                      const affR = u.immobile ? u.immobile.affitto_reale : 0;
-                      const occLabel = u.immobile && u.immobile.tipo === 'proprieta'
-                        ? `Fig. ${fmt(aff)}` : affR > 0 ? `Aff. ${fmt(affR)}` : '—';
-                      const occBg = u.immobile && u.immobile.tipo === 'proprieta' ? '#fef9c3' : 'transparent';
-                      const deltaMol = u.molINorm - u.molI;
-                      return (
-                        <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo }}>
-                          <td style={{ padding: '6px 8px', fontWeight: 600 }}><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: u.colore, marginRight: 6 }}></span>{u.cod}</td>
-                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace' }}>{fmt(u.ricavi)}</td>
-                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace' }}>{fmt(u.costiDir)}</td>
-                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', color: u.molI >= 0 ? C.verde : C.rosso }}>{fmt(u.molI)}</td>
-                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', color: u.molIPct >= 0.15 ? C.verde : u.molIPct >= 0.08 ? C.giallo : C.rosso }}>{fmtPct(u.molIPct)}</td>
-                          <td style={{ padding: '6px 8px', textAlign: 'center', fontFamily: 'monospace', fontSize: 10, background: occBg, color: aff > 0 ? '#92400e' : C.t2 }}>{occLabel}</td>
-                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: u.molINorm >= 0 ? C.verde : C.rosso }}>{fmt(u.molINorm)}</td>
-                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: u.molINormPct >= 0.15 ? C.verde : u.molINormPct >= 0.08 ? C.giallo : C.rosso }}>{fmtPct(u.molINormPct)}</td>
-                          <td style={{ padding: '6px 8px', textAlign: 'center', fontFamily: 'monospace', fontSize: 10, color: deltaMol < 0 ? C.rosso : C.t3 }}>{deltaMol !== 0 ? fmt(deltaMol) : '—'}</td>
-                        </tr>
-                      );
-                    })}
-                    <tr style={{ borderTop: '2px solid ' + C.primario, background: '#f0f4f8' }}>
-                      <td style={{ padding: '6px 8px', fontWeight: 700 }}>TOTALE BU</td>
-                      <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{fmt(TOT.ric)}</td>
-                      <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{fmt(TOT.cDir)}</td>
-                      <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: TOT.molI >= 0 ? C.verde : C.rosso }}>{fmt(TOT.molI)}</td>
-                      <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{fmtPct(TOT.molIPct)}</td>
-                      <td style={{ padding: '6px 8px', textAlign: 'center', fontFamily: 'monospace', fontSize: 10, background: '#fef9c3', fontWeight: 700 }}>{fmt(TOT_AFFITTI_FIG)}</td>
-                      <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: TOT.molINorm >= 0 ? C.verde : C.rosso }}>{fmt(TOT.molINorm)}</td>
-                      <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{fmtPct(TOT.molINormPct)}</td>
-                      <td style={{ padding: '6px 8px' }}></td>
-                    </tr>
-                    <tr style={{ background: '#eff6ff', borderTop: '1px solid ' + C.bordo }}>
-                      <td colSpan={5} style={{ padding: '6px 8px', fontWeight: 600, fontSize: 10, color: C.primario }}>Sede HQ (normalizzata: -€{Math.round(TOT_AFFITTI_FIG/1000)}k "affitti interni" ricevuti)</td>
-                      <td style={{ padding: '6px 8px', textAlign: 'center', fontFamily: 'monospace', fontSize: 10, color: C.verde }}>-{fmt(TOT_AFFITTI_FIG)}</td>
-                      <td colSpan={2} style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontSize: 11, fontWeight: 600, color: C.rosso }}>{fmt(TOT.sedeNorm)}</td>
-                      <td style={{ padding: '6px 8px', textAlign: 'center', fontFamily: 'monospace', fontSize: 10, color: C.verde }}>vs {fmt(TOT.sede)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
-                <div style={{ padding: '8px 12px', background: '#fef9c3', borderRadius: 6, fontSize: 11, color: '#92400e' }}>
-                  ⚠ CTA: MOL-I da {fmtPct(UO.find(u=>u.cod==='CTA').molIPct)} a <b>{fmtPct(UO.find(u=>u.cod==='CTA').molINormPct)}</b> con affitto figurativo €180k. Efficienza reale inferiore al dato contabile.
-                </div>
-                <div style={{ padding: '8px 12px', background: '#fef9c3', borderRadius: 6, fontSize: 11, color: '#92400e' }}>
-                  ⚠ COS: MOL-I da {fmtPct(UO.find(u=>u.cod==='COS').molIPct)} a <b>{fmtPct(UO.find(u=>u.cod==='COS').molINormPct)}</b> con affitto figurativo €240k. Sede HQ si riduce da {fmt(TOT.sede)} a {fmt(TOT.sedeNorm)}.
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ======================== TREND ======================== */}
-        {tab === 'trend' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {/* B3: Multi-UO overlay */}
-            <div style={cardS}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Trend Ricavi per UO — Confronto 12 Mesi</h3>
-              <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Clicca sulla legenda per nascondere/mostrare le linee</p>
-              <ResponsiveContainer width="100%" height={380}>
-                <LineChart data={trendUO} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="mese" fontSize={12} stroke={C.t3} />
-                  <YAxis tickFormatter={v => fmt(v)} fontSize={11} stroke={C.t3} />
-                  <Tooltip formatter={(v, name) => [fmt(v), name]} />
-                  <Legend />
-                  {UO.map(u => (
-                    <Line key={u.cod} type="monotone" dataKey={u.cod} stroke={u.colore} strokeWidth={u.cod === 'COS' ? 3 : 2} dot={{ r: 3 }} activeDot={{ r: 6 }} />
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            {/* Mini sparklines per UO */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 12 }}>
-              {UO.map(u => {
-                const data = mesiDisp.map((m, i) => ({ m, R: u.rM[i], C: u.cM[i] }));
-                return (
-                  <div key={u.cod} style={{ ...cardS, padding: 14 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-                      <span style={{ width: 10, height: 10, borderRadius: '50%', background: u.colore, display: 'inline-block', marginRight: 6 }}></span>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: C.t1 }}>{u.cod}</span>
-                      <span style={{ fontSize: 11, color: C.t3, marginLeft: 6 }}>{u.tipo}</span>
-                      <Badge reale={u.datiReali} />
-                      <span style={{ marginLeft: 'auto', fontSize: 11, padding: '2px 8px', borderRadius: 12, background: u.molGPct >= .08 ? C.verdeBg : u.molGPct >= 0 ? C.gialloBg : C.rossoBg, color: u.molGPct >= .08 ? C.verde : u.molGPct >= 0 ? C.giallo : C.rosso, fontWeight: 600 }}>
-                        MOL-G {fmtPct(u.molGPct)}
-                      </span>
-                    </div>
-                    <ResponsiveContainer width="100%" height={120}>
-                      <LineChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                        <XAxis dataKey="m" fontSize={9} tick={{ fill: C.t3 }} />
-                        <YAxis tickFormatter={v => (v/1000).toFixed(0) + 'k'} fontSize={9} width={38} />
-                        <Tooltip formatter={v => [fmt(v)]} />
-                        <Line type="monotone" dataKey="R" name="Ricavi" stroke={u.colore} strokeWidth={2} dot={false} />
-                        <Line type="monotone" dataKey="C" name="Costi" stroke={C.rossoChiaro} strokeWidth={1.5} dot={false} strokeDasharray="4 3" />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         {/* ======================== CASH FLOW ======================== */}
         {tab === 'cashflow' && (
@@ -1772,7 +1487,7 @@ const KarolDashboard = () => {
               </ResponsiveContainer>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
                 <div style={{ padding: '8px 12px', background: C.rossoBg, borderRadius: 6, fontSize: 11, color: C.rosso, fontWeight: 500 }}>
-                  ⚠️ STRESS TEST: senza mutuo e Regione, la cassa va negativa da S2 e peggiora ogni mese. Dipendenza critica da factoring — zero buffer.
+                  ⚠️ STRESS TEST: senza mutuo e Regione, la cassa va negativa da S2 e peggiora ogni mese.
                 </div>
                 <div style={{ padding: '8px 12px', background: C.verdeBg, borderRadius: 6, fontSize: 11, color: C.verde, fontWeight: 500 }}>
                   ✓ PIANO: con erogazione MCC €5M (S9) e incasso Regione €3M (S10), la cassa si normalizza a ~€5,6M. Prerequisito: chiusura mutuo entro aprile 2026.
@@ -1784,7 +1499,7 @@ const KarolDashboard = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div style={cardS}>
                 <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 8 }}>Ciclo Mensile Incassi-Pagamenti</h3>
-                <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>Meccanica factoring pro-soluto 90% — 2 finestre/mese</p>
+                <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>Meccanica factoring pro solvendo 90% — 2 finestre/mese</p>
                 {(() => {
                   const t = tesoreria;
                   // Escludi cta_extra_non_cash dal totale incassi — non è cassa, è credito
@@ -2084,7 +1799,7 @@ const KarolDashboard = () => {
                   <div style={{ fontSize: 11, color: C.t1, marginTop: 2 }}>EBITDA contabile €319k - CTA extra-tariff non-cash €395k = <strong>-€76k</strong>. L'azienda brucia cassa operativamente. Personale al 61,9% dei ricavi (soglia: 55%). Il CdA ne ha presa coscienza solo recentemente.</div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginTop: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 16 }}>
                   <div style={{ padding: '12px 16px', background: C.sfondo, borderRadius: 10 }}>
                     <div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Rate Mensili 2025</div>
                     <div style={{ fontSize: 18, fontWeight: 700, color: C.giallo }}>{fmt(DEBT.rate_mensili_2025.totale)}</div>
@@ -2092,10 +1807,6 @@ const KarolDashboard = () => {
                   <div style={{ padding: '12px 16px', background: C.sfondo, borderRadius: 10 }}>
                     <div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Cassa al 31/08</div>
                     <div style={{ fontSize: 18, fontWeight: 700, color: C.rosso }}>{fmt(DEBT.esposizione.cassa)}</div>
-                  </div>
-                  <div style={{ padding: '12px 16px', background: C.sfondo, borderRadius: 10 }}>
-                    <div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Sanzioni evitabili/anno</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: C.giallo }}>{fmt(103000)}</div>
                   </div>
                 </div>
               </div>
@@ -2215,16 +1926,11 @@ const KarolDashboard = () => {
                 <h3 style={{ fontSize: 18, fontWeight: 700, color: C.primario, marginBottom: 4 }}>Rottamazione 5 — Impatto CE 2026</h3>
                 <p style={{ fontSize: 12, color: C.t3, marginBottom: 16 }}>Email Pecchia 23/01/2026 — 10 cartelle Karol Spa + 1 Betania</p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
                   <div style={{ padding: '14px 16px', background: C.verdeBg, borderRadius: 10, borderLeft: '4px solid ' + C.verde }}>
                     <div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Karol Spa — Sopravvenienza</div>
                     <div style={{ fontSize: 18, fontWeight: 700, color: C.verde }}>{fmt(DEBT.rottamazione5.karol_spa.sopravvenienza)}</div>
                     <div style={{ fontSize: 10, color: C.t3, marginTop: 4 }}>Paga {fmt(DEBT.rottamazione5.karol_spa.definibile)} vs residuo {fmt(DEBT.rottamazione5.karol_spa.residuo)}</div>
-                  </div>
-                  <div style={{ padding: '14px 16px', background: C.gialloBg, borderRadius: 10, borderLeft: '4px solid ' + C.giallo }}>
-                    <div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Betania — Sopravvenienza</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: C.giallo }}>{fmt(DEBT.rottamazione5.betania.sopravvenienza)}</div>
-                    <div style={{ fontSize: 10, color: C.t3, marginTop: 4 }}>Paga {fmt(DEBT.rottamazione5.betania.definibile)} vs residuo {fmt(DEBT.rottamazione5.betania.residuo)}</div>
                   </div>
                   <div style={{ padding: '14px 16px', background: C.violaBg, borderRadius: 10, borderLeft: '4px solid ' + C.viola }}>
                     <div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Risparmio Totale Gruppo</div>
@@ -2233,39 +1939,6 @@ const KarolDashboard = () => {
                   </div>
                 </div>
                 <div style={{ padding: '10px 14px', background: C.sfondo, borderRadius: 8, fontSize: 11, color: C.t2 }}>{DEBT.rottamazione5.nota}</div>
-              </div>
-
-              {/* CARD 6: Anomalie CE 8M + Da Verificare */}
-              <div style={cardS}>
-                <h3 style={{ fontSize: 18, fontWeight: 700, color: C.primario, marginBottom: 4 }}>Anomalie CE 8M 2025 — Rubinetti Aperti</h3>
-                <p style={{ fontSize: 12, color: C.t3, marginBottom: 16 }}>Da Bilancio Verifica Provvisorio 31/08/2025 — ordine di impatto</p>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {D.ce_8m.anomalie.map((a, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 14px', background: a.priorita <= 2 ? '#fee2e2' : a.priorita <= 4 ? '#fef9c3' : '#f8fafc', borderRadius: 8, borderLeft: '3px solid ' + (a.priorita <= 2 ? C.rosso : a.priorita <= 4 ? C.giallo : C.t3) }}>
-                      <div style={{ minWidth: 24, height: 24, borderRadius: '50%', background: a.priorita <= 2 ? C.rosso : a.priorita <= 4 ? C.giallo : C.t3, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700 }}>{a.priorita}</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: C.t1 }}>{a.voce}</span>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: a.impatto_ann < 0 ? C.rosso : C.giallo, fontFamily: 'monospace' }}>{fmt(a.impatto_ann)}/anno</span>
-                        </div>
-                        <div style={{ fontSize: 10, color: C.t2 }}>{a.nota}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* CARD 7: Checklist Da Verificare */}
-              <div style={cardS}>
-                <h3 style={{ fontSize: 18, fontWeight: 700, color: C.primario, marginBottom: 16 }}>Checklist — Da Verificare</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {DEBT.da_verificare.map((item, i) => (
-                    <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 12px', background: C.sfondo, borderRadius: 8, borderLeft: '3px solid ' + C.giallo }}>
-                      <span style={{ fontSize: 12, color: C.t1, lineHeight: 1.5 }}>{i + 1}. {item}</span>
-                    </div>
-                  ))}
-                </div>
               </div>
 
             </div>
@@ -2521,243 +2194,6 @@ const KarolDashboard = () => {
         })()}
 
         {/* ======================== ANALISI COSTI ======================== */}
-        {tab === 'analisi' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-            {/* Composizione costi per categoria — Stacked Bar */}
-            <div style={cardS}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Composizione Costi per UO</h3>
-              <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Stacked bar — Breakdown categorie di costo</p>
-              <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={UO.map(u => ({
-                  nome: u.cod, Personale: u.costi.personale, Materiali: u.costi.materiali,
-                  Servizi: u.costi.servizi, Utenze: u.costi.utenze, Manutenzione: u.costi.manutenzione, Altri: u.costi.altri
-                }))} margin={{ top: 10, right: 20, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="nome" fontSize={12} stroke={C.t2} />
-                  <YAxis tickFormatter={v => fmt(v)} fontSize={9} stroke={C.t3} />
-                  <Tooltip formatter={v => [fmt(v)]} />
-                  <Legend />
-                  <Bar dataKey="Personale" stackId="a" fill="#3b82f6" />
-                  <Bar dataKey="Materiali" stackId="a" fill="#8b5cf6" />
-                  <Bar dataKey="Servizi" stackId="a" fill="#06b6d4" />
-                  <Bar dataKey="Utenze" stackId="a" fill="#f59e0b" />
-                  <Bar dataKey="Manutenzione" stackId="a" fill="#ef4444" />
-                  <Bar dataKey="Altri" stackId="a" fill="#94a3b8" radius={[4,4,0,0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Treemap costi — visualizzazione gerarchica */}
-            <div style={cardS}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Mappa Costi — Treemap Gerarchico</h3>
-              <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Area proporzionale all'importo — Costi diretti UO + Sede HQ</p>
-              {(() => {
-                const catColors = { Personale: '#3b82f6', Materiali: '#8b5cf6', Servizi: '#06b6d4', Utenze: '#f59e0b', Manutenzione: '#ef4444', Altri: '#94a3b8', Sede: '#1e293b' };
-                // Costruisci dati treemap: per ogni UO, le categorie di costo
-                const tmData = [];
-                UO.forEach(u => {
-                  Object.entries(u.costi).forEach(([cat, val]) => {
-                    if (val > 0) {
-                      const catLabel = cat.charAt(0).toUpperCase() + cat.slice(1);
-                      tmData.push({ name: u.cod + ' — ' + catLabel, size: val, uo: u.cod, cat: catLabel, color: catColors[catLabel] || '#94a3b8' });
-                    }
-                  });
-                });
-                // Aggiungi costi sede
-                Object.entries(D.SEDE).forEach(([k, v]) => {
-                  if (k !== 'totale' && typeof v === 'number' && v > 0) {
-                    const label = k.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
-                    tmData.push({ name: 'SEDE — ' + label, size: v, uo: 'SEDE', cat: 'Sede', color: catColors.Sede });
-                  }
-                });
-                tmData.sort((a, b) => b.size - a.size);
-
-                const CustomContent = (props) => {
-                  const { x, y, width, height, name, size } = props;
-                  if (width < 40 || height < 25) return null;
-                  return (
-                    <g>
-                      <rect x={x} y={y} width={width} height={height} rx={4}
-                        style={{ fill: props.color || '#94a3b8', stroke: '#fff', strokeWidth: 2, opacity: 0.85 }} />
-                      {width > 60 && height > 35 && (
-                        <text x={x + width / 2} y={y + height / 2 - 7} textAnchor="middle" fill="#fff" fontSize={10} fontWeight={600}>
-                          {name?.split(' — ')[0]}
-                        </text>
-                      )}
-                      {width > 60 && height > 35 && (
-                        <text x={x + width / 2} y={y + height / 2 + 8} textAnchor="middle" fill="#ffffffcc" fontSize={9}>
-                          {fmt(size)}
-                        </text>
-                      )}
-                    </g>
-                  );
-                };
-
-                return (
-                  <div>
-                    <ResponsiveContainer width="100%" height={340}>
-                      <Treemap data={tmData} dataKey="size" nameKey="name" content={<CustomContent />}>
-                        <Tooltip formatter={v => [fmt(v), 'Importo']} />
-                      </Treemap>
-                    </ResponsiveContainer>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 10, justifyContent: 'center' }}>
-                      {Object.entries(catColors).map(([cat, col]) => (
-                        <span key={cat} style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 5 }}>
-                          <span style={{ width: 12, height: 12, borderRadius: 3, background: col, opacity: 0.85 }}></span>{cat}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* Benchmark confronto — incidenza % su ricavi */}
-            <div style={cardS}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Benchmark — Incidenza Costi su Ricavi</h3>
-              <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Confronto UO vs benchmark settore</p>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={UO.map(u => ({
-                  nome: u.cod,
-                  'Pers %': +(u.persPct * 100).toFixed(1),
-                  'Bench Pers': +(BENCH.pers_pct * 100).toFixed(1),
-                  'Costi Dir %': +((u.costiDir / u.ricavi) * 100).toFixed(1),
-                }))} layout="vertical" margin={{ left: 45, right: 30 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                  <XAxis type="number" domain={[0, 100]} tickFormatter={v => v + '%'} fontSize={11} stroke={C.t3} />
-                  <YAxis type="category" dataKey="nome" fontSize={12} stroke={C.t2} />
-                  <Tooltip formatter={v => [v + '%']} />
-                  <Legend />
-                  <Bar dataKey="Pers %" fill="#3b82f6" barSize={14} radius={[0,4,4,0]} />
-                  <Bar dataKey="Bench Pers" fill="#cbd5e1" barSize={14} radius={[0,4,4,0]} />
-                  <Bar dataKey="Costi Dir %" fill="#8b5cf6" barSize={14} radius={[0,4,4,0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* RADIOGRAFIA SEDE HQ */}
-            <div style={cardS}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Radiografia Sede HQ — Costo Lordo vs Netto</h3>
-              <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>La Sede internalizza servizi per il gruppo e incassa ricavi intercompany. Costo netto = costo lordo - ricavi controllate.</p>
-              {(() => {
-                const S = D.SEDE;
-                const sedeItems = [
-                  { voce: 'Personale HQ', importo: S.personale_hq, pct: S.personale_hq/S.totale, note: '~12 FTE. Include: amm.ne, HR, acquisti, qualità, legale, IT, tecnico, marketing' },
-                  { voce: 'Consulenze/Servizi', importo: S.consulenze, pct: S.consulenze/S.totale, note: '⚠ €812k — dettaglio per fornitore IN ATTESA', alert: true },
-                  { voce: 'Altri oneri', importo: S.altri, pct: S.altri/S.totale, note: 'Emolumenti CdA, sindaci, spese legali, varie' },
-                  { voce: 'Affitti sede', importo: S.affitti, pct: S.affitti/S.totale, note: 'Locazione uffici direzione' },
-                  { voce: 'Oneri finanziari', importo: S.oneri_fin, pct: S.oneri_fin/S.totale, note: 'Interessi mutui immobiliari CTA+COS + altri' },
-                  { voce: 'Imposte', importo: S.imposte, pct: S.imposte/S.totale, note: '' },
-                ];
-                const ricItems = [
-                  { voce: 'Betania (servizi direzione)', importo: INTERCO.betania },
-                  { voce: 'Zaharaziz (servizi mensa)', importo: INTERCO.zaharaziz },
-                  { voce: 'Lab (ristorno partecipazione)', importo: INTERCO.lab_ristorno },
-                  { voce: 'Proventi fin./sopravvenienze', importo: S.ricavi_hq },
-                ];
-                const totRicHQ = INTERCO.totale + S.ricavi_hq;
-                return <div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                    {/* Costi */}
-                    <div>
-                      <h4 style={{ fontSize: 12, fontWeight: 700, color: C.rosso, marginBottom: 8 }}>Costi Sede — {fmt(S.totale)}</h4>
-                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <tbody>
-                          {sedeItems.map((r, i) => (
-                            <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo }}>
-                              <td style={{ padding: '5px 6px', fontSize: 11, fontWeight: 500 }}>{r.voce}</td>
-                              <td style={{ padding: '5px 6px', textAlign: 'right', fontFamily: 'monospace', fontSize: 12, color: C.rosso }}>{fmt(r.importo)}</td>
-                              <td style={{ padding: '5px 6px', textAlign: 'right', fontSize: 10, color: C.t3 }}>{fmtPct(r.pct)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    {/* Ricavi */}
-                    <div>
-                      <h4 style={{ fontSize: 12, fontWeight: 700, color: C.verde, marginBottom: 8 }}>Ricavi HQ — {fmt(totRicHQ)}</h4>
-                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <tbody>
-                          {ricItems.map((r, i) => (
-                            <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo }}>
-                              <td style={{ padding: '5px 6px', fontSize: 11, fontWeight: 500 }}>{r.voce}</td>
-                              <td style={{ padding: '5px 6px', textAlign: 'right', fontFamily: 'monospace', fontSize: 12, color: C.verde }}>{fmt(r.importo)}</td>
-                            </tr>
-                          ))}
-                          <tr style={{ borderTop: '2px solid ' + C.primario, background: '#f0f4f8' }}>
-                            <td style={{ padding: '5px 6px', fontWeight: 700, fontSize: 12 }}>COSTO NETTO SEDE</td>
-                            <td style={{ padding: '5px 6px', textAlign: 'right', fontFamily: 'monospace', fontSize: 14, fontWeight: 700, color: C.rosso }}>{fmt(S.totale - totRicHQ)}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                      <div style={{ marginTop: 12, padding: '8px 10px', background: '#eff6ff', borderRadius: 6, fontSize: 11, color: C.primario }}>
-                        Incidenza netta su ricavi BU: <b>{fmtPct((S.totale - totRicHQ) / TOT.ric)}</b> (vs {fmtPct(S.totale / TOT.ric)} lordo)
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Funzioni HQ e duplicazioni */}
-                  <div style={{ marginTop: 16 }}>
-                    <h4 style={{ fontSize: 12, fontWeight: 700, color: C.t1, marginBottom: 8 }}>Mappa Funzioni HQ — Dove si Duplica?</h4>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
-                      <thead><tr style={{ borderBottom: '2px solid ' + C.primario, background: '#f0f4f8' }}>
-                        <th style={{ padding: '5px 8px', textAlign: 'left', fontSize: 10 }}>Funzione</th>
-                        <th style={{ padding: '5px 8px', textAlign: 'right', fontSize: 10 }}>Costo Stimato</th>
-                        <th style={{ padding: '5px 8px', textAlign: 'center', fontSize: 10 }}>Duplica BU?</th>
-                        <th style={{ padding: '5px 8px', textAlign: 'left', fontSize: 10 }}>Note / Azione</th>
-                      </tr></thead>
-                      <tbody>
-                        {S.funzioni.map((f, i) => (
-                          <tr key={i} style={{ borderBottom: '1px solid ' + C.bordo, background: f.duplica_bu ? '#fef2f2' : 'white' }}>
-                            <td style={{ padding: '5px 8px', fontWeight: 500 }}>{f.funzione}</td>
-                            <td style={{ padding: '5px 8px', textAlign: 'right', fontFamily: 'monospace', color: f.stima ? C.t1 : C.t3 }}>{f.stima ? fmt(f.stima) : '⬜ da rilevare'}</td>
-                            <td style={{ padding: '5px 8px', textAlign: 'center' }}>{f.duplica_bu ? <span style={{ color: C.rosso, fontWeight: 700 }}>⚠ SÌ</span> : <span style={{ color: C.verde }}>No</span>}</td>
-                            <td style={{ padding: '5px 8px', fontSize: 10, color: C.t2 }}>{f.note}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 }}>
-                      <div style={{ padding: '8px 12px', background: C.rossoBg, borderRadius: 6, fontSize: 11, color: C.rosso }}>
-                        ⚠ DUPLICAZIONI: Amministrazione e Ufficio Acquisti sono le due funzioni dove BU e Sede rischiano di pagare due volte lo stesso lavoro. Serve mappa ruoli per decisione centralizza/decentra.
-                      </div>
-                      <div style={{ padding: '8px 12px', background: '#fef9c3', borderRadius: 6, fontSize: 11, color: '#92400e' }}>
-                        ⬜ DATI MANCANTI: costo per funzione da Zucchetti (chi fa cosa e quanto costa), dettaglio €812k consulenze per fornitore/contratto, personale Lab €80k — dove contabilizzato?
-                      </div>
-                    </div>
-                  </div>
-                </div>;
-              })()}
-            </div>
-
-            {/* Narrative per UO */}
-            <div style={cardS}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 12 }}>Variance Analysis — Narrative</h3>
-              {narrative.map((n, i) => {
-                const u = UO.find(x => x.cod === n.uo);
-                const ac = alertCol(n.alert);
-                return (
-                  <div key={i} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 10, background: ac.bg, borderLeft: '5px solid ' + ac.color }}>
-                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
-                      {u && <span style={{ width: 10, height: 10, borderRadius: '50%', background: u.colore, display: 'inline-block', marginRight: 8 }}></span>}
-                      <span style={{ fontWeight: 700, fontSize: 14, color: C.t1 }}>{n.uo === 'GRUPPO' ? 'GRUPPO KAROL' : n.uo + ' — ' + (u ? u.nome : '')}</span>
-                      <span style={{ marginLeft: 8, fontSize: 11, padding: '2px 8px', borderRadius: 12, background: ac.color, color: '#fff' }}>{n.alert}</span>
-                      <span style={{ marginLeft: 'auto', fontFamily: 'monospace', fontSize: 13, fontWeight: 600, color: (u ? u.molG : TOT.molG) >= 0 ? C.verde : C.rosso }}>
-                        MOL-G: {fmt(u ? u.molG : TOT.molG)}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: 12, color: C.t1, lineHeight: 1.6, marginBottom: 4 }}>{n.testo}</p>
-                    <p style={{ fontSize: 11, color: C.t2, fontStyle: 'italic', borderTop: '1px solid ' + ac.color + '33', paddingTop: 6 }}>
-                      <strong>Outlook:</strong> {n.outlook}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         {/* ======================== SIMULAZIONI ======================== */}
         {tab === 'simulazioni' && (() => {
           // Calcola impatto simulazione
@@ -2935,7 +2371,7 @@ const KarolDashboard = () => {
 
       {/* FOOTER */}
       <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 11, color: C.t3, borderTop: '1px solid ' + C.bordo }}>
-        Karol CdG v5.0 — Gruppo Karol S.p.A. — Cruscotto Controllo di Gestione | Aggiornamento: {D.meta.ultimo_aggiornamento}
+        Karol CdG v6.0 — Gruppo Karol S.p.A. — Cruscotto Controllo di Gestione | Versione Beta — dati provvisori soggetti a revisione | Aggiornamento: {D.meta.ultimo_aggiornamento}
       </div>
     </div>
   );
