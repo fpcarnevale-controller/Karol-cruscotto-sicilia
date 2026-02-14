@@ -52,7 +52,10 @@ const C = {
 // ============================================================================
 const KAROL_DATA = {
   meta: { anno: 2025, mesi_chiusi: 8, dati_reali: true, ultimo_aggiornamento: '14/02/2026',
-    fonte: 'Bilancio Verifica 31/08/2025 + Piano Rateizzazioni + Rottamazione 5 + CE Q1 + HR Zucchetti', metodo_ann: 'CE 8M×1,5 cross-validated vs Q1×4' },
+    fonte: 'Bilancio Verifica 31/08/2025 + Piano Rateizzazioni + Rottamazione 5 + CE Q1 + HR Zucchetti', metodo_ann: 'CE 8M×1,5 cross-validated vs Q1×4',
+    // Budget anno — costanti centralizzate (no hardcoded in CE/PDF/Excel)
+    budget_sede: 1550000, budget_ammort: 350000, budget_oneri_fin: 125000,
+  },
 
   // Benchmark settore RSA/Healthcare
   BENCHMARK: {
@@ -482,7 +485,9 @@ const KAROL_DATA = {
         { desc: 'Stipendi correnti agosto', residuo: 542000 },
         { desc: 'Compensazioni', residuo: -183000 },
       ]},
-      infragruppo: { totale_debiti: 10979000, totale_crediti: 7400000, netto: -3579000, dettaglio: [
+      // Infragruppo: totale_crediti = esigibili (esclude Zaharaziz €2.542k immobilizzato)
+      // Netto esposizione = debiti - crediti esigibili = €10.979k - €7.400k = -€3.579k
+      infragruppo: { totale_debiti: 10979000, totale_crediti: 7400000, crediti_immobilizzati: 2542000, netto: -3579000, dettaglio: [
         { desc: 'vs Karol Betania', debito: 8708000, credito: 4405000, netto: -4303000, nota: '⚠ VORAGINE' },
         { desc: 'vs Karol Lab', debito: 1661000, credito: 215000, netto: -1446000 },
         { desc: 'vs Cosentino', debito: 171000, credito: 1256000, netto: 1085000 },
@@ -807,10 +812,10 @@ const KarolDashboard = () => {
         { cells: ['  Utenze', fmtN(-UO.reduce((s,u) => s + u.costi.utenze, 0)), fmtN(-budCosti.ut), '', ''] },
         { cells: ['  Manutenzione', fmtN(-UO.reduce((s,u) => s + u.costi.manutenzione, 0)), fmtN(-budCosti.man), '', ''] },
         { cells: ['MOL Industriale', fmtN(TOT.molI), fmtN(TOT.budget_ric - budCDir), fmtN(TOT.molI - (TOT.budget_ric - budCDir)), fmtP(TOT.molIPct)], _bold: true, _bg: [240,244,248] },
-        { cells: ['  Costi Sede', fmtN(-TOT.sede), fmtN(-1550000), fmtN(1550000 - TOT.sede), mRic(TOT.sede, TOT.ric)] },
+        { cells: ['  Costi Sede', fmtN(-TOT.sede), fmtN(-D.meta.budget_sede), fmtN(D.meta.budget_sede - TOT.sede), mRic(TOT.sede, TOT.ric)] },
         { cells: ['MOL Gestionale', fmtN(TOT.molG), '', '', fmtP(TOT.molGPct)], _bold: true, _bg: [240,244,248] },
-        { cells: ['  Ammortamenti', fmtN(-TOT.ammort), fmtN(-350000), '', ''] },
-        { cells: ['  Oneri Finanziari', fmtN(-TOT.oneri_fin), fmtN(-125000), '', ''] },
+        { cells: ['  Ammortamenti', fmtN(-TOT.ammort), fmtN(-D.meta.budget_ammort), '', ''] },
+        { cells: ['  Oneri Finanziari', fmtN(-TOT.oneri_fin), fmtN(-D.meta.budget_oneri_fin), '', ''] },
         { cells: ['Risultato Operativo', fmtN(TOT.ebit), '', '', fmtP(TOT.ebit / TOT.ric)], _bold: true, _bg: [230,240,255],
           _colors: { 1: TOT.ebit >= 0 ? [5,150,105] : [220,38,38] } },
       ];
@@ -920,10 +925,10 @@ const KarolDashboard = () => {
         ['Utenze', -UO.reduce((s,u) => s + u.costi.utenze, 0), -UO.reduce((s,u) => s + u.budget_costi.utenze, 0), '', ''],
         ['Manutenzione', -UO.reduce((s,u) => s + u.costi.manutenzione, 0), -UO.reduce((s,u) => s + u.budget_costi.manutenzione, 0), '', ''],
         ['MOL Industriale', TOT.molI, TOT.budget_ric - TOT.budget_cDir, '', TOT.molIPct],
-        ['Costi Sede', -TOT.sede, -1550000, '', ''],
+        ['Costi Sede', -TOT.sede, -D.meta.budget_sede, '', ''],
         ['MOL Gestionale', TOT.molG, '', '', TOT.molGPct],
-        ['Ammortamenti', -TOT.ammort, -350000, '', ''],
-        ['Oneri Finanziari', -TOT.oneri_fin, -125000, '', ''],
+        ['Ammortamenti', -TOT.ammort, -D.meta.budget_ammort, '', ''],
+        ['Oneri Finanziari', -TOT.oneri_fin, -D.meta.budget_oneri_fin, '', ''],
         ['Risultato Operativo', TOT.ebit, '', '', ''],
       ];
       const ws2 = XLSX.utils.aoa_to_sheet(ceRows);
@@ -1235,11 +1240,11 @@ const KarolDashboard = () => {
             { voce: '  Manutenzione', val: -UO.reduce((s,u) => s + u.costi.manutenzione, 0), bud: -UO.reduce((s,u) => s + u.budget_costi.manutenzione, 0), cls: 'costo' },
             { voce: '  Altri costi diretti', val: -UO.reduce((s,u) => s + u.costi.altri, 0), bud: -UO.reduce((s,u) => s + u.budget_costi.altri, 0), cls: 'costo' },
             { voce: 'MOL Industriale', val: TOT.molI, bud: TOT.budget_ric - TOT.budget_cDir, cls: 'subtotale' },
-            { voce: '  Costi Sede/HQ', val: -TOT.sede, bud: -1550000, cls: 'costo' },
-            { voce: 'MOL Gestionale', val: TOT.molG, bud: (TOT.budget_ric - TOT.budget_cDir) - 1550000, cls: 'subtotale' },
-            { voce: '  Ammortamenti', val: -TOT.ammort, bud: -350000, cls: 'costo' },
-            { voce: '  Oneri finanziari', val: -TOT.oneri_fin, bud: -125000, cls: 'costo' },
-            { voce: 'Risultato Operativo', val: TOT.ebit, bud: (TOT.budget_ric - TOT.budget_cDir) - 1550000 - 350000 - 125000, cls: 'totale' },
+            { voce: '  Costi Sede/HQ', val: -TOT.sede, bud: -D.meta.budget_sede, cls: 'costo' },
+            { voce: 'MOL Gestionale', val: TOT.molG, bud: (TOT.budget_ric - TOT.budget_cDir) - D.meta.budget_sede, cls: 'subtotale' },
+            { voce: '  Ammortamenti', val: -TOT.ammort, bud: -D.meta.budget_ammort, cls: 'costo' },
+            { voce: '  Oneri finanziari', val: -TOT.oneri_fin, bud: -D.meta.budget_oneri_fin, cls: 'costo' },
+            { voce: 'Risultato Operativo', val: TOT.ebit, bud: (TOT.budget_ric - TOT.budget_cDir) - D.meta.budget_sede - D.meta.budget_ammort - D.meta.budget_oneri_fin, cls: 'totale' },
           ];
 
           // CE per singola BU
@@ -2192,6 +2197,16 @@ const KarolDashboard = () => {
                       </div>
                     );
                   })}
+                </div>
+
+                {/* Riepilogo totali infragruppo */}
+                <div style={{ marginTop: 16, padding: 12, background: '#f8fafc', borderRadius: 8, border: '1px solid ' + C.bordo }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, fontSize: 11 }}>
+                    <div><span style={{ color: C.t3 }}>Debiti lordi:</span> <span style={{ fontWeight: 700, color: C.rosso }}>{fmt(ST.infragruppo.totale_debiti)}</span></div>
+                    <div><span style={{ color: C.t3 }}>Crediti esigibili:</span> <span style={{ fontWeight: 700, color: C.verde }}>{fmt(ST.infragruppo.totale_crediti)}</span></div>
+                    <div><span style={{ color: C.t3 }}>Netto esposizione:</span> <span style={{ fontWeight: 700, color: C.rosso }}>{fmt(ST.infragruppo.netto)}</span></div>
+                  </div>
+                  <div style={{ fontSize: 9, color: C.t3, marginTop: 6 }}>Crediti esigibili escludono Zaharaziz €{(ST.infragruppo.crediti_immobilizzati/1000).toFixed(0)}k (credito immobilizzato)</div>
                 </div>
               </div>
 
