@@ -1291,7 +1291,7 @@ const KarolDashboard = () => {
                   <th style={{ padding: '10px 8px', textAlign: 'left', color: C.t2, fontWeight: 600, width: '35%' }}>Voce</th>
                   <th style={{ padding: '10px 8px', textAlign: 'right', color: C.t2, fontWeight: 600 }}>Consuntivo</th>
                   <th style={{ padding: '10px 8px', textAlign: 'right', color: C.t2, fontWeight: 600 }}>Budget</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right', color: C.t2, fontWeight: 600 }}>Delta</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right', color: C.t2, fontWeight: 600 }}>Delta (Cons−Bud)</th>
                   <th style={{ padding: '10px 8px', textAlign: 'right', color: C.t2, fontWeight: 600 }}>% Ricavi</th>
                 </tr>
               </thead>
@@ -1384,47 +1384,28 @@ const KarolDashboard = () => {
                 </div>
               )}
 
-              {/* Forecast */}
+              {/* Forecast — semplificato con 8M dati */}
               {ceView === 'forecast' && (() => {
-                const methods = [
-                  { id: 'lin', l: 'Linearizzazione', desc: 'Media mensile × 12' },
-                  { id: 'bud', l: 'Budget Residuo', desc: 'YTD + budget pro-rata residuo' },
-                  { id: 'trnd', l: 'Trend Ponderato', desc: 'YTD + media mobile 3M ponderata × residuo' },
-                ];
                 const totFcRic = fcData.reduce((s,f) => s + f.fc.ric, 0);
                 const totFcMolI = fcData.reduce((s,f) => s + f.fc.molI, 0);
                 const totFcVsBud = totFcRic - TOT.budget_ric;
-                // Barchart confronto metodi
-                const barFcData = UO.map((u, i) => ({
-                  cod: u.cod,
-                  Budget: u.budget_ricavi,
-                  Linearizzazione: forecastCalc[i].lin.ric,
-                  'Budget Residuo': forecastCalc[i].bud.ric,
-                  'Trend Ponderato': forecastCalc[i].trnd.ric,
-                }));
                 return (
                 <div style={cardS}>
-                  <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Forecast Anno — Confronto Metodi</h3>
-                  <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>Proiezione basata su {mC} mesi consuntivati, {mR} mesi residui</p>
-                  {/* Selettore metodo */}
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-                    {methods.map(m => (
-                      <button key={m.id} onClick={() => setFcMethod(m.id)}
-                        style={{ padding: '6px 14px', border: '2px solid ' + (fcMethod === m.id ? C.primario : C.bordo), background: fcMethod === m.id ? C.primario + '10' : 'white', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: fcMethod === m.id ? 700 : 500, color: fcMethod === m.id ? C.primario : C.t2, fontFamily: 'inherit' }}>
-                        {m.l}
-                        <div style={{ fontSize: 9, color: C.t3, fontWeight: 400 }}>{m.desc}</div>
-                      </button>
-                    ))}
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Forecast Anno — Budget Residuo</h3>
+                  <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>Consuntivo {mC} mesi + budget pro-rata {mR} mesi residui</p>
+
+                  <div style={{ padding: 10, background: C.gialloBg, borderRadius: 8, borderLeft: '4px solid ' + C.giallo, marginBottom: 16, fontSize: 11, color: C.giallo }}>
+                    <strong>Nota:</strong> Con {mC} mesi consuntivati e solo {mR} residui, il Budget Residuo (YTD reale + budget pro-rata) è il metodo più affidabile. Le proiezioni alternative (linearizzazione, trend ponderato) hanno margini di errore elevati su {mR} mesi.
                   </div>
-                  {/* Tabella forecast */}
+
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                     <thead>
                       <tr style={{ borderBottom: '2px solid ' + C.bordo, background: '#f8fafc' }}>
                         <th style={{ padding: '8px', textAlign: 'left', color: C.t2 }}>UO</th>
-                        <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Consuntivo YTD</th>
+                        <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Consuntivo {mC}M</th>
                         <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Forecast 12M</th>
                         <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Budget Anno</th>
-                        <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Fc vs Budget</th>
+                        <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>Delta Fc−Bud</th>
                         <th style={{ padding: '8px', textAlign: 'right', color: C.t2 }}>MOL-I Fc</th>
                       </tr>
                     </thead>
@@ -1462,30 +1443,6 @@ const KarolDashboard = () => {
                       </tr>
                     </tbody>
                   </table>
-                  {/* Grafico confronto metodi */}
-                  <div style={{ marginTop: 16 }}>
-                    <h4 style={{ fontSize: 13, fontWeight: 600, color: C.t1, marginBottom: 8 }}>Confronto Metodi — Ricavi Forecast per UO</h4>
-                    <ResponsiveContainer width="100%" height={260}>
-                      <BarChart data={barFcData} margin={{ top: 10, right: 20, left: 20, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                        <XAxis dataKey="cod" fontSize={12} stroke={C.t2} />
-                        <YAxis tickFormatter={v => fmt(v)} fontSize={9} stroke={C.t3} />
-                        <Tooltip formatter={v => [fmt(v)]} />
-                        <Legend />
-                        <Bar dataKey="Budget" fill="#94a3b8" barSize={16} />
-                        <Bar dataKey="Linearizzazione" fill="#3b82f6" barSize={16} />
-                        <Bar dataKey="Budget Residuo" fill="#8b5cf6" barSize={16} />
-                        <Bar dataKey="Trend Ponderato" fill="#06b6d4" barSize={16} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                  {/* Note metodo */}
-                  <div style={{ marginTop: 12, padding: '10px 14px', background: '#f0f4f8', borderRadius: 8, fontSize: 11, color: C.t2 }}>
-                    <strong>Metodo attivo: {methods.find(m => m.id === fcMethod)?.l}</strong> — {methods.find(m => m.id === fcMethod)?.desc}.
-                    {fcMethod === 'lin' && ' Ipotesi: ritmo costante nei mesi residui uguale alla media YTD.'}
-                    {fcMethod === 'bud' && ' Ipotesi: mesi residui seguono il budget originale, consuntivo acquisito.'}
-                    {fcMethod === 'trnd' && ' Ipotesi: trend recente (pesi 3-2-1 su ultimi 3 mesi) proiettato sui mesi residui.'}
-                  </div>
                 </div>
                 );
               })()}
@@ -1587,10 +1544,33 @@ const KarolDashboard = () => {
               );
             })()}
 
+            {/* BOX RIEPILOGO LOCAZIONI */}
+            <div style={{ ...cardS, marginTop: 16, padding: 16, borderLeft: '4px solid ' + C.viola }}>
+              <h4 style={{ fontSize: 13, fontWeight: 700, color: C.t1, marginBottom: 8 }}>Locazioni e Costo di Occupazione — Quadro 2025</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 11, color: C.t1 }}>
+                <div>
+                  <div style={{ fontWeight: 600, color: C.rosso, marginBottom: 4 }}>Affitti Reali (in CE)</div>
+                  <div>RSA Villabate: <strong>{fmt(219307)}</strong>/anno (in utenze)</div>
+                  <div>KCP Casa Protetta: <strong>{fmt(60000)}</strong>/anno (in utenze)</div>
+                  <div>Sede via La Farina: <strong>{fmt(D.SEDE.affitti)}</strong>/anno</div>
+                  <div style={{ fontWeight: 700, marginTop: 4, borderTop: '1px solid ' + C.bordo, paddingTop: 4 }}>Totale reale: <strong>{fmt(219307 + 60000 + D.SEDE.affitti)}</strong>/anno</div>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, color: C.viola, marginBottom: 4 }}>Affitti Figurativi (per normalizzazione)</div>
+                  <div>CTA Ex Stagno: <strong>{fmt(180000)}</strong>/anno (6% su €3M)</div>
+                  <div>COS Cosentino: <strong>{fmt(240000)}</strong>/anno (6% su €4M)</div>
+                  <div style={{ fontWeight: 700, marginTop: 4, borderTop: '1px solid ' + C.bordo, paddingTop: 4 }}>Totale figurativo: <strong>{fmt(420000)}</strong>/anno</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 10, color: C.t3, marginTop: 8, fontStyle: 'italic' }}>
+                CTA e COS sono proprietà Karol S.p.A. (costo storico €7M, mutui in Sede). Gli affitti figurativi servono per confrontare MOL-I tra BU in locazione e proprietà.
+              </div>
+            </div>
+
             {/* TABELLA CE NORMALIZZATO — Confronto equo con costo di occupazione */}
             <div style={{ ...cardS, marginTop: 16 }}>
               <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>CE Industriale Normalizzato — Costo di Occupazione Equo</h3>
-              <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>CTA e COS operano in immobili di proprietà (€7M, mutui attivi in Sede). RSA e KCP pagano affitto. Affitto figurativo al 6% costo storico per confronto equo.</p>
+              <p style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>CTA e COS: + affitto figurativo 6% costo storico. RSA e KCP: invariati (già pagano affitto reale).</p>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                   <thead><tr style={{ borderBottom: '2px solid ' + C.primario, background: '#f0f4f8' }}>
