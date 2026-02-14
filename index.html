@@ -1056,7 +1056,7 @@ const KarolDashboard = () => {
             { label: 'MOL Industriale', valore: fmt(TOT.molI), sub: fmtPct(TOT.molIPct), colore: C.verde },
             { label: 'Costi Sede', valore: fmt(TOT.sede), sub: fmtPct(TOT.sede / TOT.ric) + ' ricavi', colore: C.viola },
             { label: 'MOL Gestionale', valore: fmt(TOT.molG), sub: fmtPct(TOT.molGPct), colore: TOT.molG >= 0 ? C.verde : C.rosso },
-            { label: 'DSO ASP', valore: D.cashflow.kpi.dso + ' gg', sub: 'Target <' + BENCH.dso, colore: D.cashflow.kpi.dso > BENCH.dso ? C.giallo : C.verde },
+            { label: 'EBITDA Reale', valore: fmt(D.ce_8m ? (D.ce_8m.ebitda.contabile - D.ce_8m.ebitda.cta_extra_non_cash) * 1.5 : TOT.molI), sub: D.ce_8m ? 'Escl. CTA extra-tariff' : '', colore: (D.ce_8m && (D.ce_8m.ebitda.contabile - D.ce_8m.ebitda.cta_extra_non_cash) < 0) ? C.rosso : C.verde },
             { label: 'Autonomia Cassa', valore: copCassa.giorni + ' gg', sub: copCassa.mesi + ' mesi (target >' + BENCH.cop_cassa_mesi + ')', colore: copCassa.mesi < 1 ? C.rosso : copCassa.mesi < BENCH.cop_cassa_mesi ? C.giallo : C.verde },
             { label: 'Alert', valore: (nR+nG) + ' attivi', sub: nR + ' rossi / ' + nG + ' gialli / ' + nV + ' verdi', colore: nR > 0 ? C.rosso : C.giallo },
           ].map((kpi, i) => (
@@ -1095,7 +1095,7 @@ const KarolDashboard = () => {
                 { label: 'Materiali/Farmaci', valore: UO.reduce((s,u) => s + u.costi.materiali, 0), pct: UO.reduce((s,u) => s + u.costi.materiali, 0) / TOT.ric, bench: 0.12, icon: '💊', inv: true },
                 { label: 'Servizi', valore: UO.reduce((s,u) => s + u.costi.servizi, 0), pct: UO.reduce((s,u) => s + u.costi.servizi, 0) / TOT.ric, bench: 0.12, icon: '🔧', inv: true },
                 { label: 'Utenze', valore: UO.reduce((s,u) => s + u.costi.utenze, 0), pct: UO.reduce((s,u) => s + u.costi.utenze, 0) / TOT.ric, bench: 0.05, icon: '⚡', inv: true },
-                { label: 'Manutenzione', valore: UO.reduce((s,u) => s + u.costi.manutenzione, 0), pct: UO.reduce((s,u) => s + u.costi.manutenzione, 0) / TOT.ric, bench: 0.03, icon: '🏗️', inv: true },
+                { label: 'Locazioni', valore: UO.reduce((s,u) => s + (u.immobile ? u.immobile.affitto_reale : 0), 0) + D.SEDE.affitti, pct: (UO.reduce((s,u) => s + (u.immobile ? u.immobile.affitto_reale : 0), 0) + D.SEDE.affitti) / TOT.ric, bench: 0.04, icon: '🏪', inv: true },
                 { label: 'Costi Sede/HQ', valore: TOT.sede, pct: TOT.sede / TOT.ric, bench: 0.12, icon: '🏢', inv: true },
               ].map((c, i) => {
                 const ok = c.inv ? c.pct <= c.bench : c.pct >= c.bench;
@@ -1116,24 +1116,46 @@ const KarolDashboard = () => {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              {/* B1: Bar orizzontale scostamento MOL-G */}
+              {/* B1: Cash Autonomy Gauge */}
               <div style={cardS}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Scostamento MOL-G per UO</h3>
-                <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Divergenza dal breakeven per unità operativa</p>
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={scost} layout="vertical" margin={{ left: 50, right: 50 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                    <XAxis type="number" tickFormatter={v => fmt(v)} fontSize={10} stroke={C.t3} />
-                    <YAxis type="category" dataKey="nome" fontSize={12} width={45} stroke={C.t2} />
-                    <Tooltip formatter={v => [fmt(v), 'MOL-G']} />
-                    <ReferenceLine x={0} stroke={C.t3} strokeWidth={1.5} />
-                    <Bar dataKey="scost" name="MOL-G" radius={[0, 4, 4, 0]} barSize={22}>
-                      {scost.map((d, i) => <Cell key={i} fill={d.fill} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-                <div style={{ textAlign: 'center', marginTop: 8, fontSize: 13, fontWeight: 600, color: TOT.molG >= 0 ? C.verde : C.rosso }}>
-                  MOL-G Gruppo: {fmt(TOT.molG)}
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Autonomia di Cassa</h3>
+                <p style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>Saldo attuale vs burn rate — stress test senza eventi straordinari</p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
+                  <div style={{ padding: 12, background: C.rossoBg, borderRadius: 8 }}>
+                    <div style={{ fontSize: 10, color: C.t3, marginBottom: 4 }}>Saldo Cassa</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: C.rosso }}>{fmt(copCassa.saldo)}</div>
+                    <div style={{ fontSize: 9, color: C.t2, marginTop: 2 }}>Bilancio 31/08</div>
+                  </div>
+                  <div style={{ padding: 12, background: C.gialloBg, borderRadius: 8 }}>
+                    <div style={{ fontSize: 10, color: C.t3, marginBottom: 4 }}>Deficit/mese</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: C.giallo }}>{fmt(copCassa.deficit)}</div>
+                    <div style={{ fontSize: 9, color: C.t2, marginTop: 2 }}>Uscite - Incassi</div>
+                  </div>
+                  <div style={{ padding: 12, background: copCassa.giorni < 30 ? C.rossoBg : C.gialloBg, borderRadius: 8 }}>
+                    <div style={{ fontSize: 10, color: C.t3, marginBottom: 4 }}>Autonomia</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: copCassa.giorni < 30 ? C.rosso : C.giallo }}>{copCassa.giorni} gg</div>
+                    <div style={{ fontSize: 9, color: C.t2, marginTop: 2 }}>{copCassa.mesi} mesi</div>
+                  </div>
+                </div>
+
+                <div style={{ padding: 10, background: C.rossoBg, borderRadius: 8, borderLeft: '4px solid ' + C.rosso, marginBottom: 10 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: C.rosso, marginBottom: 4 }}>SCENARIO STRESS</div>
+                  <div style={{ fontSize: 11, color: C.t1, lineHeight: 1.5 }}>
+                    Senza mutuo MCC (€5M) e incasso Regione CTA (€3M), la cassa va in negativo entro <strong>2 settimane</strong>.
+                    Dipendenza critica da factoring pro-soluto 90%.
+                  </div>
+                </div>
+
+                <div style={{ padding: 10, background: '#f0fdf4', borderRadius: 8, borderLeft: '4px solid ' + C.verde }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: C.verde, marginBottom: 4 }}>PIANO</div>
+                  <div style={{ fontSize: 11, color: C.t1, lineHeight: 1.5 }}>
+                    Mutuo MCC €5M (erogazione apr 2026) + Rottamazione 5 (risparmio €833k) + chiusura KCP (€300k/anno).
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'center', marginTop: 10, fontSize: 10, color: C.t3, cursor: 'pointer' }} onClick={() => setTab('cashflow')}>
+                  Vedi tab Cash Flow per dettaglio settimana per settimana →
                 </div>
               </div>
 
